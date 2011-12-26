@@ -1,0 +1,124 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript"> 
+			$(document).ready(function() {
+				$('.singleSelection tbody tr:even').addClass('zebra'); 
+				$('.choiceSetup[group="vision"]').addClass('zebraHover');
+				$('.pivot[group !="vision"]').fadeOut(); 
+				$('.choiceSetup').click(function() {
+					var actualChoice = $('.zebraHover').attr('group');
+				  	$('.choiceSetup').removeClass('zebraHover');
+					$(this).addClass('zebraHover');
+					var group = $(this).attr('group');
+					if(group != actualChoice){
+						$('.pivot').fadeOut();
+						$('.pivot[group=' + group + ']').fadeIn();
+					}
+				});
+			}); 
+		</script>
+	</head>
+	<lift:RoleSnippet.inScenario>
+		<div class="upper_right">
+			<h1>Project Setup</h1>
+			<div class="menuBar">
+				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+			</div>
+		</div> 
+		<div class="rightContent">
+			<div class="quarterContent">
+				<h3>Setup</h3>
+				<ul>
+					<li class="listItem choiceSetup" group="vision">Product Vision</li>
+					<li class="listItem choiceSetup" group="roles">Roles</li>
+					<li class="listItem choiceSetup" group="units">Units</li>
+					<li class="listItem choiceSetup" group="design">Design Guidelines</li>
+				</ul>
+			</div>
+			<div class="threeQuarterContent pivot" group="vision">
+				<h3>Sections of Product Vision</h3>
+				<br />
+				<lift:ScenarioSnippet.visionSetup>
+						<sections:add /> <sections:remove /> <sections:up /> <sections:down /> <sections:save />
+					<br /><br />
+					<table id="visionTable" class="protocolTable">
+						<col width="10%" text-align="center"/>
+			 			<col width="90%" />
+						<thead>
+	                    	<td>Section Number</td>
+	                    	<td>Title</td>
+	                	</thead>
+	                	<tbody id="visionTableRows">
+	                    	<sections:rows />
+	                	</tbody>
+	            	</table>
+	            </lift:ScenarioSnippet.visionSetup>
+			</div>
+			<div class="quarterContent pivot" group="roles">
+				<lift:RoleSnippet.scenarioRoles>
+					<role:add /><role:remove /><role:assign />
+					<br /><br />
+	    			
+	    			<h3>Already assigned roles</h3><br />
+	    			<div id="userRoleTableContainer">
+	    				<role:userRoles />
+	    			</div>
+				</lift:RoleSnippet.scenarioRoles>
+			</div>
+			<div class="quarterContent pivot" group="roles">
+				<lift:RoleSnippet.scenarioRoles>
+					<br /><br />
+					<h3>User</h3><br />
+					<div id="userRoleTableContainer">
+						<role:user />
+					</div>
+	        	</lift:RoleSnippet.scenarioRoles>
+			</div>
+			<div class="quarterContent pivot" group="roles">
+				<lift:RoleSnippet.scenarioRoles>
+					<br /><br />
+					<h3>Roles</h3><br />
+					 <role:roles />
+				</lift:RoleSnippet.scenarioRoles>	
+			</div>
+			<div class="threeQuarterContent pivot" group="units">
+				<h3>Units to use</h3><br />
+				<lift:ScenarioSnippet.unitSetup>
+					<div>
+						<unit:add /><unit:remove /><unit:save />
+					</div><br />
+					<table id="unitTable" class="singleSelection">
+	            		<thead>
+	                   		<td>Subject</td>
+	                   		<td>Name</td>
+	                   		<td>Symbol</td>
+	                	</thead>
+	                	<tbody id="unitTableRows">
+	                    	<unit:rows />
+	                	</tbody>
+	            	</table>
+	            </lift:ScenarioSnippet.unitSetup>
+			</div>
+			<div class="quarterContent pivot" group="design">
+				<lift:ScenarioSnippet.design>
+	    			<h3>Physical Data Model</h3><br />
+	    			<design:dataModel /><br />
+				</lift:ScenarioSnippet.design>
+			</div>
+			<div class="quarterContent pivot" group="design">
+				<lift:ScenarioSnippet.design>
+	    			<h3>Views</h3><br />
+	    			<design:view />
+				</lift:ScenarioSnippet.design>
+			</div>
+			<div class="quarterContent pivot" group="design">
+				<lift:ScenarioSnippet.design>
+	    			<h3>Prefixes</h3><br />
+	    			<design:prefix />
+				</lift:ScenarioSnippet.design>	
+			</div>
+		 </div>
+	 </lift:RoleSnippet.inScenario>
+</lift:surround>
