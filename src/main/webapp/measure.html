@@ -1,0 +1,28 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+	</head>
+	
+	<div class="upper_right">
+		<h1>Measure Editor</h1>
+	</div>
+	
+	<div class="mohhowForm">
+		<div class="lift:MeasureForm"></div>
+		<div>
+	  		<table class="multipleSelection" id="measure2DimensionTable">
+				<thead>
+					<tr>
+						<td><img src="../images/idea.png" alt="Choice"/></td>
+						<td>Dimension</td>
+						<td>Level</td>
+						<td>Aggregation</td>
+					</tr>
+				</thead>
+				<tbody>
+					<lift:MeasureSnippet.editMeasures><edit:context /></lift:MeasureSnippet.editMeasures>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</lift:surround>
