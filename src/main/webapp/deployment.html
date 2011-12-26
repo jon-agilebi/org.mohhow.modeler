@@ -1,0 +1,22 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+	</head>
+	
+	<div class="upper_right">
+		<h1>Deployment</h1>
+	</div>
+	<div class="rightContent">
+		<lift:ReleaseSnippet.allScenariosWithReleases>
+			<div class="quarterContent">
+				<h3>Releases</h3>
+				<ul>
+					<deployment:releases />
+				</ul>
+				<h3>Systems</h3>
+			</div>
+			<deployment:environments />
+		</lift:ReleaseSnippet.allScenariosWithReleases>
+	</div>
+</lift:surround>

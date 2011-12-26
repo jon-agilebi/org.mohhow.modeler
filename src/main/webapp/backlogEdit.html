@@ -1,0 +1,57 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			$(document).ready(function() { 
+				$("#backlogEditAdditional").insertAfter($("table").eq(0));
+			})
+		</script>
+	</head>
+	
+     <div class="upper_right">
+        <h1>Feature Editor</h1>
+    </div> 
+    
+    <div class="mohhowForm">
+		<div class="lift:FeatureForm"></div>
+	 	<div id="backlogEditAdditional">
+		 	<br /><br />
+		 	<lift:BacklogSnippet.featureEdit>
+		 		<table>
+		 			<col width="48%" />
+					<col width="4%" />
+					<col width="48%" />
+		 			<tr>
+		 				<td><h3>Protocol References</h3></td>
+		 				<td> </td>
+		 				<td><h3>Acceptance Criteria</h3></td>
+		 			</tr>
+		 			<tr>
+		 				<td valign="top">
+					  		<span>Search: <feature:searchProtocolItems /></span>
+						  	<table class="singleSelection">
+								<thead>
+										<tr>
+											<td><img src="../images/idea.png" alt="Choice"/></td>
+											<td>Meeting</td>
+											<td>Minutes Item</td>
+										</tr>
+								</thead>
+								<tbody id="backlogProtocolRefercences">
+								</tbody>
+							</table>
+						</td>
+						<td> </td>
+						<td valign="top">
+					  		<span><feature:addCriterion /><feature:removeCriterion /></span>
+						  	<ul id="acceptanceCriteriaList" style="list-style-position:inside">
+								<feature:acceptanceCriteria />
+							</ul>
+						</td>
+					</tr>
+				</table>
+			</lift:BacklogSnippet.featureEdit>
+		</div>
+	</div>
+</lift:surround>

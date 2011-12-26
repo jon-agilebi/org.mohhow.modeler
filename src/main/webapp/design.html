@@ -1,0 +1,237 @@
+<lift:surround with="mohhow_default" at="content">	
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<link rel="stylesheet" type="text/css" href="/style/jquery.miniColors.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script  src="/script/raphael-min.js" type="text/javascript"></script>
+		<script  src="/script/scorecard.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				showDesignCanvas();
+			}); 
+		</script>
+	</head>
+	<designContainer id="designContainer">
+		<frame>
+			<column width="500">
+				<empty />
+				<row height ="500">
+					<block ref="2"></block>
+					<block ref="3"></block>
+				</row>
+			</column>
+		</frame>
+		<blocks>
+		<block id="1">
+			<presentationType>pie</presentationType>
+			<title>BBB</title>
+			<showTitle>left</showTitle>
+			<showSubtitle>none</showSubtitle>
+			<presentationDetail>several</presentationDetail>
+			<columnCount>1</columnCount>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="2">
+			<presentationType>pie</presentationType>
+			<title>AAA</title>
+			<showTitle>left</showTitle>
+			<showSubtitle>none</showSubtitle>
+			<presentationDetail>plain</presentationDetail>
+			<columnCount>1</columnCount>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="3">
+			<presentationType>pie</presentationType>
+			<title>CCC</title>
+			<showTitle>left</showTitle>
+			<showSubtitle>none</showSubtitle>
+			<presentationDetail>mirror</presentationDetail>
+			<columnCount>1</columnCount>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="4">
+			<presentationType>trend</presentationType>
+			<title>Gross Margin</title>
+			<showTitle>left</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="5">
+			<presentationType>trend</presentationType>
+			<title>Gross Margin</title>
+			<showTitle>left</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="6">
+			<presentationType>text</presentationType>
+			<title>Gross Margin</title>
+			<showTitle>left</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="7">
+			<presentationType>trend</presentationType>
+			<title>Gross Margin</title>
+			<showTitle>left</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="8">
+			<presentationType>text</presentationType>
+			<title>Hallo</title>
+			<showTitle>left</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="9">
+			<presentationType>text</presentationType>
+			<title>Gross Margin</title>
+			<showTitle>none</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="10">
+			<presentationType>trend</presentationType>
+			<title>Gross Margin</title>
+			<showTitle>left</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="11">
+			<presentationType>line</presentationType>
+			<title>Projected Growth</title>
+			<showTitle>top</showTitle>
+			<presentationDetail>plain</presentationDetail>
+			<horizontalAxis>bottom</horizontalAxis>
+			<verticalAxis>left</verticalAxis>
+			<horizontalGrid>combined</horizontalGrid>
+			<verticalGrid>combined</verticalGrid>
+			<verticalGridStep>5</verticalGridStep>
+			<horizontalGridStep>5</horizontalGridStep>
+			<horizontalLabel>beginEnd</horizontalLabel>
+			<verticalLabel>eachGrid</verticalLabel>
+			<emphasizeKind>Background</emphasizeKind>
+			<emphasizeComment>Forecast</emphasizeComment>
+			<minimalValue>0</minimalValue>
+			<maximalValue>100</maximalValue>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		<block id="12">
+			<presentationType>text</presentationType>
+			<title>Gross Margin</title>
+			<showTitle>left</showTitle>
+			<presentationDetail>...</presentationDetail>
+			<colorScheme>...</colorScheme>
+			<attributes>
+				<attribute>Region</attribute>
+				<attribute>Country</attribute>
+			</attributes>
+			<measures>
+				<measure>Gross Profit</measure>
+			</measures>
+			<parameter>
+			</parameter>
+		</block>
+		</blocks>
+	</designContainer>
+	<lift:RoleSnippet.inScenario>
+		<div class="upper_right">
+			<h1>Scorecard Design</h1>
+					<div class="menuBar">
+					    <lift:MockupSnippet.design><scorecard:turn/></lift:MockupSnippet.design>
+					    <lift:MockupSnippet.design><scorecard:save/></lift:MockupSnippet.design>
+					    <lift:MockupSnippet.design><scorecard:cancel/></lift:MockupSnippet.design>
+						<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+					</div>
+		</div>
+	</lift:RoleSnippet.inScenario>
+</lift:surround>
