@@ -1,119 +1,252 @@
-(function(A){EYE.extend({getPosition:function(E,B){var I=0;
-var G=0;
-var J=E.style;
-var K=false;
-if(B&&jQuery.curCSS(E,"display")=="none"){var F=J.visibility;
-var H=J.position;
-K=true;
-J.visibility="hidden";
-J.display="block";
-J.position="absolute"
-}var C=E;
-if(C.getBoundingClientRect){var D=C.getBoundingClientRect();
-I=D.left+Math.max(document.documentElement.scrollLeft,document.body.scrollLeft)-2;
-G=D.top+Math.max(document.documentElement.scrollTop,document.body.scrollTop)-2
-}else{I=C.offsetLeft;
-G=C.offsetTop;
-C=C.offsetParent;
-if(E!=C){while(C){I+=C.offsetLeft;
-G+=C.offsetTop;
-C=C.offsetParent
-}}if(jQuery.browser.safari&&jQuery.curCSS(E,"position")=="absolute"){I-=document.body.offsetLeft;
-G-=document.body.offsetTop
-}C=E.parentNode;
-while(C&&C.tagName.toUpperCase()!="BODY"&&C.tagName.toUpperCase()!="HTML"){if(jQuery.curCSS(C,"display")!="inline"){I-=C.scrollLeft;
-G-=C.scrollTop
-}C=C.parentNode
-}}if(K==true){J.display="none";
-J.position=H;
-J.visibility=F
-}return{x:I,y:G}
-},getSize:function(G){var B=parseInt(jQuery.curCSS(G,"width"),10);
-var E=parseInt(jQuery.curCSS(G,"height"),10);
-var F=0;
-var I=0;
-if(jQuery.curCSS(G,"display")!="none"){F=G.offsetWidth;
-I=G.offsetHeight
-}else{var H=G.style;
-var C=H.visibility;
-var D=H.position;
-H.visibility="hidden";
-H.display="block";
-H.position="absolute";
-F=G.offsetWidth;
-I=G.offsetHeight;
-H.display="none";
-H.position=D;
-H.visibility=C
-}return{w:B,h:E,wb:F,hb:I}
-},getClient:function(D){var C,B;
-if(D){B=D.clientWidth;
-C=D.clientHeight
-}else{var E=document.documentElement;
-B=window.innerWidth||self.innerWidth||(E&&E.clientWidth)||document.body.clientWidth;
-C=window.innerHeight||self.innerHeight||(E&&E.clientHeight)||document.body.clientHeight
-}return{w:B,h:C}
-},getScroll:function(H){var E=0,C=0,B=0,F=0,D=0,G=0;
-if(H&&H.nodeName.toLowerCase()!="body"){E=H.scrollTop;
-C=H.scrollLeft;
-B=H.scrollWidth;
-F=H.scrollHeight
-}else{if(document.documentElement){E=document.documentElement.scrollTop;
-C=document.documentElement.scrollLeft;
-B=document.documentElement.scrollWidth;
-F=document.documentElement.scrollHeight
-}else{if(document.body){E=document.body.scrollTop;
-C=document.body.scrollLeft;
-B=document.body.scrollWidth;
-F=document.body.scrollHeight
-}}if(typeof pageYOffset!="undefined"){E=pageYOffset;
-C=pageXOffset
-}D=self.innerWidth||document.documentElement.clientWidth||document.body.clientWidth||0;
-G=self.innerHeight||document.documentElement.clientHeight||document.body.clientHeight||0
-}return{t:E,l:C,w:B,h:F,iw:D,ih:G}
-},getMargins:function(G,D){var E=jQuery.curCSS(G,"marginTop")||"";
-var F=jQuery.curCSS(G,"marginRight")||"";
-var B=jQuery.curCSS(G,"marginBottom")||"";
-var C=jQuery.curCSS(G,"marginLeft")||"";
-if(D){return{t:parseInt(E,10)||0,r:parseInt(F,10)||0,b:parseInt(B,10)||0,l:parseInt(C,10)}
-}else{return{t:E,r:F,b:B,l:C}
-}},getPadding:function(G,D){var E=jQuery.curCSS(G,"paddingTop")||"";
-var F=jQuery.curCSS(G,"paddingRight")||"";
-var B=jQuery.curCSS(G,"paddingBottom")||"";
-var C=jQuery.curCSS(G,"paddingLeft")||"";
-if(D){return{t:parseInt(E,10)||0,r:parseInt(F,10)||0,b:parseInt(B,10)||0,l:parseInt(C,10)}
-}else{return{t:E,r:F,b:B,l:C}
-}},getBorder:function(G,D){var E=jQuery.curCSS(G,"borderTopWidth")||"";
-var F=jQuery.curCSS(G,"borderRightWidth")||"";
-var B=jQuery.curCSS(G,"borderBottomWidth")||"";
-var C=jQuery.curCSS(G,"borderLeftWidth")||"";
-if(D){return{t:parseInt(E,10)||0,r:parseInt(F,10)||0,b:parseInt(B,10)||0,l:parseInt(C,10)||0}
-}else{return{t:E,r:F,b:B,l:C}
-}},traverseDOM:function(B,C){C(B);
-B=B.firstChild;
-while(B){EYE.traverseDOM(B,C);
-B=B.nextSibling
-}},getInnerWidth:function(D,B){var C=D.offsetWidth;
-return B?Math.max(D.scrollWidth,C)-C+D.clientWidth:D.clientWidth
-},getInnerHeight:function(D,B){var C=D.offsetHeight;
-return B?Math.max(D.scrollHeight,C)-C+D.clientHeight:D.clientHeight
-},getExtraWidth:function(B){if(A.boxModel){return(parseInt(A.curCSS(B,"paddingLeft"))||0)+(parseInt(A.curCSS(B,"paddingRight"))||0)+(parseInt(A.curCSS(B,"borderLeftWidth"))||0)+(parseInt(A.curCSS(B,"borderRightWidth"))||0)
-}return 0
-},getExtraHeight:function(B){if(A.boxModel){return(parseInt(A.curCSS(B,"paddingTop"))||0)+(parseInt(A.curCSS(B,"paddingBottom"))||0)+(parseInt(A.curCSS(B,"borderTopWidth"))||0)+(parseInt(A.curCSS(B,"borderBottomWidth"))||0)
-}return 0
-},isChildOf:function(D,C,B){if(D==C){return true
-}if(!C||!C.nodeType||C.nodeType!=1){return false
-}if(D.contains&&!A.browser.safari){return D.contains(C)
-}if(D.compareDocumentPosition){return !!(D.compareDocumentPosition(C)&16)
-}var E=C.parentNode;
-while(E&&E!=B){if(E==D){return true
-}E=E.parentNode
-}return false
-},centerEl:function(E,D){var B=EYE.getScroll();
-var C=EYE.getSize(E);
-if(!D||D=="vertically"){A(E).css({top:B.t+((Math.min(B.h,B.ih)-C.hb)/2)+"px"})
-}if(!D||D=="horizontally"){A(E).css({left:B.l+((Math.min(B.w,B.iw)-C.wb)/2)+"px"})
-}}});
-if(!A.easing.easeout){A.easing.easeout=function(D,F,B,E,C){return -E*((F=F/C-1)*F*F*F-1)+B
+/**
+ *
+ * Utilities
+ * Author: Stefan Petre www.eyecon.ro
+ * 
+ */
+(function($) {
+EYE.extend({
+	getPosition : function(e, forceIt)
+	{
+		var x = 0;
+		var y = 0;
+		var es = e.style;
+		var restoreStyles = false;
+		if (forceIt && jQuery.curCSS(e,'display') == 'none') {
+			var oldVisibility = es.visibility;
+			var oldPosition = es.position;
+			restoreStyles = true;
+			es.visibility = 'hidden';
+			es.display = 'block';
+			es.position = 'absolute';
+		}
+		var el = e;
+		if (el.getBoundingClientRect) { // IE
+			var box = el.getBoundingClientRect();
+			x = box.left + Math.max(document.documentElement.scrollLeft, document.body.scrollLeft) - 2;
+			y = box.top + Math.max(document.documentElement.scrollTop, document.body.scrollTop) - 2;
+		} else {
+			x = el.offsetLeft;
+			y = el.offsetTop;
+			el = el.offsetParent;
+			if (e != el) {
+				while (el) {
+					x += el.offsetLeft;
+					y += el.offsetTop;
+					el = el.offsetParent;
+				}
+			}
+			if (jQuery.browser.safari && jQuery.curCSS(e, 'position') == 'absolute' ) {
+				x -= document.body.offsetLeft;
+				y -= document.body.offsetTop;
+			}
+			el = e.parentNode;
+			while (el && el.tagName.toUpperCase() != 'BODY' && el.tagName.toUpperCase() != 'HTML') 
+			{
+				if (jQuery.curCSS(el, 'display') != 'inline') {
+					x -= el.scrollLeft;
+					y -= el.scrollTop;
+				}
+				el = el.parentNode;
+			}
+		}
+		if (restoreStyles == true) {
+			es.display = 'none';
+			es.position = oldPosition;
+			es.visibility = oldVisibility;
+		}
+		return {x:x, y:y};
+	},
+	getSize : function(e)
+	{
+		var w = parseInt(jQuery.curCSS(e,'width'), 10);
+		var h = parseInt(jQuery.curCSS(e,'height'), 10);
+		var wb = 0;
+		var hb = 0;
+		if (jQuery.curCSS(e, 'display') != 'none') {
+			wb = e.offsetWidth;
+			hb = e.offsetHeight;
+		} else {
+			var es = e.style;
+			var oldVisibility = es.visibility;
+			var oldPosition = es.position;
+			es.visibility = 'hidden';
+			es.display = 'block';
+			es.position = 'absolute';
+			wb = e.offsetWidth;
+			hb = e.offsetHeight;
+			es.display = 'none';
+			es.position = oldPosition;
+			es.visibility = oldVisibility;
+		}
+		return {w:w, h:h, wb:wb, hb:hb};
+	},
+	getClient : function(e)
+	{
+		var h, w;
+		if (e) {
+			w = e.clientWidth;
+			h = e.clientHeight;
+		} else {
+			var de = document.documentElement;
+			w = window.innerWidth || self.innerWidth || (de&&de.clientWidth) || document.body.clientWidth;
+			h = window.innerHeight || self.innerHeight || (de&&de.clientHeight) || document.body.clientHeight;
+		}
+		return {w:w,h:h};
+	},
+	getScroll : function (e)
+	{
+		var t=0, l=0, w=0, h=0, iw=0, ih=0;
+		if (e && e.nodeName.toLowerCase() != 'body') {
+			t = e.scrollTop;
+			l = e.scrollLeft;
+			w = e.scrollWidth;
+			h = e.scrollHeight;
+		} else  {
+			if (document.documentElement) {
+				t = document.documentElement.scrollTop;
+				l = document.documentElement.scrollLeft;
+				w = document.documentElement.scrollWidth;
+				h = document.documentElement.scrollHeight;
+			} else if (document.body) {
+				t = document.body.scrollTop;
+				l = document.body.scrollLeft;
+				w = document.body.scrollWidth;
+				h = document.body.scrollHeight;
+			}
+			if (typeof pageYOffset != 'undefined') {
+				t = pageYOffset;
+				l = pageXOffset;
+			}
+			iw = self.innerWidth||document.documentElement.clientWidth||document.body.clientWidth||0;
+			ih = self.innerHeight||document.documentElement.clientHeight||document.body.clientHeight||0;
+		}
+		return { t: t, l: l, w: w, h: h, iw: iw, ih: ih };
+	},
+	getMargins : function(e, toInteger)
+	{
+		var t = jQuery.curCSS(e,'marginTop') || '';
+		var r = jQuery.curCSS(e,'marginRight') || '';
+		var b = jQuery.curCSS(e,'marginBottom') || '';
+		var l = jQuery.curCSS(e,'marginLeft') || '';
+		if (toInteger)
+			return {
+				t: parseInt(t, 10)||0,
+				r: parseInt(r, 10)||0,
+				b: parseInt(b, 10)||0,
+				l: parseInt(l, 10)
+			};
+		else
+			return {t: t, r: r,	b: b, l: l};
+	},
+	getPadding : function(e, toInteger)
+	{
+		var t = jQuery.curCSS(e,'paddingTop') || '';
+		var r = jQuery.curCSS(e,'paddingRight') || '';
+		var b = jQuery.curCSS(e,'paddingBottom') || '';
+		var l = jQuery.curCSS(e,'paddingLeft') || '';
+		if (toInteger)
+			return {
+				t: parseInt(t, 10)||0,
+				r: parseInt(r, 10)||0,
+				b: parseInt(b, 10)||0,
+				l: parseInt(l, 10)
+			};
+		else
+			return {t: t, r: r,	b: b, l: l};
+	},
+	getBorder : function(e, toInteger)
+	{
+		var t = jQuery.curCSS(e,'borderTopWidth') || '';
+		var r = jQuery.curCSS(e,'borderRightWidth') || '';
+		var b = jQuery.curCSS(e,'borderBottomWidth') || '';
+		var l = jQuery.curCSS(e,'borderLeftWidth') || '';
+		if (toInteger)
+			return {
+				t: parseInt(t, 10)||0,
+				r: parseInt(r, 10)||0,
+				b: parseInt(b, 10)||0,
+				l: parseInt(l, 10)||0
+			};
+		else
+			return {t: t, r: r,	b: b, l: l};
+	},
+	traverseDOM : function(nodeEl, func)
+	{
+		func(nodeEl);
+		nodeEl = nodeEl.firstChild;
+		while(nodeEl){
+			EYE.traverseDOM(nodeEl, func);
+			nodeEl = nodeEl.nextSibling;
+		}
+	},
+	getInnerWidth :  function(el, scroll) {
+		var offsetW = el.offsetWidth;
+		return scroll ? Math.max(el.scrollWidth,offsetW) - offsetW + el.clientWidth:el.clientWidth;
+	},
+	getInnerHeight : function(el, scroll) {
+		var offsetH = el.offsetHeight;
+		return scroll ? Math.max(el.scrollHeight,offsetH) - offsetH + el.clientHeight:el.clientHeight;
+	},
+	getExtraWidth : function(el) {
+		if($.boxModel)
+			return (parseInt($.curCSS(el, 'paddingLeft'))||0)
+				+ (parseInt($.curCSS(el, 'paddingRight'))||0)
+				+ (parseInt($.curCSS(el, 'borderLeftWidth'))||0)
+				+ (parseInt($.curCSS(el, 'borderRightWidth'))||0);
+		return 0;
+	},
+	getExtraHeight : function(el) {
+		if($.boxModel)
+			return (parseInt($.curCSS(el, 'paddingTop'))||0)
+				+ (parseInt($.curCSS(el, 'paddingBottom'))||0)
+				+ (parseInt($.curCSS(el, 'borderTopWidth'))||0)
+				+ (parseInt($.curCSS(el, 'borderBottomWidth'))||0);
+		return 0;
+	},
+	isChildOf: function(parentEl, el, container) {
+		if (parentEl == el) {
+			return true;
+		}
+		if (!el || !el.nodeType || el.nodeType != 1) {
+			return false;
+		}
+		if (parentEl.contains && !$.browser.safari) {
+			return parentEl.contains(el);
+		}
+		if ( parentEl.compareDocumentPosition ) {
+			return !!(parentEl.compareDocumentPosition(el) & 16);
+		}
+		var prEl = el.parentNode;
+		while(prEl && prEl != container) {
+			if (prEl == parentEl)
+				return true;
+			prEl = prEl.parentNode;
+		}
+		return false;
+	},
+	centerEl : function(el, axis)
+	{
+		var clientScroll = EYE.getScroll();
+		var size = EYE.getSize(el);
+		if (!axis || axis == 'vertically')
+			$(el).css(
+				{
+					top: clientScroll.t + ((Math.min(clientScroll.h,clientScroll.ih) - size.hb)/2) + 'px'
+				}
+			);
+		if (!axis || axis == 'horizontally')
+			$(el).css(
+				{
+					left: clientScroll.l + ((Math.min(clientScroll.w,clientScroll.iw) - size.wb)/2) + 'px'
+				}
+			);
+	}
+});
+if (!$.easing.easeout) {
+	$.easing.easeout = function(p, n, firstNum, delta, duration) {
+		return -delta * ((n=n/duration-1)*n*n*n - 1) + firstNum;
+	};
 }
-}})(jQuery);
+	
+})(jQuery);

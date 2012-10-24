@@ -23,10 +23,11 @@
 		<div class="lift:MeasureForm" ></div>
 		<div id="measureFormAdditional" >
 			<lift:MeasureSnippet.editMeasures>
-				<table width = "90%">
+				<table width = "95%">
 					<tr>
-					 <td width="50%">
-				  		<table class="multipleSelection" id="measure2DimensionTable" valign="top" >
+					 <td width="40%" valign="top">
+					    <h3>Context</h3><br />
+				  		<table class="protocolTable" id="measure2DimensionTable">
 							<thead>
 								<tr>
 									<td><img src="../images/idea.png" alt="Choice"/></td>
@@ -40,9 +41,11 @@
 							</tbody>
 						</table>
 					 </td>
-					 <td width="50%">
-						<edit:addRange /><edit:removeRange />
-				  		<table class="multipleSelection" id="measureRangeTable" valign="top">
+					 <td width="10%" valign="top"></td>
+					 <td width="50%" valign="top">
+					    <h3>Ranges</h3><edit:addRange /><edit:removeRange /><br />
+						
+				  		<table class="protocolTable" id="measureRangeTable">
 							<thead>
 								<tr>
 									<td>Lower Bound</td>

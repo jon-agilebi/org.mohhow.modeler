@@ -39,8 +39,8 @@
 	<res name="administrationPage" lang="en">Administration</res>
 	<res name="userPage" lang="de">Benutzerverwaltung</res>	
 	<res name="userPage" lang="en">User Administration</res>
-	<res name="helpPage" lang="de">Hilfe</res>	
-	<res name="helpPage" lang="en">Help</res>
+	<res name="aboutPage" lang="de">&Uuml;ber BI Modeler</res>	
+	<res name="aboutPage" lang="en">About BI Modeler</res>
 	<res name="measureEditor" lang="de">Kennzahlen Bearbeiten</res>	
 	<res name="measureEditor" lang="en">Measure Editor</res>
 	<res name="meetingEditor" lang="de">Besprechungen Planen</res>	
@@ -213,6 +213,8 @@
 	<res name="sprintBacklog" lang="en">Backlog</res>
 	<res name="sprintSchedule" lang="de">Sprintplanung</res>	
 	<res name="sprintSchedule" lang="en">Sprint Schedule</res>
+	<res name="sprintReview" lang="de">Sprintreview</res>	
+	<res name="sprintReview" lang="en">Sprint Review</res>
 	<res name="category" lang="de">Kategorie</res>	
 	<res name="category" lang="en">Category</res>
 	<res name="release" lang="de">Release</res>	
@@ -357,6 +359,10 @@
 	<res name="patch" lang="en">Patch</res>
 	<res name="scheduledEnd" lang="de">Geplantes Ende</res>	
 	<res name="scheduledEnd" lang="en">Scheduled End</res>
+	<res name="announcedEnd" lang="de">Angek&uuml;ndigtes Ende</res>	
+	<res name="announcedEnd" lang="en">Announced End</res>
+	<res name="freezeDate" lang="de">Freeze-Datum</res>	
+	<res name="freezeDate" lang="en">Freeze Date</res>
 	<res name="releaseKind" lang="de">Art des Release</res>	
 	<res name="releaseKind" lang="en">Release Kind</res>
 	<res name="developmentSnapshot" lang="de">Entwicklungsstand</res>	
@@ -502,7 +508,7 @@
 	<res name="requiredStorageTime" lang="de">Mindestspeicherzeit</res>
 	<res name="requiredStorageTime" lang="en">Required Storage Time</res>
 	<res name="noAggregation" lang="de">Keine Aggregation</res>
-	<res name="noAggregation" lang="en">No Aggrgation</res>
+	<res name="noAggregation" lang="en">No Aggregation</res>
 	<res name="sum" lang="de">Summe</res>
 	<res name="sum" lang="en">Sum</res>
 	<res name="min" lang="de">Minimum</res>
@@ -511,6 +517,10 @@
 	<res name="max" lang="en">Maximal</res>
 	<res name="avg" lang="de">Durchschnitt</res>
 	<res name="avg" lang="en">Average</res>
+	<res name="count" lang="de">Anzahl</res>
+	<res name="count" lang="en">Count</res>
+	<res name="countDistinct" lang="de">Unterschiedliche Anzahl</res>
+	<res name="countDistinct" lang="en">Count Distinct</res>
 	<res name="addSprint" lang="de">Sprint hinzuf&uuml;gen</res>
 	<res name="addSprint" lang="en">Add Sprint</res>
 	<res name="removeLatestSprint" lang="de">Letzten Sprint l&ouml;schen</res>
@@ -553,6 +563,12 @@
 	<res name="numberWorkingDays" lang="en">Number of Working Days</res>
 	<res name="sprintObjective" lang="de">Sprintziel</res>
 	<res name="sprintObjective" lang="en">Sprint Objective</res>
+	<res name="sprintBegin" lang="de">Sprintanfang</res>
+	<res name="sprintBegin" lang="en">Sprint Begin</res>
+	<res name="sprintEnd" lang="de">Sprintende</res>
+	<res name="sprintEnd" lang="en">Sprint End</res>
+	<res name="numberOfWorkingDays" lang="de">Anzahl Arbeitstage</res>
+	<res name="numberOfWorkingDays" lang="en">Number of Working Days</res>
 	<res name="addSpecification" lang="de">Spezifikation hinzuf&uuml;gen</res>
 	<res name="addSpecification" lang="en">Add Specification</res>
 	<res name="removeSpecification" lang="de">Spezifikation l&ouml;schen</res>
@@ -562,6 +578,8 @@
 	<res name="removeBlock" lang="de">Block l&ouml;schen</res>
 	<res name="removeBlock" lang="en">Remove Block</res>
 	<res name="noBlockSpecificationChoice" lang="de">Bitte w&auml;hlen Sie den Block, der kopiert werden soll und die Spezifikation, die den Block enthalten soll!</res>
+	<res name="noSpecificationChoice" lang="en">Please choose the specification which shall contain the block!</res>
+	<res name="noSpecificationChoice" lang="de">Bitte w&auml;hlen Sie die Spezifikation, die den Block enthalten soll!</res>
 	<res name="noBlockSpecificationChoice" lang="en">Please choose the block to be copied and the specification which shall contain the block!</res>
 	<res name="status" lang="de">Status</res>
 	<res name="status" lang="en">Status</res>
@@ -617,4 +635,122 @@
 	<res name="labelPadding" lang="en">Label Padding</res>
 	<res name="labelText" lang="de">Label</res>
 	<res name="labelText" lang="en">Label</res>
+	<res name="status" lang="de">Status</res>
+	<res name="status" lang="en">Status</res>
+	<res name="metadata" lang="de">Metadaten</res>
+	<res name="metadata" lang="en">Meta Data</res>
+	<res name="deploy" lang="de">Deployment</res>
+	<res name="deploy" lang="en">Deploy</res>
+	<res name="transport" lang="de">Transport</res>
+	<res name="transport" lang="en">Transport</res>
+	<res name="noPhysicalTable" lang="de">keine Tabellenbeschreibung vorhanden</res>
+	<res name="noPhysicalTable" lang="en">no table description available</res>
+	<res name="schema" lang="de">Schema</res>
+	<res name="schema" lang="en">Schema</res>
+	<res name="tableName" lang="de">Tabellenname</res>
+	<res name="tableName" lang="en">Table Name</res>
+	<res name="sqlDataType" lang="de">SQL Datentyp</res>
+	<res name="sqlDataType" lang="en">SQL Data Type</res>
+	<res name="length" lang="de">L&auml;nge</res>
+	<res name="length" lang="en">Length</res>
+	<res name="precision" lang="de">Pr&auml;zision</res>
+	<res name="precision" lang="en">Precision</res>
+	<res name="isNotNull" lang="de">NOT NULL</res>
+	<res name="isNotNull" lang="en">NOT NULL</res>
+	<res name="isPrimaryKey" lang="de">PK</res>
+	<res name="isPrimaryKey" lang="en">PK</res>
+	<res name="references" lang="de">Referenz</res>
+	<res name="references" lang="en">References</res>
+	<res name="partOfUniqueKey" lang="de">UQ</res>
+	<res name="partOfUniqueKey" lang="en">UQ</res>
+	<res name="comment" lang="de">Kommentar</res>
+	<res name="comment" lang="en">Comment</res>
+	<res name="fact" lang="de">Faktentabelle</res>
+	<res name="fact" lang="en">Fact Table</res>
+	<res name="measureDimension" lang="de">Kennzahlendimension</res>
+	<res name="measureDimension" lang="en">Measure Dimension</res>
+	<res name="dateDimension" lang="de">Zeitdimension</res>
+	<res name="dateDimension" lang="en">Date Dimension</res>
+	<res name="fact" lang="de">Faktentabelle</res>
+	<res name="fact" lang="en">Fact Table</res>
+	<res name="snapshotFact" lang="de">Faktentabelle (Snapshot)</res>
+	<res name="snapshotFact" lang="en">Snapshot Fact Table</res>
+	<res name="transactionFact" lang="de">Faktentabelle (Transaktion)</res>
+	<res name="transactionFact" lang="en">Transaction Fact Table</res>
+	<res name="accountFact" lang="de">Faktentabelle (Kontenmodell)</res>
+	<res name="accountFact" lang="en">Account Fact Table</res>
+	<res name="accountSnapshotFact" lang="de">Faktentabelle (Kontenmodell, Snapshot)</res>
+	<res name="accountSnapshotFact" lang="en">Account Snapshot Fact Table</res>
+	<res name="accountTransactionFact" lang="de">Faktentabelle (Kontenmodell, Transaktion)</res>
+	<res name="accountTransactionFact" lang="en">Account Transaction Fact Table</res>
+	<res name="noReleaseChosen" lang="de">Bitte w&auml;hlen Sie zuerst ein Release aus!</res>
+	<res name="noReleaseChosen" lang="en">Please choose a release at first!</res>
+	<res name="announcementRestriction" lang="de">Sie k&ouml;nnen nur Ank&uuml;ndigungen f&uuml;r aktive Projekte durchf&uuml;hren!</res>
+	<res name="announcementRestriction" lang="en">You can only make announcements on active projects!</res>
+	<res name="freezeRestriction" lang="de">Sie k&ouml;nnen erst nach einer Ank&uuml;ndigung ein Projekt einfrieren!</res>
+	<res name="freezeRestriction" lang="en">You can only freeze announced projects!</res>
+	<res name="announceReleaseFreeze" lang="de">Release Freeze ank&uuml;ndigen</res>
+	<res name="announceReleaseFreeze" lang="en">Announce Release Freeze</res>
+	<res name="freeze" lang="de">Einfrieren</res>
+	<res name="freeze" lang="en">Freeze</res>
+	<res name="generate" lang="de">Release Erzeugen</res>
+	<res name="generate" lang="en">Generate Release</res>
+	<res name="host" lang="de">Host</res>
+	<res name="host" lang="en">Host</res>
+	<res name="port" lang="de">Port</res>
+	<res name="port" lang="en">Port</res>
+	<res name="system" lang="de">System</res>
+	<res name="system" lang="en">System</res>
+	<res name="environment" lang="de">Umgebung</res>
+	<res name="environment" lang="en">Environment</res>
+	<res name="dataStores" lang="de">Backendsysteme</res>
+	<res name="dataStores" lang="en">Data Stores</res>
+	<res name="alias" lang="de">Alias</res>
+	<res name="alias" lang="en">Alias</res>
+	<res name="connectionString" lang="de">Verbindungsbeschreibung</res>
+	<res name="connectionString" lang="en">Connection String</res>
+	<res name="password" lang="de">Passwort</res>
+	<res name="password" lang="en">Password</res>
+	<res name="driver" lang="de">Treiber</res>
+	<res name="driver" lang="en">Driver</res>
+	<res name="markAsSynonym" lang="de">Synonym</res>
+	<res name="markAsSynonym" lang="en">Synonym</res>
+	<res name="rule" lang="de">Regel</res>
+	<res name="rule" lang="en">Rule</res>
+	<res name="generic" lang="de">Generischer Block</res>
+	<res name="generic" lang="en">Generic Block</res>
+	<res name="scorecard" lang="de">Agile Scorecard</res>
+	<res name="scorecard" lang="en">Agile Scorecard</res>
+	<res name="rest" lang="de">Rest Service</res>
+	<res name="rest" lang="en">Rest Service</res>
+	<res name="addBlock" lang="de">Block hinzuf&uuml;gen</res>
+	<res name="addBlock" lang="en">Add Block</res>
+	<res name="linkRole" lang="de">Rolle Verkn&uuml;pfen</res>
+	<res name="linkRole" lang="en">Link Role</res>
+	<res name="linkGroup" lang="de">Gruppe verkn&uuml;pfen</res>
+	<res name="linkGroup" lang="en">Link Group</res>
+	<res name="searchTerm" lang="de">Suchbegriff</res>
+	<res name="searchTerm" lang="en">Search Term</res>
+	<res name="displayAttribute" lang="de">Anzeigeattribut</res>
+	<res name="displayAttribute" lang="en">Display Attribute</res>
+	<res name="memberAttribute" lang="de">Mitgliederattribut</res>
+	<res name="memberAttribute" lang="en">Member Attribute</res>
+	<res name="noDevNode" lang="de">Es ist keine Entwicklungsumgebung vorhanden!</res>
+	<res name="noDevNode" lang="en">There exists no development environment!</res>
+	<res name="noReleasesOnNode" lang="de">Es wurden keine Releases in der Entwicklungsumgebung installiert!</res>
+	<res name="noReleasesOnNode" lang="en">There are no releases on the development environment!</res>
+	<res name="noSystemChosen" lang="de">Bitte zuerst ein System ausw&auml;hlen!</res>
+	<res name="noSystemChosen" lang="en">Please choose a system at first!</res>
+	<res name="noChoice" lang="de">Bitte zuerst eine Auswahl treffen!</res>
+	<res name="noChoice" lang="en">Please make a choice at first!</res>
+	<res name="filter" lang="de">Filter</res>
+	<res name="filter" lang="en">Filter</res>
+	<res name="rotate" lang="de">Drehen</res>
+	<res name="rotate" lang="en">Rotate</res>
+	<res name="clean" lang="de">Aufr&auml;umen</res>
+	<res name="clean" lang="en">Clean</res>
+	<res name="pie" lang="de">Tortendiagramm</res>
+	<res name="pie" lang="en">Pie Diagram</res>
+	
+	
 </resources>

@@ -1,487 +1,948 @@
 var paper;
 var editPaper;
-var symbols=[];
-var elementTitles=[];
-var fourMarker=[];
-var frames=[];
-var connections=[];
+var symbols = [];
+var elementTitles = [];
+var fourMarker = [];
+var frames = [];
+var connections = [];
 var textToEdit;
 var lineToDraw;
 var source;
 var focus;
 var elementToRemove;
-var removeIcon=[];
-var someoneHasFocus=false;
-var hasSource=false;
-var superfluousClones=[];
-var justALineToRemove=false;
-function setSymbolAttributes(A){A.attr("fill","lightgray");
-A.attr("stroke","black")
-}function setFrameAttributes(A){A.attr("fill","#fff");
-A.attr("stroke","#000")
-}function updateElements(A,F,D,E){var B;
-if(D=="hierarchy"){B=[{cx:16+A,cy:18+F},{cx:8+A,cy:32+F},{cx:24+A,cy:32+F},{path:movePath("M16,18L8,32M16,18L24,32",A,F)}]
-}else{if(D=="cube"){B=[{path:movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",A,F)}]
-}else{if(D=="attribute"){B=[{path:movePath("M7,20L14,13L21,20L14,27Z",A,F)}]
-}else{if(D=="dimension"){B=[{x:6+A,y:9+F},{x:18+A,y:F+4},{x:23+A,y:9+F},{x:4+A,y:23+F},{path:movePath("M6,9L18,5.5M18,9L23,9M6,21L6,23",A,F)}]
-}else{if(D=="level"){B=[{path:movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",A,F)},{path:movePath("M12,16L8,24L16,24Z",A,F)},{path:movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",A,F)}]
-}else{if(D=="member"){B=[{path:movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",A,F)},{cx:12+A,cy:20+F},{path:movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",A,F)}]
-}else{if(D=="scope"){B=[{path:movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",A,F)},{path:movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",A,F)}]
-}else{if(D=="context"){B=[{path:movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",A,F)},{path:movePath("M6,6A11,11,0,1,1,20,20",A,F)}]
-}}}}}}}}for(var C=0;
-C<E.length;
-C++){E[C].attr(B[C])
-}}function computeElements(G,F,E,B){if(E=="hierarchy"){var A=B.path(movePath("M16,18L8,32M16,18L24,32",G,F));
-setSymbolAttributes(A);
-var K=B.circle(16+G,18+F,4);
-setSymbolAttributes(K);
-var J=B.circle(8+G,32+F,4);
-setSymbolAttributes(J);
-var H=B.circle(24+G,32+F,4);
-setSymbolAttributes(H);
-return[K,J,H,A]
-}else{if(E=="cube"){var I=B.path(movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",G,F));
-setSymbolAttributes(I);
-return[I]
-}else{if(E=="attribute"){var I=B.path(movePath("M7,20L14,13L21,20L14,27Z",G,F));
-setSymbolAttributes(I);
-return[I]
-}else{if(E=="dimension"){var P=B.rect(6+G,9+F,12,12);
-setSymbolAttributes(P);
-var N=B.rect(18+G,4+F,3,3);
-setSymbolAttributes(N);
-var M=B.rect(23+G,9+F,3,3);
-setSymbolAttributes(M);
-var L=B.rect(4+G,23+F,3,3);
-setSymbolAttributes(L);
-var I=B.path(movePath("M6,9L18,5.5M18,9L23,9M6,21L6,23",G,F));
-setSymbolAttributes(I);
-return[P,N,M,L,I]
-}else{if(E=="level"){var D=B.path(movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",G,F));
-D.attr("stroke","black");
-D.attr("stroke-width",1.5);
-var O=B.path(movePath("M12,16L8,24L16,24Z",G,F));
-setSymbolAttributes(O);
-var Q=B.path(movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",G,F));
-Q.attr("stroke","black");
-Q.attr("stroke-width",1.5);
-return[D,O,Q]
-}else{if(E=="member"){var D=B.path(movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",G,F));
-D.attr("stroke","black");
-D.attr("stroke-width",1.5);
-var C=B.circle(12+G,20+F,4);
-setSymbolAttributes(C);
-var Q=B.path(movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",G,F));
-Q.attr("stroke","black");
-Q.attr("stroke-width",1.5);
-return[D,C,Q]
-}else{if(E=="scope"){var D=B.path(movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",G,F));
-D.attr("stroke","black");
-D.attr("stroke-width",1.5);
-var Q=B.path(movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",G,F));
-Q.attr("stroke","black");
-Q.attr("stroke-width",1.5);
-return[D,Q]
-}else{if(E=="context"){var I=B.path(movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",G,F));
-setSymbolAttributes(I);
-var R=B.path(movePath("M6,6A11,11,0,1,1,20,20",G,F));
-R.attr("stroke-dasharry","-");
-return[I,R]
-}else{return[]
-}}}}}}}}}Raphael.el.getStatus=function(){for(var A=0;
-A<elementTitles.length;
-A++){if(elementTitles[A].frame==this){return elementTitles[A].status
-}}return"unknown"
+var removeIcon = [];
+var someoneHasFocus = false;
+var hasSource = false;
+var superfluousClones = [];
+var justALineToRemove = false;
+
+function setSymbolAttributes(symbol) {
+	symbol.attr("fill", "lightgray");
+	symbol.attr("stroke", "black");
+}
+
+function setFrameAttributes(frame) {
+	frame.attr("fill", "#fff");
+	frame.attr("stroke", "#000");
+}
+
+function updateElements(x, y, kind, elements) {
+	var attributes;
+
+	if(kind == "hierarchy") {
+		attributes = [{cx: 16 + x, cy: 18 + y}, {cx: 8 + x, cy: 32 + y}, {cx: 24 + x, cy: 32 + y}, {path: movePath("M16,18L8,32M16,18L24,32",x,y)}];
+	} 
+	else if (kind == "cube") {
+		attributes = [{path: movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y)}];
+	} 
+	else if (kind == "attribute") {
+		attributes = [{path:movePath("M7,20L14,13L21,20L14,27Z",x,y)}];
+	}
+	else if (kind == "dimension") {
+		attributes = [{x: 6 + x, y: 9 + y}, {x: 18 + x, y: y+4}, {x: 23 + x, y: 9 + y}, {x: 4+x, y: 23 + y}, {path: movePath("M6,9L18,5.5M18,9L23,9M6,21L6,23",x,y)}];
+	}	
+	else if (kind == "level") {
+		attributes = [{path: movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y)}, {path: movePath("M12,16L8,24L16,24Z",x,y)}, {path: movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y)}];
+	}
+	else if (kind == "member") {
+		attributes = [{path: movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y)}, {cx: 12 + x, cy: 20 + y}, {path: movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y)}];
+	}
+	else if (kind == "scope") {
+		attributes = [{path: movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y)}, {path: movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y)}];
+	}
+	else if (kind == "context") {
+		attributes = [{path: movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y)}, {path:movePath("M6,6A11,11,0,1,1,20,20",x,y)}];
+	}
+	
+	for(var i = 0; i < elements.length; i++) {
+		elements[i].attr(attributes[i]);
+	} 
+}
+
+function computeElements(x, y, kind, myPaper) {
+	
+	if(kind == "hierarchy") {
+		var p1 = myPaper.path(movePath("M16,18L8,32M16,18L24,32",x,y));
+		setSymbolAttributes(p1);
+		var c1 = myPaper.circle(16+x, 18+y, 4);
+		setSymbolAttributes(c1);
+		var c2 = myPaper.circle(8+x, 32+y, 4);
+		setSymbolAttributes(c2);
+		var c3 = myPaper.circle(24+x, 32+y, 4);
+		setSymbolAttributes(c3);
+		
+		return [c1, c2, c3, p1];
+	}
+	else if (kind == "cube") {
+		var p = myPaper.path(movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y));
+		setSymbolAttributes(p);
+	    return [p];
+	}
+	else if (kind == "attribute") {
+		var p = myPaper.path(movePath("M7,20L14,13L21,20L14,27Z",x,y));
+		setSymbolAttributes(p);
+	    return [p];
+	}
+	else if (kind == "dimension") {
+		var r1 = myPaper.rect(6+x,9+y,12,12);
+		setSymbolAttributes(r1);
+		var r2 = myPaper.rect(18+x,4+y,3,3);
+		setSymbolAttributes(r2);
+		var r3 = myPaper.rect(23+x,9+y,3,3);
+		setSymbolAttributes(r3);
+		var r4 = myPaper.rect(4+x,23+y,3,3);
+		setSymbolAttributes(r4);
+		var p = myPaper.path(movePath("M6,9L18,5.5M18,9L23,9M6,21L6,23",x,y));
+		setSymbolAttributes(p);
+		
+	    return [r1, r2, r3, r4, p];
+	}	
+	else if (kind == "level") {
+		
+		var lbracket = myPaper.path(movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y));
+		lbracket.attr("stroke", "black");
+		lbracket.attr("stroke-width", 1.5);
+		var triangle = myPaper.path(movePath("M12,16L8,24L16,24Z",x,y));
+		setSymbolAttributes(triangle);
+		var rbracket = myPaper.path(movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y));
+		rbracket.attr("stroke", "black");
+		rbracket.attr("stroke-width", 1.5);
+	    return [lbracket, triangle, rbracket];
+	}
+	else if (kind == "member") {
+		
+		var lbracket = myPaper.path(movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y));
+		lbracket.attr("stroke", "black");
+		lbracket.attr("stroke-width", 1.5);
+		var circle = myPaper.circle(12+x, 20+y, 4);
+		setSymbolAttributes(circle);
+		var rbracket = myPaper.path(movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y));
+		rbracket.attr("stroke", "black");
+		rbracket.attr("stroke-width", 1.5);
+	    return [lbracket, circle, rbracket];
+	}
+	else if (kind == "scope") {
+		
+		var lbracket = myPaper.path(movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y));
+		lbracket.attr("stroke", "black");
+		lbracket.attr("stroke-width", 1.5);
+		var rbracket = myPaper.path(movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y));
+		rbracket.attr("stroke", "black");
+		rbracket.attr("stroke-width", 1.5);
+	    return [lbracket, rbracket];
+	}
+	else if (kind == "context") {
+		var p = myPaper.path(movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y));
+		setSymbolAttributes(p);
+		var c = myPaper.path(movePath("M6,6A11,11,0,1,1,20,20",x,y));
+		c.attr("stroke-dasharry", "-");
+	    return [p, c];
+	}
+	else return [];
+}
+
+Raphael.el.getStatus = function() {
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].frame == this) {	
+			return elementTitles[i].status;
+		}
+	}
+	
+	return "unknown";
+}
+
+Raphael.el.getElementType = function() {
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].frame == this) {	
+			return elementTitles[i].elementType;
+		}
+	}
+	
+	return "unknown";
+}
+
+Raphael.el.getVertexId = function() {
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		 if(elementTitles[i].frame == this) {	
+			return elementTitles[i].vertexId;
+		 }
+	 }
+		
+	 return null;
+}
+
+Raphael.el.setStatus = function(status) {
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].frame == this) {	
+		 elementTitles[i].status = status;
+		}
+	}
+}
+
+Raphael.el.setVertexId = function(vertexId) {
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].frame == this) {	
+		 elementTitles[i].vertexId = vertexId;
+		}
+	}
+}
+
+Raphael.el.isInBox = function(x, y) {
+	var box = this.getBBox();
+	return box.x < x && x < box.x + box.width && box.y < y && y < box.y + box.height;
+}
+
+Raphael.fn.symbol  = function(kind, frame) {
+	
+	var x = frame.getBBox().x;
+	var y = frame.getBBox().y;
+	var elements = computeElements(Number(x), Number(y), kind, this);
+	
+	return {
+		kind: kind,
+		elements: elements,
+		frame: frame
+	};
+}
+
+Raphael.fn.connectionMarker  = function(x, y, frame) {
+	var att = {"fill": "#00d", "fill-opacity": .4};
+	var marker = this.rect(x, y, 4, 4);
+	marker.attr(att);
+	return {
+		marker: marker,
+		frame: frame
+	};
+}
+
+function getModelConnection(source, target) {
+	
+ var bb1 = source.getBBox(),
+     bb2 = target.getBBox(),
+     p = [{x: bb1.x + bb1.width / 2, y: bb1.y - 1},
+     {x: bb1.x + bb1.width / 2, y: bb1.y + bb1.height + 1},
+     {x: bb1.x - 1, y: bb1.y + bb1.height / 2},
+     {x: bb1.x + bb1.width + 1, y: bb1.y + bb1.height / 2},
+     {x: bb2.x + bb2.width / 2, y: bb2.y - 1},
+     {x: bb2.x + bb2.width / 2, y: bb2.y + bb2.height + 1},
+     {x: bb2.x - 1, y: bb2.y + bb2.height / 2},
+     {x: bb2.x + bb2.width + 1, y: bb2.y + bb2.height / 2}],
+     d = {}, dis = [];
+
+ for (var i = 0; i < 4; i++) {
+    for (var j = 4; j < 8; j++) {
+        var dx = Math.abs(p[i].x - p[j].x),
+            dy = Math.abs(p[i].y - p[j].y);
+        if ((i == j - 4) || (((i != 3 && j != 6) || p[i].x < p[j].x) && ((i != 2 && j != 7) || p[i].x > p[j].x) && ((i != 0 && j != 5) || p[i].y > p[j].y) && ((i != 1 && j != 4) || p[i].y < p[j].y))) {
+            dis.push(dx + dy);
+            d[dis[dis.length - 1]] = [i, j];
+        }
+    }
+ }
+ if (dis.length == 0) {
+    var res = [0, 4];
+ } else {
+    res = d[Math.min.apply(Math, dis)];
+ }
+ var x1 = p[res[0]].x,
+     y1 = p[res[0]].y,
+     x4 = p[res[1]].x,
+     y4 = p[res[1]].y;
+ dx = Math.max(Math.abs(x1 - x4) / 2, 10);
+ dy = Math.max(Math.abs(y1 - y4) / 2, 10);
+ var x2 = [x1, x1, x1 - dx, x1 + dx][res[0]].toFixed(3),
+     y2 = [y1 - dy, y1 + dy, y1, y1][res[0]].toFixed(3),
+     x3 = [0, 0, 0, 0, x4, x4, x4 - dx, x4 + dx][res[1]].toFixed(3),
+     y3 = [0, 0, 0, 0, y1 + dy, y1 - dy, y4, y4][res[1]].toFixed(3);
+
+ return path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3)].join(",");	
+}
+
+Raphael.fn.connection = function (source, target) {
+	var path = getModelConnection(source, target);
+	
+	return {
+        line: this.path(path).attr({stroke: "#000", fill: "none"}).hover(markLine, unmarkLine),
+        from: source,
+        to: target
+    };
 };
-Raphael.el.getElementType=function(){for(var A=0;
-A<elementTitles.length;
-A++){if(elementTitles[A].frame==this){return elementTitles[A].elementType
-}}return"unknown"
+
+function updateModelConnection(connection) {
+	var path = getModelConnection(connection.from, connection.to);
+	connection.line.attr({path: path});
+}
+
+function moveSymbol(symbol) {
+ var x = symbol.frame.getBBox().x;
+ var y = symbol.frame.getBBox().y;
+ updateElements(Number(x), Number(y), symbol.kind, symbol.elements);
+}
+
+Raphael.fn.elementTitle = function(text, frame, elementType, detail, vertexId) {
+	var x = Number(frame.getBBox().x);
+	var y = Number(frame.getBBox().y);
+	
+	var elm = this.text(x + 60, y + 20, text);
+	elm.dblclick(showDialog);
+	
+	return {
+		element: elm,
+		frame: frame,
+		status: "prototype",
+		text: text,
+		elementType: elementType,
+		detail: detail,
+		vertexId: vertexId
+	};
+}
+
+var showDialog = function () {
+	
+	var thisStatus = "prototype";
+	var thisKind;
+	var someDetail;
+	var someUsage;
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].element == this) {	
+			thisStatus = elementTitles[i].status;
+			thisKind = elementTitles[i].elementType;
+			someDetail = elementTitles[i].detail;
+			someUsage = elementTitles[i].usage;
+		}
+	 }
+	
+	if(thisStatus != "prototype")
+	{
+		textToEdit = this;
+		var text = "";
+		
+		
+		if(!(this.attr("text").substring(0,2) == "<<")) text = this.attr("text");
+		
+		var label1 = "<label>Name</label>";
+		var nameInput1 = "<input type='text' id= 'modalModelTextInput' value='";
+		var nameInput2 = "' />";
+		
+		var cancel = "<input type='button' value='Cancel' class='standardButton' style='float: right' onclick='$.unblockUI();' />";
+		var save = "<input type='button' value='Save' class='standardButton' style='float: right' onclick='saveText()' />";
+		
+		if(thisKind == "attribute") {
+			var pattern;
+			var realize;
+			
+			if(someDetail) pattern = "<input type='text' id= 'modalModelAttributePatternInput' value='" + someDetail + "'/>";
+			else pattern = "<input type='text' id= 'modalModelAttributePatternInput' />";
+			
+			if(someUsage) realize = "<input type='text' id= 'modalModelAttributeUsageInput' value='" + someUsage + "'/>";
+			else realize = "<input type='text' id= 'modalModelAttributeUsageInput' />";
+			
+			$.blockUI({message: "<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>" + 
+				                 nameInput1 + text + nameInput2 + "</td></tr><tr><td><label>Pattern</label></td><td>" 
+				                 + pattern + "</td></tr><tr><td><label>Realises</label></td><td>" + realize + "</td></tr></table><br />"+ cancel + save + "</div>"});
+			
+		}
+		else if(thisKind == "dimension" || thisKind == "cube") {
+			
+			var initialGrowth;
+			var growthPerLoad;
+		
+			if(someDetail && someDetail.split(";").length == 2) {
+				var bothValues = someDetail.split(";")
+				initialGrowth = "<input type='text' id= 'modalModelAttributePatternInput' value='" + bothValues[0] + "'/>";
+				growthPerLoad = "<input type='text' id= 'modalModelAttributeAdditionalPatternInput' value='" + bothValues[1] + "'/>";
+			}
+			else {
+				initialGrowth = "<input type='text' id= 'modalModelAttributePatternInput' />";
+				growthPerLoad = "<input type='text' id= 'modalModelAttributeAdditionalPatternInput'/>";
+			}
+			
+			$.blockUI({message: "<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>" + 
+				                 nameInput1 + text + nameInput2 + "</td></tr><tr><td><label>Estimated initial size</label></td><td>" 
+				                 + initialGrowth + "</td></tr><tr><td><label>Estimated growth per load</label></td><td>" 
+				                 + growthPerLoad + "</td></tr></table><br />"+ cancel + save + "</div>"});
+		}
+		else {
+	
+			$.blockUI({message: "<div class='blockDialogue'>" + label1 + nameInput1 + text + nameInput2 + "<br />" + cancel + save + "</div>"});
+		}
+	}
+}
+
+function saveText() {
+
+ var modelId = null;
+ var vertexId = 0;
+ 
+ for(var i = 0; i < elementTitles.length ;i++) {
+	if(elementTitles[i].element  == textToEdit) {
+		modelId = 	elementTitles[i].frame.id;
+		vertexId = elementTitles[i].vertexId;
+	}
+ }
+	
+ var text = $('#modalModelTextInput').val();
+ var detailText = $('#modalModelAttributePatternInput').val();
+ var additionalDetailText = $('#modalModelAttributeAdditionalPatternInput').val();
+ var usageText = $('#modalModelAttributeUsageInput').val();
+ 
+ if(additionalDetailText && additionalDetailText.length > 0) detailText = detailText + ";" + additionalDetailText;
+ 
+ if(vertexId > 0) {
+	  textToEdit.attr('text',text);
+	  textToEdit.attr('detail', detailText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] elementName").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] elementName").append(text);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] detail").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] detail").append(detailText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").append(usageText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] status").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] status").append("changed");
+	  $.unblockUI();
+ }
+ else if(modelId) {
+	  textToEdit.attr('text',text);
+	  textToEdit.attr('detail', detailText);
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] elementName").empty();
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] elementName").append(text);
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] detail").empty();
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] detail").append(detailText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").append(usageText);
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] status").empty();
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] status").append("changed");
+	  $.unblockUI();
+ }
+}
+
+function moveTitle(title) {
+	var x = title.frame.getBBox().x;
+	var y = title.frame.getBBox().y;
+	var att = {x: Number(x) + 60, y: Number(y) + 20};
+	title.element.attr(att);
+}
+
+window.onload = function () {
+	paper = Raphael(460, 80, 800, 650);
+	createCanvas();
+}
+
+function movePath(path, dx, dy) {
+
+	var text = String(path);
+	var parts = text.trim().split(/(\D)/);
+	var k = 0;
+	var leastLetter;
+	
+	for(var j = 0; j < parts.length; j++) {
+		if(parts[j] == ',') {  
+			k++;
+		}
+		else if(parts[j].match(/\d+/)) {
+			
+			var help = Number(parts[j]);
+			
+			if(leastLetter != 'A') {
+				if (k == 0) parts[j] = help + Number(dx); else parts[j] = help + Number(dy);
+			}
+			else {
+				if (k == 5) parts[j] = help + Number(dx); 
+				else if (k == 6) parts[j] = help + Number(dy);
+			}
+		}
+		else if(parts[j].match(/[MTLA]/)) {
+			leastLetter = parts[j];
+			k = 0;
+		}
+	}
+	
+	return parts.join('');
+}
+
+function createCanvas() {
+	
+	var canvas = paper.rect(0, 0, 800, 650);
+	canvas.attr("fill", "#ffa");
+	canvas.attr("stroke", "#000");	
+}
+
+function createEditCanvas() {
+	
+	paper.clear();
+	editPaper = Raphael(180, 60, 1096, 684);
+	var bigCanvas = editPaper.rect(0,0, 1096, 684);
+	bigCanvas.attr("fill", "#ffa");
+	bigCanvas.attr("stroke", "#000");
+	
+	var leftCanvas = editPaper.rect(5, 5, 274, 674);
+	leftCanvas.attr("fill", "#ffd");
+	leftCanvas.attr("stroke", "#000");
+}
+
+var startMove = function() {
+	
+	if(this.getStatus() == "prototype") {
+		
+		var clone = this.clone();
+		clone.drag(move, startMove, stopMove);
+		
+		for(var i = 0; i < symbols.length; i++) {
+			if(symbols[i].frame == this) {
+			 symbols.push(editPaper.symbol(symbols[i].kind, clone));	
+			}
+		}
+		
+		for(var i = 0; i < elementTitles.length; i++) {
+			 if(elementTitles[i].frame == this) {	
+				 var newTitle = editPaper.elementTitle(elementTitles[i].text, clone, elementTitles[i].elementType, null, "m" + this.id);
+				 elementTitles.push(newTitle);
+			}
+		}
+	}
+	
+	if(this.type == "path") {
+		this.opath = this.attr("path");
+	}
+	else {
+		this.ox = this.attr("x");
+		this.oy = this.attr("y");
+	} 
+
+}
+
+var move = function(dx, dy) {
+	
+	removeConnectionMarker();
+
+	if(this.type == "path") {
+		var att = {path: movePath(this.opath, dx, dy)};
+		this.attr(att);
+	}
+	else { 
+		var att = {x: Number(this.ox) + Number(dx), y: Number(this.oy) + Number(dy)};
+		this.attr(att);	
+	}
+	
+	for(var k = 0; k < connections.length; k++) {
+		updateModelConnection(connections[k]);
+	}
+	
+	for(var j = 0; j < elementTitles.length; j++) {
+		
+		if(elementTitles[j].frame == this) {
+			
+			moveTitle(elementTitles[j]);
+		}	
+	}
+
+	for(var i = 0; i < symbols.length; i++) {
+		if(symbols[i].frame == this) {
+			moveSymbol(symbols[i]);
+		}	
+	}
+	
+}
+
+function determineModelOrVertexId(elm, isVertex) {
+	
+	var modelId = -1;
+	var vertexId = -1;
+	
+	for(var i = 0; i < elementTitles.length ;i++) {
+		if(elementTitles[i].frame  == elm) {
+			vertexId = elementTitles[i].vertexId;
+			modelId = elementTitles[i].modelId;
+			break;
+		}
+	}
+	
+	if(isVertex) return vertexId; else return modelId;
+}
+
+var stopMove = function() {
+	
+	var x = this.getBBox().x;
+	var y = this.getBBox().y;
+	var vertexId = -1;
+	var modelId = -1;
+	
+	if (x < 280) {
+		this.hide();
+	} 
+	else {
+		
+		for(var i = 0; i < elementTitles.length ;i++) {
+			if(elementTitles[i].frame  == this) {
+				vertexId = elementTitles[i].vertexId;
+				modelId = elementTitles[i].modelId;
+				break;
+			}
+		}
+		
+		if(this.getStatus() == "prototype") {
+			
+			this.setStatus("initial");
+			this.setVertexId("m" + this.id);
+			this.hover(getFocus, leaveFocus);
+			frames.push(this);
+			$('#logicalModelVertices').append("<v modelId='" + this.id + "' vertexId='m"+ this.id + "'><elementType>" + this.getElementType() + "</elementType><elementName></elementName><x>" + x + "</x><y>" + y + "</y><detail></detail><scale>1</scale><usage>0</usage><status>new</status></v>");
+		}
+		else if (modelId > 0) {
+			
+			$("#logicalModelVertices v[modelId='" + this.id + "'] x").empty();
+			$("#logicalModelVertices v[modelId='" + this.id + "'] x").append(x);
+			$("#logicalModelVertices v[modelId='" + this.id + "'] y").empty();
+			$("#logicalModelVertices v[modelId='" + this.id + "'] y").append(y);
+			$("#logicalModelVertices v[modelId='" + this.id + "'] status").empty();
+			$("#logicalModelVertices v[modelId='" + this.id + "'] status").append("changed");
+		}
+		else {
+			
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] x").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] x").append(x);
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] y").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] y").append(y);
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").append("changed");
+		}
+	}  
+}
+
+var getFocus = function() {
+	if(!hasSource) {
+		this.animate({"fill": "#f23", "fill-opacity": .2},500);
+		removeConnectionMarker();
+		createConnectionMarker(this);
+		someoneHasFocus = true;
+		focus = this;
+		justALineToRemove = false;
+	}
 };
-Raphael.el.getVertexId=function(){for(var A=0;
-A<elementTitles.length;
-A++){if(elementTitles[A].frame==this){return elementTitles[A].vertexId
-}}return null
+
+var drawLine = function(dx, dy) {
+	var att = {x: this.ox + dx, y: this.oy + dy};
+	this.attr(att);
+	
+	var lx = this.ox + 2;
+	var ly = this.oy + 2;
+	var lx2 = this.ox + dx;
+	var ly2 = this.oy + dy;
+	lineToDraw.attr("path", "M" + lx + "," + ly + "L" + lx2 + "," + ly2);
 };
-Raphael.el.setStatus=function(A){for(var B=0;
-B<elementTitles.length;
-B++){if(elementTitles[B].frame==this){elementTitles[B].status=A
-}}};
-Raphael.el.setVertexId=function(A){for(var B=0;
-B<elementTitles.length;
-B++){if(elementTitles[B].frame==this){elementTitles[B].vertexId=A
-}}};
-Raphael.el.isInBox=function(A,C){var B=this.getBBox();
-return B.x<A&&A<B.x+B.width&&B.y<C&&C<B.y+B.height
+
+var finishLineDrawing = function() {
+	
+	lineToDraw.remove();
+	
+	var x = this.getBBox().x + 2;
+	var y = this.getBBox().y + 2;
+	
+	if(hasSource) {
+		
+		for(var i = 0; i < frames.length; i++) {
+			
+			if(frames[i].isInBox(x, y)) {
+                var conn = editPaper.connection(source, frames[i]);
+				connections.push(conn);
+				$('#logicalModelEdges').append("<e modelId='" + conn.line.id + "' edgeId='m" + conn.line.id + "'><h>" + source.getVertexId() + "</h><t>" + frames[i].getVertexId() + "</t><status>new</status></e>");
+			}
+		}
+	}
+	
+	hasSource = false;
+	
 };
-Raphael.fn.symbol=function(B,D){var A=D.getBBox().x;
-var E=D.getBBox().y;
-var C=computeElements(Number(A),Number(E),B,this);
-return{kind:B,elements:C,frame:D}
+
+var initConnection = function() {
+	
+	var clone = this.clone();
+	clone.drag(drawLine, initConnection, finishLineDrawing);
+	superfluousClones.push(clone);
+	this.ox = this.attr("x");
+	this.oy = this.attr("y");
+	this.toFront();
+	
+	var lx = this.ox + 2;
+	var ly = this.oy + 2;
+	lineToDraw  = editPaper.path("M" + lx + "," + ly + "L" + lx + "," + ly);
+	
+	for(var i = 0; i < fourMarker.length; i++) {
+		if(fourMarker[i].marker == this) {
+			source = fourMarker[i].frame;
+			hasSource = true;
+		}
+	}
+}
+
+function createConnectionMarker(frame) {
+	var x = frame.getBBox().x;
+	var y = frame.getBBox().y;
+	var width = frame.getBBox().width;
+	var height = frame.getBBox().height;
+	
+	var marker1 = editPaper.connectionMarker(x - 2, y + height/2 -2, frame);
+	fourMarker.push(marker1);
+	var marker2 = editPaper.connectionMarker(x + width/2 - 2, y + height -2, frame);
+	fourMarker.push(marker2);
+	var marker3 = editPaper.connectionMarker(x + width/2, y -2, frame);
+	fourMarker.push(marker3);
+	var marker4 = editPaper.connectionMarker(x + width - 2, y + height/2 -2, frame);
+	fourMarker.push(marker4);
+	
+	for(var i = 0; i < fourMarker.length; i++) {
+		fourMarker[i].marker.drag(drawLine, initConnection, finishLineDrawing);
+	}
+	
+	createRemoveIcon(x + width - 8, y + 8, frame);
+}
+
+function removeConnectionMarker() {
+	
+	while(fourMarker.length > 0) {
+		var aMarker = fourMarker.pop();
+		aMarker.marker.remove();
+	}
+	
+	while(removeIcon.length > 0) {
+		var aPart = removeIcon.pop();
+		aPart.remove();
+	}
+	
+	while(superfluousClones.length > 0) {
+		var aClone = superfluousClones.pop();
+		aClone.remove();
+	}
+}
+
+var leaveFocus = function() {
+	
+	this.animate({"fill": "#fff", "fill-opacity": 1},500);
+	someoneHasFocus = false;
 };
-Raphael.fn.connectionMarker=function(A,E,D){var C={fill:"#00d","fill-opacity":0.4};
-var B=this.rect(A,E,4,4);
-B.attr(C);
-return{marker:B,frame:D}
-};
-function getModelConnection(K,S){var H=K.getBBox(),G=S.getBBox(),J=[{x:H.x+H.width/2,y:H.y-1},{x:H.x+H.width/2,y:H.y+H.height+1},{x:H.x-1,y:H.y+H.height/2},{x:H.x+H.width+1,y:H.y+H.height/2},{x:G.x+G.width/2,y:G.y-1},{x:G.x+G.width/2,y:G.y+G.height+1},{x:G.x-1,y:G.y+G.height/2},{x:G.x+G.width+1,y:G.y+G.height/2}],R={},I=[];
-for(var O=0;
-O<4;
-O++){for(var M=4;
-M<8;
-M++){var F=Math.abs(J[O].x-J[M].x),E=Math.abs(J[O].y-J[M].y);
-if((O==M-4)||(((O!=3&&M!=6)||J[O].x<J[M].x)&&((O!=2&&M!=7)||J[O].x>J[M].x)&&((O!=0&&M!=5)||J[O].y>J[M].y)&&((O!=1&&M!=4)||J[O].y<J[M].y))){I.push(F+E);
-R[I[I.length-1]]=[O,M]
-}}}if(I.length==0){var T=[0,4]
-}else{T=R[Math.min.apply(Math,I)]
-}var Q=J[T[0]].x,D=J[T[0]].y,L=J[T[1]].x,A=J[T[1]].y;
-F=Math.max(Math.abs(Q-L)/2,10);
-E=Math.max(Math.abs(D-A)/2,10);
-var P=[Q,Q,Q-F,Q+F][T[0]].toFixed(3),C=[D-E,D+E,D,D][T[0]].toFixed(3),N=[0,0,0,0,L,L,L-F,L+F][T[1]].toFixed(3),B=[0,0,0,0,D+E,D-E,A,A][T[1]].toFixed(3);
-return path=["M",Q.toFixed(3),D.toFixed(3),"C",P,C,N,B,L.toFixed(3),A.toFixed(3)].join(",")
-}Raphael.fn.connection=function(A,C){var B=getModelConnection(A,C);
-return{line:this.path(B).attr({stroke:"#000",fill:"none"}).hover(markLine,unmarkLine),from:A,to:C}
-};
-function updateModelConnection(A){var B=getModelConnection(A.from,A.to);
-A.line.attr({path:B})
-}function moveSymbol(B){var A=B.frame.getBBox().x;
-var C=B.frame.getBBox().y;
-updateElements(Number(A),Number(C),B.kind,B.elements)
-}Raphael.fn.elementTitle=function(F,E,C,D,B){var A=Number(E.getBBox().x);
-var H=Number(E.getBBox().y);
-var G=this.text(A+60,H+20,F);
-G.dblclick(showDialog);
-return{element:G,frame:E,status:"prototype",text:F,elementType:C,detail:D,vertexId:B}
-};
-var showDialog=function(){var K="prototype";
-var G;
-var B;
-var C;
-for(var F=0;
-F<elementTitles.length;
-F++){if(elementTitles[F].element==this){K=elementTitles[F].status;
-G=elementTitles[F].elementType;
-B=elementTitles[F].detail;
-C=elementTitles[F].usage
-}}if(K!="prototype"){textToEdit=this;
-var N="";
-if(!(this.attr("text").substring(0,2)=="<<")){N=this.attr("text")
-}var D="<label>Name</label>";
-var O="<input type='text' id= 'modalModelTextInput' value='";
-var M="' />";
-var P="<input type='button' value='Cancel' class='standardButton' style='float: right' onclick='$.unblockUI();' />";
-var J="<input type='button' value='Save' class='standardButton' style='float: right' onclick='saveText()' />";
-if(G=="attribute"){var I;
-var A;
-if(B){I="<input type='text' id= 'modalModelAttributePatternInput' value='"+B+"'/>"
-}else{I="<input type='text' id= 'modalModelAttributePatternInput' />"
-}if(C){A="<input type='text' id= 'modalModelAttributeUsageInput' value='"+C+"'/>"
-}else{A="<input type='text' id= 'modalModelAttributeUsageInput' />"
-}$.blockUI({message:"<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>"+O+N+M+"</td></tr><tr><td><label>Pattern</label></td><td>"+I+"</td></tr><tr><td><label>Realises</label></td><td>"+A+"</td></tr></table><br />"+P+J+"</div>"})
-}else{if(G=="dimension"||G=="cube"){var E;
-var H;
-if(B&&B.split(";").length==2){var L=B.split(";");
-E="<input type='text' id= 'modalModelAttributePatternInput' value='"+L[0]+"'/>";
-H="<input type='text' id= 'modalModelAttributeAdditionalPatternInput' value='"+L[1]+"'/>"
-}else{E="<input type='text' id= 'modalModelAttributePatternInput' />";
-H="<input type='text' id= 'modalModelAttributeAdditionalPatternInput'/>"
-}$.blockUI({message:"<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>"+O+N+M+"</td></tr><tr><td><label>Estimated initial size</label></td><td>"+E+"</td></tr><tr><td><label>Estimated growth per load</label></td><td>"+H+"</td></tr></table><br />"+P+J+"</div>"})
-}else{$.blockUI({message:"<div class='blockDialogue'>"+D+O+N+M+"<br />"+P+J+"</div>"})
-}}}};
-function saveText(){var G=null;
-var A=0;
-for(var D=0;
-D<elementTitles.length;
-D++){if(elementTitles[D].element==textToEdit){G=elementTitles[D].frame.id;
-A=elementTitles[D].vertexId
-}}var F=$("#modalModelTextInput").val();
-var C=$("#modalModelAttributePatternInput").val();
-var E=$("#modalModelAttributeAdditionalPatternInput").val();
-var B=$("#modalModelAttributeUsageInput").val();
-if(E&&E.length>0){C=C+";"+E
-}if(A>0){textToEdit.attr("text",F);
-textToEdit.attr("detail",C);
-$("#logicalModelVertices v[vertexId='"+A+"'] elementName").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] elementName").append(F);
-$("#logicalModelVertices v[vertexId='"+A+"'] detail").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] detail").append(C);
-$("#logicalModelVertices v[vertexId='"+A+"'] usage").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] usage").append(B);
-$("#logicalModelVertices v[vertexId='"+A+"'] status").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] status").append("changed");
-$.unblockUI()
-}else{if(G){textToEdit.attr("text",F);
-textToEdit.attr("detail",C);
-$("#logicalModelVertices v[modelId='"+G+"'] elementName").empty();
-$("#logicalModelVertices v[modelId='"+G+"'] elementName").append(F);
-$("#logicalModelVertices v[modelId='"+G+"'] detail").empty();
-$("#logicalModelVertices v[modelId='"+G+"'] detail").append(C);
-$("#logicalModelVertices v[vertexId='"+A+"'] usage").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] usage").append(B);
-$("#logicalModelVertices v[modelId='"+G+"'] status").empty();
-$("#logicalModelVertices v[modelId='"+G+"'] status").append("changed");
-$.unblockUI()
-}}}function moveTitle(C){var A=C.frame.getBBox().x;
-var D=C.frame.getBBox().y;
-var B={x:Number(A)+60,y:Number(D)+20};
-C.element.attr(B)
-}window.onload=function(){paper=Raphael(460,80,800,650);
-createCanvas()
-};
-function movePath(H,I,G){var E=String(H);
-var C=E.trim().split(/(\D)/);
-var A=0;
-var F;
-for(var D=0;
-D<C.length;
-D++){if(C[D]==","){A++
-}else{if(C[D].match(/\d+/)){var B=Number(C[D]);
-if(F!="A"){if(A==0){C[D]=B+Number(I)
-}else{C[D]=B+Number(G)
-}}else{if(A==5){C[D]=B+Number(I)
-}else{if(A==6){C[D]=B+Number(G)
-}}}}else{if(C[D].match(/[MTLA]/)){F=C[D];
-A=0
-}}}}return C.join("")
-}function createCanvas(){var A=paper.rect(0,0,800,650);
-A.attr("fill","#ffa");
-A.attr("stroke","#000")
-}function createEditCanvas(){paper.clear();
-editPaper=Raphael(180,60,1096,684);
-var B=editPaper.rect(0,0,1096,684);
-B.attr("fill","#ffa");
-B.attr("stroke","#000");
-var A=editPaper.rect(5,5,274,674);
-A.attr("fill","#ffd");
-A.attr("stroke","#000")
-}var startMove=function(){if(this.getStatus()=="prototype"){var C=this.clone();
-C.drag(move,startMove,stopMove);
-for(var A=0;
-A<symbols.length;
-A++){if(symbols[A].frame==this){symbols.push(editPaper.symbol(symbols[A].kind,C))
-}}for(var A=0;
-A<elementTitles.length;
-A++){if(elementTitles[A].frame==this){var B=editPaper.elementTitle(elementTitles[A].text,C,elementTitles[A].elementType,null,"m"+this.id);
-elementTitles.push(B)
-}}}if(this.type=="path"){this.opath=this.attr("path")
-}else{this.ox=this.attr("x");
-this.oy=this.attr("y")
-}};
-var move=function(D,A){removeConnectionMarker();
-if(this.type=="path"){var C={path:movePath(this.opath,D,A)};
-this.attr(C)
-}else{var C={x:Number(this.ox)+Number(D),y:Number(this.oy)+Number(A)};
-this.attr(C)
-}for(var B=0;
-B<connections.length;
-B++){updateModelConnection(connections[B])
-}for(var E=0;
-E<elementTitles.length;
-E++){if(elementTitles[E].frame==this){moveTitle(elementTitles[E])
-}}for(var F=0;
-F<symbols.length;
-F++){if(symbols[F].frame==this){moveSymbol(symbols[F])
-}}};
-function determineModelOrVertexId(E,C){var D=-1;
-var A=-1;
-for(var B=0;
-B<elementTitles.length;
-B++){if(elementTitles[B].frame==E){A=elementTitles[B].vertexId;
-D=elementTitles[B].modelId;
-break
-}}if(C){return A
-}else{return D
-}}var stopMove=function(){var B=this.getBBox().x;
-var E=this.getBBox().y;
-var A=-1;
-var D=-1;
-if(B<280){this.hide()
-}else{for(var C=0;
-C<elementTitles.length;
-C++){if(elementTitles[C].frame==this){A=elementTitles[C].vertexId;
-D=elementTitles[C].modelId;
-break
-}}if(this.getStatus()=="prototype"){this.setStatus("initial");
-this.setVertexId("m"+this.id);
-this.hover(getFocus,leaveFocus);
-frames.push(this);
-$("#logicalModelVertices").append("<v modelId='"+this.id+"' vertexId='m"+this.id+"'><elementType>"+this.getElementType()+"</elementType><elementName></elementName><x>"+B+"</x><y>"+E+"</y><detail></detail><scale>1</scale><usage>0</usage><status>new</status></v>")
-}else{if(D>0){$("#logicalModelVertices v[modelId='"+this.id+"'] x").empty();
-$("#logicalModelVertices v[modelId='"+this.id+"'] x").append(B);
-$("#logicalModelVertices v[modelId='"+this.id+"'] y").empty();
-$("#logicalModelVertices v[modelId='"+this.id+"'] y").append(E);
-$("#logicalModelVertices v[modelId='"+this.id+"'] status").empty();
-$("#logicalModelVertices v[modelId='"+this.id+"'] status").append("changed")
-}else{$("#logicalModelVertices v[vertexId='"+A+"'] x").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] x").append(B);
-$("#logicalModelVertices v[vertexId='"+A+"'] y").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] y").append(E);
-$("#logicalModelVertices v[vertexId='"+A+"'] status").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] status").append("changed")
-}}}};
-var getFocus=function(){if(!hasSource){this.animate({fill:"#f23","fill-opacity":0.2},500);
-removeConnectionMarker();
-createConnectionMarker(this);
-someoneHasFocus=true;
-focus=this;
-justALineToRemove=false
-}};
-var drawLine=function(D,B){var C={x:this.ox+D,y:this.oy+B};
-this.attr(C);
-var F=this.ox+2;
-var E=this.oy+2;
-var G=this.ox+D;
-var A=this.oy+B;
-lineToDraw.attr("path","M"+F+","+E+"L"+G+","+A)
-};
-var finishLineDrawing=function(){lineToDraw.remove();
-var A=this.getBBox().x+2;
-var D=this.getBBox().y+2;
-if(hasSource){for(var B=0;
-B<frames.length;
-B++){if(frames[B].isInBox(A,D)){var C=editPaper.connection(source,frames[B]);
-connections.push(C);
-$("#logicalModelEdges").append("<e modelId='"+C.line.id+"' edgeId='m"+C.line.id+"'><h>"+source.getVertexId()+"</h><t>"+frames[B].getVertexId()+"</t><status>new</status></e>")
-}}}hasSource=false
-};
-var initConnection=function(){var D=this.clone();
-D.drag(drawLine,initConnection,finishLineDrawing);
-superfluousClones.push(D);
-this.ox=this.attr("x");
-this.oy=this.attr("y");
-this.toFront();
-var C=this.ox+2;
-var B=this.oy+2;
-lineToDraw=editPaper.path("M"+C+","+B+"L"+C+","+B);
-for(var A=0;
-A<fourMarker.length;
-A++){if(fourMarker[A].marker==this){source=fourMarker[A].frame;
-hasSource=true
-}}};
-function createConnectionMarker(C){var I=C.getBBox().x;
-var H=C.getBBox().y;
-var B=C.getBBox().width;
-var J=C.getBBox().height;
-var F=editPaper.connectionMarker(I-2,H+J/2-2,C);
-fourMarker.push(F);
-var E=editPaper.connectionMarker(I+B/2-2,H+J-2,C);
-fourMarker.push(E);
-var D=editPaper.connectionMarker(I+B/2,H-2,C);
-fourMarker.push(D);
-var A=editPaper.connectionMarker(I+B-2,H+J/2-2,C);
-fourMarker.push(A);
-for(var G=0;
-G<fourMarker.length;
-G++){fourMarker[G].marker.drag(drawLine,initConnection,finishLineDrawing)
-}createRemoveIcon(I+B-8,H+8,C)
-}function removeConnectionMarker(){while(fourMarker.length>0){var C=fourMarker.pop();
-C.marker.remove()
-}while(removeIcon.length>0){var B=removeIcon.pop();
-B.remove()
-}while(superfluousClones.length>0){var A=superfluousClones.pop();
-A.remove()
-}}var leaveFocus=function(){this.animate({fill:"#fff","fill-opacity":1},500);
-someoneHasFocus=false
-};
-var removeElement=function(){var B="<input type='button' value='Cancel' class='standardButton' onclick='$.unblockUI();' />";
-var A="<input type='button' value='OK' class='standardButton' onclick='removeFinally()' />";
-$.blockUI({message:"<div>Really wanna destroy?<br />"+B+A+"</div>"})
-};
-function removeFinally(){removeConnectionMarker();
-if(!justALineToRemove){var D=determineModelOrVertexId(elementToRemove,false);
-var A=determineModelOrVertexId(elementToRemove,true);
-if(D>0){$("#logicalModelVertices v[modelId='"+D+"'] status").empty();
-$("#logicalModelVertices v[modelId='"+D+"'] status").append("removed")
-}else{$("#logicalModelVertices v[vertexId='"+A+"'] status").empty();
-$("#logicalModelVertices v[vertexId='"+A+"'] status").append("removed")
-}for(var C=0;
-C<connections.length;
-C++){if(connections[C].from==elementToRemove||connections[C].to==elementToRemove){$("#logicalModelEdges e[modelId='"+connections[C].line.id+"'] status").empty();
-$("#logicalModelEdges e[modelId='"+connections[C].line.id+"'] status").append("removed");
-connections[C].line.remove()
-}}for(var C=0;
-C<elementTitles.length;
-C++){if(elementTitles[C].frame==elementToRemove){elementTitles[C].element.remove()
-}}for(var C=0;
-C<symbols.length;
-C++){if(symbols[C].frame==elementToRemove){for(var B=0;
-B<symbols[C].elements.length;
-B++){symbols[C].elements[B].remove()
-}}}}elementToRemove.remove();
-$.unblockUI()
-}function createRemoveIcon(H,E,D){var A=editPaper.circle(H,E,8);
-A.attr("fill","#f00");
-A.attr("stroke","#fff");
-A.attr("stroke-width",2);
-removeIcon.push(A);
-var C=H-6,G=E-6,B=H+6,F=E+6;
-var I=editPaper.path("M"+C+","+G+"L"+B+","+F+"M"+C+","+F+"L"+B+","+G);
-I.attr("stroke-width",2);
-I.attr("stroke","#fff");
-removeIcon.push(I);
-A.dblclick(removeElement);
-I.dblclick(removeElement);
-elementToRemove=D
-}var markLine=function(){removeConnectionMarker();
-var A=this.getPointAtLength(1);
-createRemoveIcon(A.x,A.y,this);
-justALineToRemove=true
-};
-var unmarkLine=function(){};
-function drawModel(A){elementTitles=[];
-frames=[];
-symbols=[];
-if(A){paper.clear();
-createCanvas()
-}else{createEditCanvas()
-}$("#logicalModelVertices v").each(function(){var D=$(this).attr("vertexId");
-var E=$(this).find("elementType").text();
-var C=$(this).find("elementName").text();
-var F=$(this).find("detail").text();
-var B=$(this).find("x").text();
-var G=$(this).find("y").text();
-drawElement(E,A,Number(B),Number(G),C,D,F)
-});
-$("#logicalModelEdges e").each(function(E){var B=$(this).find("h").text();
-var F=$(this).find("t").text();
-var D=getVertexById(B);
-var C=getVertexById(F);
-if(D&&C){if(A){paper.connection(D,C)
-}else{connections.push(editPaper.connection(D,C))
-}}})
-}function getVertexById(A){for(var B=0;
-B<elementTitles.length;
-B++){if(elementTitles[B].vertexId==A){return elementTitles[B].frame
-}}}function drawFrame(C,G,B,H,D,A,E,F){if(C){if(G){return paper.path(F)
-}else{return paper.rect(B,H,D,A,E)
-}}else{if(G){return editPaper.path(F)
-}else{return editPaper.rect(B,H,D,A,E)
-}}}function drawElement(E,D,C,F,B,A){drawElement(E,D,C,F,B,A,null)
-}function drawElement(C,D,H,G,J,F,E){var B;
-var A,I;
-if(D){A=H-280;
-I=G-20
-}else{A=H;
-I=G
-}if(C=="hierarchy"){B=drawFrame(D,true,0,0,0,0,0,movePath("M0,12L24,0L96,0L120,12L120,40L0,40Z",A,I))
-}if(C=="level"||C=="member"||C=="scope"||C=="dimension"){B=drawFrame(D,false,A,I,120,40,10,"")
-}if(C=="attribute"){B=drawFrame(D,true,0,0,0,0,0,movePath("M12,0L120,0L120,40L12,40L0,30L0,10Z",A,I))
-}if(C=="cube"||C=="context"){B=drawFrame(D,true,0,0,0,0,0,movePath("M0,0L120,0L120,80L0,80ZM0,30L120,30",A,I))
-}setFrameAttributes(B);
-frames.push(B);
-if(D){symbols.push(paper.symbol(C,B));
-elementTitles.push(paper.elementTitle(J,B,C,E,F))
-}else{symbols.push(editPaper.symbol(C,B));
-elementTitles.push(editPaper.elementTitle(J,B,C,E,F));
-B.drag(move,startMove,stopMove);
-if(B.getVertexId()>=0||(B.getVertexId().length>0&&B.getVertexId().substring(0,1)=="m")){B.setStatus("sync");
-B.hover(getFocus,leaveFocus)
-}}}function createPalette(A){if(A=="dimension"){drawElement("hierarchy",false,83,40,"<<hierarchy>>",-1);
-drawElement("level",false,83,90,"<<level>>",-1);
-drawElement("member",false,83,140,"<<member>>",-1);
-drawElement("attribute",false,83,190,"<<attribute>>",-1);
-drawElement("scope",false,83,240,"<<scope>>",-1)
-}else{drawElement("cube",false,83,40,"<<cube>>",-1);
-drawElement("dimension",false,83,130,"<<dimension>>",-1);
-drawElement("level",false,83,180,"<<level>>",-1)
-}};
+
+var removeElement = function () {
+	
+	var cancel = "<input type='button' value='Cancel' class='standardButton' onclick='$.unblockUI();' />";
+	var ok = "<input type='button' value='OK' class='standardButton' onclick='removeFinally()' />";
+
+	$.blockUI({message: "<div>Really wanna destroy?<br />" + cancel + ok + "</div>"});
+	
+}
+
+function removeFinally() {
+	
+	removeConnectionMarker();
+	if(!justALineToRemove) {
+		
+		var modelId = determineModelOrVertexId(elementToRemove, false);
+		var vertexId = determineModelOrVertexId(elementToRemove, true);
+		
+		if(modelId > 0) {
+			$("#logicalModelVertices v[modelId='" + modelId + "'] status").empty();
+			$("#logicalModelVertices v[modelId='" + modelId + "'] status").append("removed");
+		}
+		else {
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").append("removed");
+		}
+		
+		for(var i = 0; i < connections.length; i++) {
+			if(connections[i].from == elementToRemove || connections[i].to == elementToRemove) {
+				
+				$("#logicalModelEdges e[modelId='" + connections[i].line.id + "'] status").empty();
+				$("#logicalModelEdges e[modelId='" + connections[i].line.id + "'] status").append("removed");
+				connections[i].line.remove();
+			}
+		}
+		
+		for(var i = 0; i < elementTitles.length; i++) {
+			 if(elementTitles[i].frame == elementToRemove) {	
+				 elementTitles[i].element.remove();
+			 }
+		}
+		
+		for(var i = 0; i < symbols.length; i++) {
+			
+			if(symbols[i].frame == elementToRemove) {
+				
+				for(var j = 0; j < symbols[i].elements.length; j++) {
+					symbols[i].elements[j].remove();
+				}
+			} 
+		}
+	}
+	
+	elementToRemove.remove();
+	
+	$.unblockUI();
+}
+
+function createRemoveIcon(x, y, element) {
+	
+	var circle = editPaper.circle(x, y, 8);
+	circle.attr("fill", "#f00");
+	circle.attr("stroke", "#fff"); 
+	circle.attr("stroke-width", 2);
+	removeIcon.push(circle);
+	var x1 = x - 6, y1 = y -6, x2 = x + 6, y2 = y + 6;  
+	var lines = editPaper.path("M" + x1 + "," + y1 + "L" + x2 + "," + y2 + "M" + x1 + "," + y2 + "L" + x2 + "," + y1);
+	lines.attr("stroke-width", 2);
+	lines.attr("stroke", "#fff");
+	removeIcon.push(lines);
+	
+	circle.dblclick(removeElement);
+	lines.dblclick(removeElement);
+	
+	elementToRemove = element;
+	
+}
+
+var markLine = function() {
+	removeConnectionMarker();
+	var p = this.getPointAtLength(1);
+	createRemoveIcon(p.x,p.y, this);
+	justALineToRemove = true;
+}
+
+var unmarkLine = function() {
+	
+}
+
+/**
+ * draws the diagram for one cube or dimension out of the XML information on the page
+ * @param onlyDisplay
+ */
+
+function drawModel(onlyDisplay) {
+	
+	elementTitles = [];
+	frames = [];
+	symbols = [];
+	
+	if(onlyDisplay) {
+		paper.clear(); 
+		createCanvas(); 
+	}
+	else {
+		createEditCanvas();
+	}
+	
+	$('#logicalModelVertices v').each(function(){
+		
+		var vertexId =$(this).attr("vertexId");
+		var elementType = $(this).find("elementType").text(); 
+		var elementName = $(this).find("elementName").text();  
+		var detail = $(this).find("detail").text();
+	  	var x =  $(this).find("x").text();
+	  	var y =  $(this).find("y").text();
+	  	drawElement(elementType, onlyDisplay, Number(x), Number(y), elementName, vertexId, detail);  	
+	});
+	
+	$('#logicalModelEdges e').each(function(edge){
+		var headId = $(this).find("h").text();
+		var tailId = $(this).find("t").text();
+		var head = getVertexById(headId);
+		var tail = getVertexById(tailId);
+		if(head && tail) {
+			if(onlyDisplay) paper.connection(head, tail); else connections.push(editPaper.connection(head, tail));
+		}
+	}); 
+}  
+
+function getVertexById(vertexId) {
+	for(var i = 0; i < elementTitles.length; i++) {
+		 if(elementTitles[i].vertexId == vertexId) {	
+			 return elementTitles[i].frame;
+		 }
+	}
+}
+
+function drawFrame(onlyDisplay, isPath, x, y, width, height, r, path) {
+	
+	if(onlyDisplay) {
+		
+		if(isPath) {
+			return paper.path(path);
+		}
+		else {
+			return paper.rect(x, y, width, height, r);
+		}
+		
+	}
+	else {
+		
+		if(isPath) {
+			return editPaper.path(path);
+		}
+		else {
+			return editPaper.rect(x, y, width, height, r);
+		}
+	}
+}
+
+function drawElement(kind, onlyDisplay, x, y, elementName, vertexId) {
+	drawElement(kind, onlyDisplay, x, y, elementName, vertexId, null);
+}
+
+function drawElement(kind, onlyDisplay, x, y, elementName, vertexId, detail) {
+	var frame;
+	var newX, newY;
+	
+	if(onlyDisplay) {
+		newX = x - 280;
+		newY = y - 20;
+	}
+	else {
+		newX = x;
+		newY = y;
+	}
+	
+	if(kind == "hierarchy") frame = drawFrame(onlyDisplay, true, 0, 0, 0, 0, 0, movePath("M0,12L24,0L96,0L120,12L120,40L0,40Z", newX, newY));
+	if(kind == "level" || kind == "member" || kind == "scope"  || kind == "dimension") frame = drawFrame(onlyDisplay, false, newX, newY, 120, 40, 10, "");
+	if(kind == "attribute") frame = drawFrame(onlyDisplay, true, 0, 0, 0, 0, 0, movePath("M12,0L120,0L120,40L12,40L0,30L0,10Z", newX, newY));
+	if(kind == "cube"  || kind == "context") frame = drawFrame(onlyDisplay, true, 0, 0, 0, 0, 0, movePath("M0,0L120,0L120,80L0,80ZM0,30L120,30", newX, newY));
+	
+	setFrameAttributes(frame);
+	frames.push(frame);
+	
+	if(onlyDisplay) {		
+		symbols.push(paper.symbol(kind, frame));
+		elementTitles.push(paper.elementTitle(elementName, frame, kind, detail, vertexId));
+	}
+	else {
+		
+		symbols.push(editPaper.symbol(kind, frame));
+		elementTitles.push(editPaper.elementTitle(elementName, frame, kind, detail, vertexId));
+		frame.drag(move, startMove, stopMove);
+		
+		if(frame.getVertexId() >= 0 || (frame.getVertexId().length > 0 && frame.getVertexId().substring(0,1) == "m")) {
+			frame.setStatus("sync");
+			frame.hover(getFocus, leaveFocus);
+		} 	
+	}
+}
+
+function createPalette(elementType) {
+	
+	if(elementType == "dimension") {
+		
+		drawElement("hierarchy", false, 83, 40, "<<hierarchy>>", -1);
+		drawElement("level", false, 83, 90, "<<level>>", -1);
+		drawElement("member", false, 83, 140, "<<member>>", -1);
+		drawElement("attribute", false, 83, 190, "<<attribute>>", -1);
+		drawElement("scope", false, 83, 240, "<<scope>>", -1);
+	}
+	else {
+		
+		drawElement("cube", false, 83, 40, "<<cube>>", -1);
+		drawElement("dimension", false, 83, 130, "<<dimension>>", -1);
+		drawElement("level", false, 83, 180, "<<level>>", -1);
+	}  
+}  

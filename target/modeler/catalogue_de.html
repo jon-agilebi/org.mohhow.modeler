@@ -9,19 +9,20 @@
 					$(this).addClass('zebraHover');
 					$('#catalogueTable').attr('currentSelection',$(this).attr('choice'));
 				});
+			  $('#synonymList').hide();
 			}); 
 		</script>
 	</head>
 	<lift:RoleSnippet.inScenario>
 		<div class="upper_right">
-			<h1>Measure Catalogue</h1>
+			<h1>Kennzahlenkatalog</h1>
 			<div class="menuBar">
-				<lift:MeasureSnippet.measures><catalogue:add /><catalogue:edit /><catalogue:discard /><catalogue:choice /></lift:MeasureSnippet.measures>
+				<lift:MeasureSnippet.measures><catalogue:add /><catalogue:edit /><catalogue:discard /><catalogue:choice /><catalogue:markAsSynonym /><catalogue:synonyms /></lift:MeasureSnippet.measures>
 				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
 			</div>
 		</div>
 		<lift:MeasureSnippet.measures>
-			<div class="rightContent">
+			<div class="rightScrollableContent">
 				<table class="singleSelection protocolTable" id="catalogueTable" currentSelection="-1">
 			     <thead>
 			     	<tr>

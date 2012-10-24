@@ -9,6 +9,9 @@
 			$(document).ready(function() { 
 				$(".dateInput").datepicker({dateFormat: 'dd.mm.yy'});
 			});
+			//$(document).ready(function() { 
+			//	$("#testDataEstimateBlock").insertAfter($("table").eq(0));
+			//});
 		</script>
 	</head>
 	<div class="upper_right">
@@ -16,5 +19,10 @@
 	</div>
 	<div class="mohhowForm">
 		<div class="lift:TestDataForm"></div>
+		<!--  <div id=testDataEstimateBlock>
+			<lift:ReleaseSnippet.allScenariosWithReleases>
+				<deploymentEstimation />
+			</lift:ReleaseSnippet.allScenariosWithReleases>
+		</div> -->
 	</div>
 </lift:surround>
