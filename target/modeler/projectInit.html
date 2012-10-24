@@ -1,0 +1,37 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			
+		</script>
+	</head>
+	<lift:RoleSnippet.inScenario>
+		<div class="upper_right">
+	        <h1>Projektinitialisierung</h1>
+	        <div class="menuBar">
+				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+			</div>
+	    </div>
+		<div class="rightContent">
+			<img src='images/project_structure.jpg' alt='Project Structure' text-align='center' />
+			<p>
+				W&auml;hrend der Projektinitialisierung werden die grundlegenden Weichen f&uuml;r das Projekt gestellt:<br /><br />
+				<ul style="margin-left:30px; margin-right:30px">
+					<li>
+					 <a href="/setup">Das Projektteam wird zusammengestellt.</a> Dabei geh&ouml;ren zu dem Team nicht nur diejenigen, die Analyse- Design oder Entwicklungsaufgaben 
+					 &uuml;bernehmen, sondern jeder, der im Analyseprozess Anforderungen stellen oder bewerten darf. Dieser Punkt ist wichtig, da die gesamte 
+					 Kommunikation bzgl. der Anforderungen innerhalb des Systems gehalten werden soll.
+					</li>
+					<li>
+					 <a href="/setup">Die Konfiguration des Szenarios wird vorgenommen.</a> Damit werden bereits wichtige Entscheidungen bzgl. der Struktur der Szenariovision, 
+					 des logischen und physikalischen Datenmodells getroffen.	
+					</li>
+					<li>
+					 <a href="/vision">In einer knappen Szenariovision werden die wesentlichen Ziele und Rahmenbedingungen dokumentiert.</a>
+					</li>
+				</ul>	
+			</p>
+		</div>
+	</lift:RoleSnippet.inScenario>
+</lift:surround>
