@@ -721,10 +721,11 @@ class ReleaseSnippet {
   if(SelectedSystem.is != null) {
 	  
 	  val nodes = (Repository.read("configuration", -1, "nodes", "nodes",0) \\ "node")
-	  val devNode = nodes.filter(n => MyUtil.getSeqHeadText(n \\ "system") == SelectedSystem.is).filter(n => MyUtil.getSeqHeadText(n \\ "system") == "DEV")
+	  val devNode = nodes.filter(n => MyUtil.getSeqHeadText(n \\ "system") == SelectedSystem.is).filter(n => MyUtil.getSeqHeadText(n \\ "environment") == "DEV")
 	 
 	  if(devNode.isEmpty) Alert(S.?("noDevNode"))
 	  else {
+	 	  /*
 	 	  val releases = releasesOfNode(devNode.apply(0))
 	 	  
 	 	  if(releases.isEmpty) Alert(S.?("noReleasesOnNode"))
@@ -738,7 +739,8 @@ class ReleaseSnippet {
 	 	 	  TestDataModel(tablesAndModels)
 	 	 	   	 	  
 	 	 	  RedirectTo("/testData")
-	 	  }
+	 	  } */
+	 	  RedirectTo("/testData")
 	  }
   }
   else Alert(S.?("noSystemChosen"))
