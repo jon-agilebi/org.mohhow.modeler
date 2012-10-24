@@ -1,28 +1,67 @@
 <lift:surround with="mohhow_default" at="content">
 	<head>
 		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<link rel="stylesheet" type="text/css" href="/style/ui-lightness21/jquery-ui-1.8.21.custom.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script  src="/script/jquery-1.7.1.min.js" type="text/javascript"></script>
+		<script  src="/script/jquery-ui-1.8.21.custom.min.js" type="text/javascript"></script>
+		<script  src="/script/catalogue.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			$(document).ready(function() { 
+				$("#measureFormAdditional").insertAfter($("table").eq(0));
+				$(".termEditor").bind("focusin", function() {focusTermEditor($(this));});
+			})
+		</script>
 	</head>
 	
 	<div class="upper_right">
 		<h1>Measure Editor</h1>
 	</div>
 	
-	<div class="mohhowForm">
-		<div class="lift:MeasureForm"></div>
-		<div>
-	  		<table class="multipleSelection" id="measure2DimensionTable">
-				<thead>
+	<div class="mohhowForm" style="overflow: scroll">
+		<lift:MeasureSnippet.completion><completion:sources /></lift:MeasureSnippet.completion>
+		<div class="lift:MeasureForm" ></div>
+		<div id="measureFormAdditional" >
+			<lift:MeasureSnippet.editMeasures>
+				<table width = "95%">
 					<tr>
-						<td><img src="../images/idea.png" alt="Choice"/></td>
-						<td>Dimension</td>
-						<td>Level</td>
-						<td>Aggregation</td>
+					 <td width="40%" valign="top">
+					    <h3>Context</h3><br />
+				  		<table class="protocolTable" id="measure2DimensionTable">
+							<thead>
+								<tr>
+									<td><img src="../images/idea.png" alt="Choice"/></td>
+									<td>Dimension</td>
+									<td>Level</td>
+									<td>Aggregation</td>
+								</tr>
+							</thead>
+							<tbody>
+								<edit:context />
+							</tbody>
+						</table>
+					 </td>
+					 <td width="10%" valign="top"></td>
+					 <td width="50%" valign="top">
+					    <h3>Ranges</h3><edit:addRange /><edit:removeRange /><br />
+						
+				  		<table class="protocolTable" id="measureRangeTable">
+							<thead>
+								<tr>
+									<td>Lower Bound</td>
+									<td>Upper Bound</td>
+									<td>Range Value</td>
+									<td>Meaning</td>
+								</tr>
+							</thead>
+							<tbody id="measureRangeTableBody">
+								<edit:range />
+							</tbody>
+						</table>
+					 </td>
 					</tr>
-				</thead>
-				<tbody>
-					<lift:MeasureSnippet.editMeasures><edit:context /></lift:MeasureSnippet.editMeasures>
-				</tbody>
-			</table>
+				</table>
+			</lift:MeasureSnippet.editMeasures>
 		</div>
 	</div>
 </lift:surround>

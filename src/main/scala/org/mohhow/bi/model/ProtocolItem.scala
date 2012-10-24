@@ -21,7 +21,7 @@ class ProtocolItem extends LongKeyedMapper[ProtocolItem] with IdPK {
    override def dbColumnName = "ITEM_NUMBER"
  }
 
- object classification extends MappedPoliteString(this, 10) {
+ object classification extends MappedPoliteString(this, 20) {
    override def dbColumnName = "CLASSIFICATION"
  }
 
@@ -40,5 +40,3 @@ class ProtocolItem extends LongKeyedMapper[ProtocolItem] with IdPK {
  }
      
 }
-
-

@@ -11,11 +11,15 @@ import _root_.net.liftweb.common._
 object User extends User with MetaMegaProtoUser[User] {
   override def dbTableName = "users" // define the DB table name
   override def screenWrap = Full(<lift:surround with="mohhow_default" at="content">
-  																	<div class="upper_right">
-																			<h1>Login and User Management</h1>
-																		</div>
-																		<div class="rightContent">
+  																<div class="upper_right">
+																	<h1>{if(htmlHeaders.text.startsWith("Vor")) "Anmeldung und Benutzerverwaltung" else "Login and User Management"}</h1>
+																</div>
+																<div class="rightContent">
 			       													<lift:bind />
+		  															<div class="alert">
+																		<br />
+		  																<span class="lift:Msgs?showAll=true"/>
+		  															</div>
 			       												</div>
 			       											</lift:surround>)
   // define the order fields will appear in forms and output
@@ -30,7 +34,7 @@ object User extends User with MetaMegaProtoUser[User] {
 /**
  * An O-R mapped "User" class that includes first name, last name, password and we add a "Personal Essay" to it
  */
-class User extends MegaProtoUser[User] {
+class User extends MegaProtoUser[User] with ManyToMany {
   def getSingleton = User // what's the "meta" server
 
   // define an additional field for a personal essay
@@ -39,6 +43,8 @@ class User extends MegaProtoUser[User] {
     override def textareaCols = 50
     override def displayName = "Personal Essay"
   }
+  
+  object clients extends MappedManyToMany(ClientToUser, ClientToUser.fkUser, ClientToUser.fkClient, Client)
 }
 }
 }

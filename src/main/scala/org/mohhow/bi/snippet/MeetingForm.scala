@@ -17,33 +17,35 @@ object MeetingForm extends LiftScreen{
 	
  def nvl(s: String) = if (s == null) "" else s
  
- val meeting = RelevantMeeting.is
- 
  val datePattern = Pattern.compile("\\d\\d\\.\\d\\d\\.\\d\\d\\d\\d");
  val timePattern = Pattern.compile("\\d\\d:\\d\\d")
  
- val meetingCategory = select("Category", nvl(meeting.category), List("Kickoff", "Requirements Gathering", "Discussion on Prototype", "Sprint Review"))
- val topic = field("Topic", nvl(meeting.topic), valMinLen(1, "Topic too short"), valMaxLen(255, "Topic too long"))
+ val meetingCategory = select(S.?("category"), nvl(RelevantMeeting.is.category), List(S.?("kickoff"), S.?("requirementsGathering"), S.?("prototypeDiscussion"), S.?("sprintReview")))
+ val topic = field(S.?("topic"), nvl(RelevantMeeting.is.topic), valMinLen(1, S.?("textToShort")), valMaxLen(255, S.?("textToLong")))
  
  val dateField = new Field { 
     type ValueType = String 
-    override def name = "Meeting Date" 
+    override def name = S.?("meetingDate") 
     lazy val manifest = buildIt[String]
-    override def default = MyUtil.formatDate(meeting.meetingBegin)
+    override def default = MyUtil.formatDate(RelevantMeeting.is.meetingBegin)
     override def toForm: Box[NodeSeq] =  SHtml.text(is, set _, "class" -> "dateInput") 
   } 
  
- val meetingDate = dateField //"Date", "") //, valRegex(datePattern, "Date format must be dd.mm.yyyy"))
- val meetingBegin = field("Begin", nvl(MyUtil.timeInDay(meeting.meetingBegin)), valRegex(timePattern, "Time format must be hh:mm"))
- val meetingEnd = field("End", nvl(MyUtil.timeInDay(meeting.meetingEnd)), valRegex(timePattern, "Time format must be hh:mm"))
+ val meetingDate = dateField
+ val meetingBegin = field(S.?("begin"), nvl(MyUtil.timeInDay(RelevantMeeting.is.meetingBegin)), valRegex(timePattern, "Time format must be hh:mm"))
+ val meetingEnd = field(S.?("end"), nvl(MyUtil.timeInDay(RelevantMeeting.is.meetingEnd)), valRegex(timePattern, "Time format must be hh:mm"))
+ 
+ override def cancelButton = <button>{S.?("cancel")}</button>
+ override def finishButton = <button>{S.?("finish")}</button>
  
  def finish() {
+	val meeting = RelevantMeeting.is
 	val minutes = RelevantMinutes.is
-    meeting.topic(topic).category(meetingCategory).meetingBegin(org.mohhow.bi.util.Utility.asDate(meetingDate, meetingBegin)).meetingEnd(org.mohhow.bi.util.Utility.asDate(meetingDate, meetingEnd)).moderator(User.currentUser).save
+    meeting.topic(topic).category(meetingCategory).meetingBegin(MyUtil.asDate(meetingDate, meetingBegin)).meetingEnd(MyUtil.asDate(meetingDate, meetingEnd)).moderator(User.currentUser).save
     meeting.save
     if(minutes != null) minutes.fkMeeting(meeting).save
     
-    val candidates = ScenarioRole.findAll(By(ScenarioRole.fkScenario, SelectedScenario.is.id))
+    val candidates =  MyUtil.filterScenarioRoles(Nil, ScenarioRole.findAll(By(ScenarioRole.fkScenario, SelectedScenario.is.id)).toList)
     
     for(candidate <- candidates) {
     	val mr = MeetingRecipient.findAll(By(MeetingRecipient.fkUser, candidate.fkUser), By(MeetingRecipient.fkMeeting, meeting.id))

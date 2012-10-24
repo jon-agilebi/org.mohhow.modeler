@@ -1,0 +1,54 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+			  $('.singleSelection tbody tr').click(function() {
+			  	$('.singleSelection tbody tr').removeClass('zebraHover');
+					$(this).addClass('zebraHover');
+					$('#catalogueTable').attr('currentSelection',$(this).attr('choice'));
+				});
+			  $('#synonymList').hide();
+			}); 
+		</script>
+	</head>
+	<lift:RoleSnippet.inScenario>
+		<div class="upper_right">
+			<h1>Kennzahlenkatalog</h1>
+			<div class="menuBar">
+				<lift:MeasureSnippet.measures><catalogue:add /><catalogue:edit /><catalogue:discard /><catalogue:choice /><catalogue:markAsSynonym /><catalogue:synonyms /></lift:MeasureSnippet.measures>
+				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+			</div>
+		</div>
+		<lift:MeasureSnippet.measures>
+			<div class="rightScrollableContent">
+				<table class="singleSelection protocolTable" id="catalogueTable" currentSelection="-1">
+			     <thead>
+			     	<tr>
+			     		<td>Bereich</td>
+			     		<td>Status</td>
+			      		<td>Kurzname</td>
+						<td>Langname</td>
+						<td>Einheit</td>
+						<td>Ben&ouml;tige Aktualit&auml;t</td>
+						<td>Zeitraum des Interesses</td>
+						<td>Vorgeschriebene Speicherzeit</td>
+						<td>referenziert Backlog-Eintrag</td>
+						<td>Erstellungsdatum</td>
+			        </tr>
+			      </thead>
+			      <tbody id="catalogueTableRows">
+			      	<catalogue:rows />
+			      </tbody>
+				</table>
+				<br />
+				<catalogue:definition />
+				<catalogue:formula />
+				<catalogue:mockup />
+				<catalogue:context />
+				<catalogue:range />
+			</div>
+		</lift:MeasureSnippet.measures>
+	</lift:RoleSnippet.inScenario>
+</lift:surround>

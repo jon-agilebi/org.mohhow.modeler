@@ -20,7 +20,7 @@ object SprintForm extends LiftScreen{
  
  val beginField = new Field { 
     type ValueType = String 
-    override def name = "Sprint Begin" 
+    override def name = S.?("sprintBegin") 
     lazy val manifest = buildIt[String]
     override def default = MyUtil.formatDate(SelectedSprint.is.sprintBegin)
     override def toForm: Box[NodeSeq] =  SHtml.text(is, set _, "class" -> "dateInput") 
@@ -28,7 +28,7 @@ object SprintForm extends LiftScreen{
  
  val endField = new Field { 
     type ValueType = String 
-    override def name = "Sprint End" 
+    override def name = S.?("sprintEnd") 
     lazy val manifest = buildIt[String]
     override def default = MyUtil.formatDate(SelectedSprint.is.sprintEnd)
     override def toForm: Box[NodeSeq] =  SHtml.text(is, set _, "class" -> "dateInput") 
@@ -37,8 +37,11 @@ object SprintForm extends LiftScreen{
  val sprintBegin = beginField
  val sprintEnd = endField
  
- val sprintWorkingDays = field("Number of Working Days", nvl(SelectedSprint.is.numberOfWorkingDays.toString), valRegex(twoDigitsPattern, "Priority must be a number less or equal to 99"))
- val purpose = textarea("Sprint Objective", nvl(SelectedSprint.is.purpose), valMaxLen(255, "Description too long"))
+ val sprintWorkingDays = field(S.?("numberOfWorkingDays"), nvl(SelectedSprint.is.numberOfWorkingDays.toString), valRegex(twoDigitsPattern, "Priority must be a number less or equal to 99"))
+ val purpose = textarea(S.?("sprintObjective"), nvl(SelectedSprint.is.purpose), valMaxLen(255, "Description too long"))
+ 
+ override def cancelButton = <button>{S.?("cancel")}</button>
+ override def finishButton = <button>{S.?("finish")}</button>
  
  def finish() {
 	val sprint = SelectedSprint.is

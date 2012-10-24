@@ -7,13 +7,16 @@
 				$('#editStoreTableBody tr').click(function() {
 					$('#editStoreTableBody tr').removeClass('zebraHover');
 					$(this).addClass('zebraHover');
+				});  
+				$('#editStoreTableBody input').live('change', function(){
+					$(this).attr('value', $(this).val());
 				});
-				$('#addStoreButton').click(function() {
-					$('#editStoreTableBody').append('<tr><td>doof</td><td>doof</td><td>doof</td><td>doof</td></tr>');
-				}); 
-				$('#removeStoreButton').click(function(){
-					$('#editStoreTableBody .zebraHover').remove();
-				}); 
+				$('.nodeInput input').live('change', function(){
+					$(this).attr('value', $(this).val());
+				});
+				$('.nodeInput select').live('change', function(){
+					$(this).attr('value', $(this).val());
+				});
 			})
 		</script>
 	</head>
@@ -28,7 +31,7 @@
     	<div class="mohhowForm">
     		<ds:node /><br /><br />
 	  		<h3>Data Stores</h3><br />
-	  		<input type="button" value="+" class="standardButton" id="addStoreButton" /><input type="button" value="-" class="standardButton" id="removeStoreButton" /><br />
+	  		<ds:add /><ds:remove /><br /> 
 		  	<ds:stores /><br /><br />
 		</div>
 	 </lift:NodeSnippet.dataStoreEdit>	

@@ -25,15 +25,7 @@ class MeasureToModelVertex extends LongKeyedMapper[MeasureToModelVertex] with Id
    override def dbColumnName = "AGGREGATION"
  }
  
- object validFrom extends MappedDateTime(this) {
-   override def dbColumnName = "VALID_FROM"
- }
-	
- object validUntil extends MappedDateTime(this) {
-   override def dbColumnName = "VALID_UNTIL"
- }
-	
- object isCurrent extends MappedLong(this) {
-   override def dbColumnName = "IS_CURRENT"
+ object dateCreated extends MappedDateTime(this) {
+   override def dbColumnName = "DATE_CREATED"
  }
 }

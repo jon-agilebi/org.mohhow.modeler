@@ -1,0 +1,39 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			
+		</script>
+	</head>
+	<lift:RoleSnippet.inScenario>
+		<div class="upper_right">
+	        <h1>Design</h1>
+	        <div class="menuBar">
+				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+			</div>
+	    </div>
+		<div class="rightContent">
+			<img src='images/design.jpeg' alt='Design' text-align='center' />
+			<p>
+			
+			F&uuml;r das Szenariodesign sind drei Artefakte wesentlich:
+			<br/><br/>
+			<ul style="margin-left:30px; margin-right:30px">
+				<li>
+					Das <a href="/adapt">logische Datenmodell</a> beschreibt die interne Struktur aller Dimensionen und das Zusammenspiel von Dimensionen und W&uuml;rfeln. 
+				</li> 
+				<li>
+					Der <a href="/catalogue">Kennzahlenkatalog</a> listet alle Kennzahlen auf und beschreibt die wesentlichen Eigenschaften jeder Kennzahl; unter anderem wird der 
+					Auswertekontext jeder Kennzahl beschrieben. Daraus kann abgeleitet werden, mit welchen Dimensionen die Kennzahl in Verbindung steht und daraus wiederum, 
+					welchem W&uuml;rfel die Kennzahl zugeordnet werden kann. 
+				</li> 
+				<li>
+					F&uuml;r jedes Informationsobjekt wird eine <a href="/specification">Spezifikation</a> erstellt, die angibt, welche Kennzahlen im Kontext welcher 
+					Dimensionsattribute dargestellt werden, wie sie gefiltert werden und in welcher Diagramm- oder Tabellenform die einzelnen Bl&ouml;cke dargestellt werden. 
+				</li>
+			</ul>	
+			</p>
+		</div>
+	</lift:RoleSnippet.inScenario>
+</lift:surround>

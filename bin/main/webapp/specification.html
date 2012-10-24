@@ -2,41 +2,52 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
   		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
-  		<script  src="/script/jquery-ui-1.8.16.custom.min.js" type="text/javascript"></script>
+  		<script  src="/script/jquery-ui-1.8.17.custom.min.js" type="text/javascript"></script>
+  		<!--  <script  src="/script/scorecard.js" type="text/javascript"></script> -->
+  		<script  src="/script/specification.js" type="text/javascript"></script>
   		<script type="text/javascript">
 			$(document).ready(function() { 
-			    $('.emphasizable').click(function() {
-			  	 $('.emphasizable').removeClass('emphasized');
+			    $('.emphasizableBlock').click(function() {
+			  	 $('.emphasizableBlock').removeClass('emphasized');
 					$(this).addClass('emphasized');
 				});
-			    $('.handle').click(function(){$(this).toggleClass('closed opened').nextAll('ul').toggle();}); 
-			    $('.dragMeasure').draggable({
-			    	//helper: 'clone',
-			    	opacity: 0.1
-			    });
-			    S('.dropMeasure').droppable({
-			    	drop: function(event, ui) {
-			    		alert("hello ");
-			    		//$('this ul').append('<li>some new measure</li>');
-			    	}
-			    });  
+			    $('.emphasizableSpec').click(function() {
+				  	 $('.emphasizableSpec').removeClass('emphasized');
+						$(this).addClass('emphasized');
+					});
+			    $('#specificationTree ul').hide();
+			    $('.handle').live('click',function(){$(this).toggleClass('closed').toggleClass('opened').nextAll('ul').toggle();
+			    });   
+			    activateSorting();
+			    initializeBlockInformation();
+			    $('.emphasizableMeasure').live('click', function() {
+				  	$('.emphasizableMeasure').removeClass('emphasized');
+					$(this).addClass('emphasized');
+				});
+			    $('.emphasizableAttribute').live('click', function() {
+				  	$('.emphasizableAttribute').removeClass('emphasized');
+					$(this).addClass('emphasized');
+				});
 			}); 
 		</script>
 	</head>
+	<dropResults id="dropResults" />
 	<lift:RoleSnippet.inScenario>
 		<div class="upper_right">
 			<h1>Specifications</h1>
 			<div class="menuBar">
-				<lift:MockupSnippet.specification><spec:addSpecification /><spec:removeSpecification /><spec:copyBlock /><spec:removeBlock /></lift:MockupSnippet.specification>
+				<lift:MockupSnippet.specification><spec:addSpecification /><spec:removeSpecification /><spec:copyBlock /><spec:addBlock /><spec:removeBlock /></lift:MockupSnippet.specification>
 				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
 			</div>
 		</div>
 		<div class="rightContent">
 			<lift:MockupSnippet.specification>
 				<div class="quarterContent">
-					<div id="specificationTree">
+					<div>
 						<p class="messageTitle">Status <spec:statusChoice /></p>
-						<spec:tree />
+						<ul id="specificationTree">
+							<spec:tree />
+						</ul>
 					</div>
 			  	</div>
 			  	<div class="threeQuarterContent">

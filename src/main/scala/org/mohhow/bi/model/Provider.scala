@@ -28,6 +28,10 @@ class Provider extends LongKeyedMapper[Provider] with IdPK {
  object userName extends MappedPoliteString(this, 100) {
    override def dbColumnName = "USER_NAME"
  }
+ 
+ object pwd extends MappedPoliteString(this, 100) {
+   override def dbColumnName = "PWD"
+ }
 	
  object authType extends MappedPoliteString(this, 100) {
    override def dbColumnName = "AUTH_TYPE"
@@ -47,6 +51,18 @@ class Provider extends LongKeyedMapper[Provider] with IdPK {
 
  object maxRetries extends MappedLong(this) {
    override def dbColumnName = "MAX_RETRIES"
+ }
+ 
+ object searchTerm extends MappedPoliteString(this, 100) {
+   override def dbColumnName = "SEARCH_TERM"
+ }
+ 
+ object memberAttribute extends MappedPoliteString(this, 100) {
+   override def dbColumnName = "MEMBER_ATTRIBUTE"
+ }
+ 
+ object displayAttribute extends MappedPoliteString(this, 100) {
+   override def dbColumnName = "DISPLAY_ATTRIBUTE"
  }
 
  object dateCreated extends MappedDateTime(this) {

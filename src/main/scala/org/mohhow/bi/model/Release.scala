@@ -34,11 +34,11 @@ class Release extends LongKeyedMapper[Release] with IdPK {
  }
  
  object begin extends MappedDateTime(this) {
-   override def dbColumnName = "BEGIN"
+   override def dbColumnName = "RELEASE_BEGIN"
  }
  
  object end extends MappedDateTime(this) {
-   override def dbColumnName = "END"
+   override def dbColumnName = "RELEASE_END"
  }
  
  object scheduledEnd extends MappedDateTime(this) {
@@ -62,5 +62,5 @@ class Release extends LongKeyedMapper[Release] with IdPK {
  }
  
  def prettyNumber = if(patch == null) majorRelease.toString + "." + minorRelease.toString
- 				    else majorRelease.toString + "." + minorRelease.toString + "." + patch.toString
-}
+ 				    else majorRelease.toString + "." + minorRelease.toString + "." + patch.toString 
+} 

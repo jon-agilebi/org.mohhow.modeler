@@ -13,6 +13,8 @@ var elementToRemove;
 var removeIcon = [];
 var someoneHasFocus = false;
 var hasSource = false;
+var superfluousClones = [];
+var justALineToRemove = false;
 
 function setSymbolAttributes(symbol) {
 	symbol.attr("fill", "lightgray");
@@ -26,18 +28,18 @@ function setFrameAttributes(frame) {
 
 function updateElements(x, y, kind, elements) {
 	var attributes;
-	
+
 	if(kind == "hierarchy") {
 		attributes = [{cx: 16 + x, cy: 18 + y}, {cx: 8 + x, cy: 32 + y}, {cx: 24 + x, cy: 32 + y}, {path: movePath("M16,18L8,32M16,18L24,32",x,y)}];
 	} 
 	else if (kind == "cube") {
-		attributes = [{path: movePath("M3,5L11,0L19,5L11,10L3,5L3,17M11,10L11,22M19,5L19,17M3,17L11,22L19,17",x,y)}];
+		attributes = [{path: movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y)}];
 	} 
 	else if (kind == "attribute") {
 		attributes = [{path:movePath("M7,20L14,13L21,20L14,27Z",x,y)}];
 	}
 	else if (kind == "dimension") {
-		attributes = [{x: 2 + x, y: 5 + y}, {x: 14 + x, y: y}, {x: 19 + x, y: 5 + y}, {x: x, y: 19 + y}, {path: movePath("M2,5L14,1.5M14,5L19,5M2,17L2,19",x,y)}];
+		attributes = [{x: 6 + x, y: 9 + y}, {x: 18 + x, y: y+4}, {x: 23 + x, y: 9 + y}, {x: 4+x, y: 23 + y}, {path: movePath("M6,9L18,5.5M18,9L23,9M6,21L6,23",x,y)}];
 	}	
 	else if (kind == "level") {
 		attributes = [{path: movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y)}, {path: movePath("M12,16L8,24L16,24Z",x,y)}, {path: movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y)}];
@@ -49,12 +51,12 @@ function updateElements(x, y, kind, elements) {
 		attributes = [{path: movePath("M6,10T4,12T6,18L4,20L6,22T4,24T6,30",x,y)}, {path: movePath("M18,10T20,12T18,18L20,20L18,22T20,24T18,30",x,y)}];
 	}
 	else if (kind == "context") {
-		attributes = [{path: movePath("M3,5L11,0L19,5L11,10L3,5L3,17M11,10L11,22M19,5L19,17M3,17L11,22L19,17",x,y)}];
+		attributes = [{path: movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y)}, {path:movePath("M6,6A11,11,0,1,1,20,20",x,y)}];
 	}
 	
 	for(var i = 0; i < elements.length; i++) {
 		elements[i].attr(attributes[i]);
-	}  
+	} 
 }
 
 function computeElements(x, y, kind, myPaper) {
@@ -72,7 +74,7 @@ function computeElements(x, y, kind, myPaper) {
 		return [c1, c2, c3, p1];
 	}
 	else if (kind == "cube") {
-		var p = myPaper.path(movePath("M3,5L11,0L19,5L11,10L3,5L3,17M11,10L11,22M19,5L19,17M3,17L11,22L19,17",x,y));
+		var p = myPaper.path(movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y));
 		setSymbolAttributes(p);
 	    return [p];
 	}
@@ -82,15 +84,15 @@ function computeElements(x, y, kind, myPaper) {
 	    return [p];
 	}
 	else if (kind == "dimension") {
-		var r1 = myPaper.rect(2+x,5+y,12,12);
+		var r1 = myPaper.rect(6+x,9+y,12,12);
 		setSymbolAttributes(r1);
-		var r2 = myPaper.rect(14+x,y,3,3);
+		var r2 = myPaper.rect(18+x,4+y,3,3);
 		setSymbolAttributes(r2);
-		var r3 = myPaper.rect(19+x,5+y,3,3);
+		var r3 = myPaper.rect(23+x,9+y,3,3);
 		setSymbolAttributes(r3);
-		var r4 = myPaper.rect(x,19+y,3,3);
+		var r4 = myPaper.rect(4+x,23+y,3,3);
 		setSymbolAttributes(r4);
-		var p = myPaper.path(movePath("M2,5L14,1.5M14,5L19,5M2,17L2,19",x,y));
+		var p = myPaper.path(movePath("M6,9L18,5.5M18,9L23,9M6,21L6,23",x,y));
 		setSymbolAttributes(p);
 		
 	    return [r1, r2, r3, r4, p];
@@ -130,32 +132,35 @@ function computeElements(x, y, kind, myPaper) {
 	    return [lbracket, rbracket];
 	}
 	else if (kind == "context") {
-		var p = myPaper.path(movePath("M3,5L11,0L19,5L11,10L3,5L3,17M11,10L11,22M19,5L19,17M3,17L11,22L19,17",x,y));
+		var p = myPaper.path(movePath("M6,11L14,6L22,11L14,16L6,11L6,23M14,16L14,28M22,11L22,23M6,23L14,28L22,23",x,y));
 		setSymbolAttributes(p);
-	    return [p];
+		var c = myPaper.path(movePath("M6,6A11,11,0,1,1,20,20",x,y));
+		c.attr("stroke-dasharry", "-");
+	    return [p, c];
 	}
+	else return [];
 }
 
 Raphael.el.getStatus = function() {
 	
- for(var i = 0; i < elementTitles.length; i++) {
-	if(elementTitles[i].frame == this) {	
-		return elementTitles[i].status;
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].frame == this) {	
+			return elementTitles[i].status;
+		}
 	}
- }
 	
- return "unknown";
+	return "unknown";
 }
 
 Raphael.el.getElementType = function() {
 	
- for(var i = 0; i < elementTitles.length; i++) {
-	 if(elementTitles[i].frame == this) {	
-		return elementTitles[i].elementType;
-	 }
- }
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].frame == this) {	
+			return elementTitles[i].elementType;
+		}
+	}
 	
- return "unknown";
+	return "unknown";
 }
 
 Raphael.el.getVertexId = function() {
@@ -166,7 +171,7 @@ Raphael.el.getVertexId = function() {
 		 }
 	 }
 		
-	 return "unknown";
+	 return null;
 }
 
 Raphael.el.setStatus = function(status) {
@@ -174,6 +179,15 @@ Raphael.el.setStatus = function(status) {
 	for(var i = 0; i < elementTitles.length; i++) {
 		if(elementTitles[i].frame == this) {	
 		 elementTitles[i].status = status;
+		}
+	}
+}
+
+Raphael.el.setVertexId = function(vertexId) {
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		if(elementTitles[i].frame == this) {	
+		 elementTitles[i].vertexId = vertexId;
 		}
 	}
 }
@@ -187,12 +201,13 @@ Raphael.fn.symbol  = function(kind, frame) {
 	
 	var x = frame.getBBox().x;
 	var y = frame.getBBox().y;
+	var elements = computeElements(Number(x), Number(y), kind, this);
 	
 	return {
 		kind: kind,
-		elements: computeElements(x, y, kind, this),
+		elements: elements,
 		frame: frame
-		};
+	};
 }
 
 Raphael.fn.connectionMarker  = function(x, y, frame) {
@@ -202,7 +217,7 @@ Raphael.fn.connectionMarker  = function(x, y, frame) {
 	return {
 		marker: marker,
 		frame: frame
-	}
+	};
 }
 
 function getModelConnection(source, target) {
@@ -252,7 +267,7 @@ Raphael.fn.connection = function (source, target) {
 	var path = getModelConnection(source, target);
 	
 	return {
-        line: this.path(path).attr({stroke: "#000", fill: "none"}),
+        line: this.path(path).attr({stroke: "#000", fill: "none"}).hover(markLine, unmarkLine),
         from: source,
         to: target
     };
@@ -266,12 +281,13 @@ function updateModelConnection(connection) {
 function moveSymbol(symbol) {
  var x = symbol.frame.getBBox().x;
  var y = symbol.frame.getBBox().y;
- symbol.elements(updateElements(x, y, symbol.kind, symbol.elements));
+ updateElements(Number(x), Number(y), symbol.kind, symbol.elements);
 }
 
 Raphael.fn.elementTitle = function(text, frame, elementType, detail, vertexId) {
-	var x = frame.getBBox().x;
-	var y = frame.getBBox().y;
+	var x = Number(frame.getBBox().x);
+	var y = Number(frame.getBBox().y);
+	
 	var elm = this.text(x + 60, y + 20, text);
 	elm.dblclick(showDialog);
 	
@@ -291,12 +307,14 @@ var showDialog = function () {
 	var thisStatus = "prototype";
 	var thisKind;
 	var someDetail;
+	var someUsage;
 	
 	for(var i = 0; i < elementTitles.length; i++) {
 		if(elementTitles[i].element == this) {	
 			thisStatus = elementTitles[i].status;
 			thisKind = elementTitles[i].elementType;
 			someDetail = elementTitles[i].detail;
+			someUsage = elementTitles[i].usage;
 		}
 	 }
 	
@@ -317,14 +335,38 @@ var showDialog = function () {
 		
 		if(thisKind == "attribute") {
 			var pattern;
+			var realize;
 			
 			if(someDetail) pattern = "<input type='text' id= 'modalModelAttributePatternInput' value='" + someDetail + "'/>";
 			else pattern = "<input type='text' id= 'modalModelAttributePatternInput' />";
 			
+			if(someUsage) realize = "<input type='text' id= 'modalModelAttributeUsageInput' value='" + someUsage + "'/>";
+			else realize = "<input type='text' id= 'modalModelAttributeUsageInput' />";
+			
 			$.blockUI({message: "<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>" + 
 				                 nameInput1 + text + nameInput2 + "</td></tr><tr><td><label>Pattern</label></td><td>" 
-				                 + pattern + "</td></tr></table><br />"+ cancel + save + "</div>"});
+				                 + pattern + "</td></tr><tr><td><label>Realises</label></td><td>" + realize + "</td></tr></table><br />"+ cancel + save + "</div>"});
 			
+		}
+		else if(thisKind == "dimension" || thisKind == "cube") {
+			
+			var initialGrowth;
+			var growthPerLoad;
+		
+			if(someDetail && someDetail.split(";").length == 2) {
+				var bothValues = someDetail.split(";")
+				initialGrowth = "<input type='text' id= 'modalModelAttributePatternInput' value='" + bothValues[0] + "'/>";
+				growthPerLoad = "<input type='text' id= 'modalModelAttributeAdditionalPatternInput' value='" + bothValues[1] + "'/>";
+			}
+			else {
+				initialGrowth = "<input type='text' id= 'modalModelAttributePatternInput' />";
+				growthPerLoad = "<input type='text' id= 'modalModelAttributeAdditionalPatternInput'/>";
+			}
+			
+			$.blockUI({message: "<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>" + 
+				                 nameInput1 + text + nameInput2 + "</td></tr><tr><td><label>Estimated initial size</label></td><td>" 
+				                 + initialGrowth + "</td></tr><tr><td><label>Estimated growth per load</label></td><td>" 
+				                 + growthPerLoad + "</td></tr></table><br />"+ cancel + save + "</div>"});
 		}
 		else {
 	
@@ -336,22 +378,44 @@ var showDialog = function () {
 function saveText() {
 
  var modelId = null;
+ var vertexId = 0;
  
  for(var i = 0; i < elementTitles.length ;i++) {
 	if(elementTitles[i].element  == textToEdit) {
 		modelId = 	elementTitles[i].frame.id;
+		vertexId = elementTitles[i].vertexId;
 	}
  }
 	
  var text = $('#modalModelTextInput').val();
  var detailText = $('#modalModelAttributePatternInput').val();
+ var additionalDetailText = $('#modalModelAttributeAdditionalPatternInput').val();
+ var usageText = $('#modalModelAttributeUsageInput').val();
  
- if(modelId) {
+ if(additionalDetailText && additionalDetailText.length > 0) detailText = detailText + ";" + additionalDetailText;
+ 
+ if(vertexId > 0) {
 	  textToEdit.attr('text',text);
-	  $("#logicalModelVertices v[modelId=" + modelId + "] elementName").empty();
+	  textToEdit.attr('detail', detailText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] elementName").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] elementName").append(text);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] detail").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] detail").append(detailText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").append(usageText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] status").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] status").append("changed");
+	  $.unblockUI();
+ }
+ else if(modelId) {
+	  textToEdit.attr('text',text);
+	  textToEdit.attr('detail', detailText);
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] elementName").empty();
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] elementName").append(text);
-	  $("#logicalModelVertices v[modelId=" + modelId + "] detail").empty();
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] detail").empty();
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] detail").append(detailText);
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").append(usageText);
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] status").empty();
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] status").append("changed");
 	  $.unblockUI();
@@ -361,7 +425,7 @@ function saveText() {
 function moveTitle(title) {
 	var x = title.frame.getBBox().x;
 	var y = title.frame.getBBox().y;
-	var att = {x: x + 60, y: y + 20};
+	var att = {x: Number(x) + 60, y: Number(y) + 20};
 	title.element.attr(att);
 }
 
@@ -374,15 +438,28 @@ function movePath(path, dx, dy) {
 
 	var text = String(path);
 	var parts = text.trim().split(/(\D)/);
-	var i = 0;
+	var k = 0;
+	var leastLetter;
 	
 	for(var j = 0; j < parts.length; j++) {
-		if(parts[j] == ',') { 
-			i = 1; 
+		if(parts[j] == ',') {  
+			k++;
 		}
 		else if(parts[j].match(/\d+/)) {
+			
 			var help = Number(parts[j]);
-			if (i == 0) { parts[j] = help + dx;} else { parts[j] = help + dy; i = 0;} 
+			
+			if(leastLetter != 'A') {
+				if (k == 0) parts[j] = help + Number(dx); else parts[j] = help + Number(dy);
+			}
+			else {
+				if (k == 5) parts[j] = help + Number(dx); 
+				else if (k == 6) parts[j] = help + Number(dy);
+			}
+		}
+		else if(parts[j].match(/[MTLA]/)) {
+			leastLetter = parts[j];
+			k = 0;
 		}
 	}
 	
@@ -449,7 +526,7 @@ var move = function(dx, dy) {
 		this.attr(att);
 	}
 	else { 
-		var att = {x: this.ox + dx, y: this.oy + dy};
+		var att = {x: Number(this.ox) + Number(dx), y: Number(this.oy) + Number(dy)};
 		this.attr(att);	
 	}
 	
@@ -473,29 +550,67 @@ var move = function(dx, dy) {
 	
 }
 
+function determineModelOrVertexId(elm, isVertex) {
+	
+	var modelId = -1;
+	var vertexId = -1;
+	
+	for(var i = 0; i < elementTitles.length ;i++) {
+		if(elementTitles[i].frame  == elm) {
+			vertexId = elementTitles[i].vertexId;
+			modelId = elementTitles[i].modelId;
+			break;
+		}
+	}
+	
+	if(isVertex) return vertexId; else return modelId;
+}
+
 var stopMove = function() {
 	
 	var x = this.getBBox().x;
 	var y = this.getBBox().y;
+	var vertexId = -1;
+	var modelId = -1;
+	
 	if (x < 280) {
 		this.hide();
 	} 
 	else {
 		
-		if(this.getStatus() == "prototype"){
+		for(var i = 0; i < elementTitles.length ;i++) {
+			if(elementTitles[i].frame  == this) {
+				vertexId = elementTitles[i].vertexId;
+				modelId = elementTitles[i].modelId;
+				break;
+			}
+		}
+		
+		if(this.getStatus() == "prototype") {
+			
 			this.setStatus("initial");
+			this.setVertexId("m" + this.id);
 			this.hover(getFocus, leaveFocus);
 			frames.push(this);
 			$('#logicalModelVertices').append("<v modelId='" + this.id + "' vertexId='m"+ this.id + "'><elementType>" + this.getElementType() + "</elementType><elementName></elementName><x>" + x + "</x><y>" + y + "</y><detail></detail><scale>1</scale><usage>0</usage><status>new</status></v>");
 		}
-		else {
-			$("#logicalModelVertices v[modelId=" + this.id + "] x").empty();
+		else if (modelId > 0) {
+			
+			$("#logicalModelVertices v[modelId='" + this.id + "'] x").empty();
 			$("#logicalModelVertices v[modelId='" + this.id + "'] x").append(x);
-			$("#logicalModelVertices v[modelId=" + this.id + "] y").empty();
+			$("#logicalModelVertices v[modelId='" + this.id + "'] y").empty();
 			$("#logicalModelVertices v[modelId='" + this.id + "'] y").append(y);
 			$("#logicalModelVertices v[modelId='" + this.id + "'] status").empty();
 			$("#logicalModelVertices v[modelId='" + this.id + "'] status").append("changed");
+		}
+		else {
 			
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] x").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] x").append(x);
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] y").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] y").append(y);
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").append("changed");
 		}
 	}  
 }
@@ -507,6 +622,7 @@ var getFocus = function() {
 		createConnectionMarker(this);
 		someoneHasFocus = true;
 		focus = this;
+		justALineToRemove = false;
 	}
 };
 
@@ -524,7 +640,6 @@ var drawLine = function(dx, dy) {
 var finishLineDrawing = function() {
 	
 	lineToDraw.remove();
-	//this.remove();
 	
 	var x = this.getBBox().x + 2;
 	var y = this.getBBox().y + 2;
@@ -532,11 +647,11 @@ var finishLineDrawing = function() {
 	if(hasSource) {
 		
 		for(var i = 0; i < frames.length; i++) {
-		
+			
 			if(frames[i].isInBox(x, y)) {
                 var conn = editPaper.connection(source, frames[i]);
 				connections.push(conn);
-				$('#logicalModelEdges').append("<e modelId='" + conn.line.id + "' edgeId=''><h>" + source.getVertexId() + "</h><t>" + frames[i].getVertexId() + "</t><status>new</status></e>");
+				$('#logicalModelEdges').append("<e modelId='" + conn.line.id + "' edgeId='m" + conn.line.id + "'><h>" + source.getVertexId() + "</h><t>" + frames[i].getVertexId() + "</t><status>new</status></e>");
 			}
 		}
 	}
@@ -549,6 +664,7 @@ var initConnection = function() {
 	
 	var clone = this.clone();
 	clone.drag(drawLine, initConnection, finishLineDrawing);
+	superfluousClones.push(clone);
 	this.ox = this.attr("x");
 	this.oy = this.attr("y");
 	this.toFront();
@@ -598,6 +714,11 @@ function removeConnectionMarker() {
 		var aPart = removeIcon.pop();
 		aPart.remove();
 	}
+	
+	while(superfluousClones.length > 0) {
+		var aClone = superfluousClones.pop();
+		aClone.remove();
+	}
 }
 
 var leaveFocus = function() {
@@ -618,33 +739,44 @@ var removeElement = function () {
 function removeFinally() {
 	
 	removeConnectionMarker();
-	
-	$("#logicalModelVertices v[modelId='" + elementToRemove.id + "'] status").empty();
-	$("#logicalModelVertices v[modelId='" + elementToRemove.id + "'] status").append("removed");
-
-	for(var i = 0; i < connections.length; i++) {
-		if(connections[i].from == elementToRemove || connections[i].to == elementToRemove) {
-			
-			$("#logicalModelEdges e[modelId='" + connections[i].line.id + "'] status").empty();
-			$("#logicalModelEdges e[modelId='" + connections[i].line.id + "'] status").append("removed");
-			connections[i].line.remove();
-		}
-	}
-	
-	for(var i = 0; i < elementTitles.length; i++) {
-		 if(elementTitles[i].frame == elementToRemove) {	
-			 elementTitles[i].element.remove();
-		 }
-	}
-	
-	for(var i = 0; i < symbols.length; i++) {
+	if(!justALineToRemove) {
 		
-		if(symbols[i].frame == elementToRemove) {
-			
-			for(var j = 0; j < symbols[i].elements.length; j++) {
-				symbols[i].elements[j].remove();
+		var modelId = determineModelOrVertexId(elementToRemove, false);
+		var vertexId = determineModelOrVertexId(elementToRemove, true);
+		
+		if(modelId > 0) {
+			$("#logicalModelVertices v[modelId='" + modelId + "'] status").empty();
+			$("#logicalModelVertices v[modelId='" + modelId + "'] status").append("removed");
+		}
+		else {
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").empty();
+			$("#logicalModelVertices v[vertexId='" + vertexId + "'] status").append("removed");
+		}
+		
+		for(var i = 0; i < connections.length; i++) {
+			if(connections[i].from == elementToRemove || connections[i].to == elementToRemove) {
+				
+				$("#logicalModelEdges e[modelId='" + connections[i].line.id + "'] status").empty();
+				$("#logicalModelEdges e[modelId='" + connections[i].line.id + "'] status").append("removed");
+				connections[i].line.remove();
 			}
-		} 
+		}
+		
+		for(var i = 0; i < elementTitles.length; i++) {
+			 if(elementTitles[i].frame == elementToRemove) {	
+				 elementTitles[i].element.remove();
+			 }
+		}
+		
+		for(var i = 0; i < symbols.length; i++) {
+			
+			if(symbols[i].frame == elementToRemove) {
+				
+				for(var j = 0; j < symbols[i].elements.length; j++) {
+					symbols[i].elements[j].remove();
+				}
+			} 
+		}
 	}
 	
 	elementToRemove.remove();
@@ -672,12 +804,27 @@ function createRemoveIcon(x, y, element) {
 	
 }
 
+var markLine = function() {
+	removeConnectionMarker();
+	var p = this.getPointAtLength(1);
+	createRemoveIcon(p.x,p.y, this);
+	justALineToRemove = true;
+}
+
+var unmarkLine = function() {
+	
+}
+
 /**
  * draws the diagram for one cube or dimension out of the XML information on the page
  * @param onlyDisplay
  */
 
 function drawModel(onlyDisplay) {
+	
+	elementTitles = [];
+	frames = [];
+	symbols = [];
 	
 	if(onlyDisplay) {
 		paper.clear(); 
@@ -692,9 +839,10 @@ function drawModel(onlyDisplay) {
 		var vertexId =$(this).attr("vertexId");
 		var elementType = $(this).find("elementType").text(); 
 		var elementName = $(this).find("elementName").text();  
+		var detail = $(this).find("detail").text();
 	  	var x =  $(this).find("x").text();
 	  	var y =  $(this).find("y").text();
-	  	drawElement(elementType, onlyDisplay, x, y, elementName, vertexId);  	
+	  	drawElement(elementType, onlyDisplay, Number(x), Number(y), elementName, vertexId, detail);  	
 	});
 	
 	$('#logicalModelEdges e').each(function(edge){
@@ -706,7 +854,7 @@ function drawModel(onlyDisplay) {
 			if(onlyDisplay) paper.connection(head, tail); else connections.push(editPaper.connection(head, tail));
 		}
 	}); 
-}
+}  
 
 function getVertexById(vertexId) {
 	for(var i = 0; i < elementTitles.length; i++) {
@@ -740,6 +888,10 @@ function drawFrame(onlyDisplay, isPath, x, y, width, height, r, path) {
 }
 
 function drawElement(kind, onlyDisplay, x, y, elementName, vertexId) {
+	drawElement(kind, onlyDisplay, x, y, elementName, vertexId, null);
+}
+
+function drawElement(kind, onlyDisplay, x, y, elementName, vertexId, detail) {
 	var frame;
 	var newX, newY;
 	
@@ -753,19 +905,27 @@ function drawElement(kind, onlyDisplay, x, y, elementName, vertexId) {
 	}
 	
 	if(kind == "hierarchy") frame = drawFrame(onlyDisplay, true, 0, 0, 0, 0, 0, movePath("M0,12L24,0L96,0L120,12L120,40L0,40Z", newX, newY));
-	if(kind == "level" || kind == "member" || kind == "scope") frame = drawFrame(onlyDisplay, false, newX, newY, 120, 40, 10, "");
+	if(kind == "level" || kind == "member" || kind == "scope"  || kind == "dimension") frame = drawFrame(onlyDisplay, false, newX, newY, 120, 40, 10, "");
 	if(kind == "attribute") frame = drawFrame(onlyDisplay, true, 0, 0, 0, 0, 0, movePath("M12,0L120,0L120,40L12,40L0,30L0,10Z", newX, newY));
-
+	if(kind == "cube"  || kind == "context") frame = drawFrame(onlyDisplay, true, 0, 0, 0, 0, 0, movePath("M0,0L120,0L120,80L0,80ZM0,30L120,30", newX, newY));
+	
 	setFrameAttributes(frame);
+	frames.push(frame);
 	
 	if(onlyDisplay) {		
 		symbols.push(paper.symbol(kind, frame));
-		elementTitles.push(paper.elementTitle(elementName, frame, kind, null, vertexId));
+		elementTitles.push(paper.elementTitle(elementName, frame, kind, detail, vertexId));
 	}
 	else {
-		frame.drag(move, startMove, stopMove);
+		
 		symbols.push(editPaper.symbol(kind, frame));
-		elementTitles.push(editPaper.elementTitle(elementName, frame, kind, null, vertexId));	
+		elementTitles.push(editPaper.elementTitle(elementName, frame, kind, detail, vertexId));
+		frame.drag(move, startMove, stopMove);
+		
+		if(frame.getVertexId() >= 0 || (frame.getVertexId().length > 0 && frame.getVertexId().substring(0,1) == "m")) {
+			frame.setStatus("sync");
+			frame.hover(getFocus, leaveFocus);
+		} 	
 	}
 }
 
@@ -773,15 +933,16 @@ function createPalette(elementType) {
 	
 	if(elementType == "dimension") {
 		
-		drawElement("hierarchy", false, 83, 40, "<<hierarchy>>", null);
-		drawElement("level", false, 83, 90, "<<level>>", null);
-		drawElement("member", false, 83, 140, "<<member>>", null);
-		drawElement("attribute", false, 83, 190, "<<attribute>>", null);
-		drawElement("scope", false, 83, 240, "<<scope>>", null);
+		drawElement("hierarchy", false, 83, 40, "<<hierarchy>>", -1);
+		drawElement("level", false, 83, 90, "<<level>>", -1);
+		drawElement("member", false, 83, 140, "<<member>>", -1);
+		drawElement("attribute", false, 83, 190, "<<attribute>>", -1);
+		drawElement("scope", false, 83, 240, "<<scope>>", -1);
 	}
 	else {
-		// cube
-		// dimension
-		// context
+		
+		drawElement("cube", false, 83, 40, "<<cube>>", -1);
+		drawElement("dimension", false, 83, 130, "<<dimension>>", -1);
+		drawElement("level", false, 83, 180, "<<level>>", -1);
 	}  
 }  

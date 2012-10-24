@@ -35,8 +35,8 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
    override def dbColumnName = "LENGTH"
  }
 	
- object precision extends MappedLong(this) {
-   override def dbColumnName = "PRECISION"
+ object scale extends MappedLong(this) {
+   override def dbColumnName = "SCALE"
  }
 	
  object isNotNullable extends MappedLong(this) {
@@ -61,6 +61,14 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
 	
  object isDerivedFromModel extends MappedLong(this) {
    override def dbColumnName = "IS_DERIVED_FROM_MODEL"
+ }
+ 
+ object fkModelAttribute extends MappedLong(this) {
+   override def dbColumnName = "FK_MODEL_ATTRIBUTE"
+ }
+ 
+ object fkMeasure extends MappedLong(this) {
+   override def dbColumnName = "FK_MEASURE"
  }
 	
  object validFrom extends MappedDateTime(this) {
@@ -105,7 +113,7 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
   selectionKind match {
 	 	  case "name" => attr.name(text)
 	 	  case "length" => attr.length(text.toLong)
-	 	  case "precision" => attr.precision(text.toLong)
+	 	  case "scale" => attr.scale(text.toLong)
 	 	  case "reference" => attr.reference(0)
 	 	  case "comment" => attr.comment(text)
 	  }
@@ -114,12 +122,17 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
   Noop
  }
  
- val allDataTypes = List(("varchar2", "VARCHAR2"), ("number", "NUMBER"), ("date", "DATE"))
+ val allDataTypes = List(("VARCHAR2", "VARCHAR2"), ("NUMBER", "NUMBER"), ("DATE", "DATE"), ("TIMESTAMP", "TIMESTAMP"))
  
  def saveSelection(attributeId: Long, selection: String) : JsCmd = {
   val attr = PAttribute.findAll(By(PAttribute.id, attributeId)).apply(0)
   attr.dataType(selection).save
   Noop
+ }
+ 
+ def getRef(id: Long) = {
+  val matches = PAttribute.findAll(By(PAttribute.id, id))
+  if(matches.isEmpty) "" else PTable.findAll(By(PTable.id, matches(0).fkPTable)).apply(0).name + "." +  matches.apply(0).name
  }
 	  
  def tr2() : NodeSeq = {
@@ -127,7 +140,7 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
 	 val primaryKey = (isPrimaryKey > 0)
 	 val partOfUniqueKey = (isPartOfUniqueKey > 0)
 	 
-        <tr class="physicalEditRow">
+        <tr class="physicalEditRow" rowID={id.toString}>
 			<td>
 	 			{SHtml.ajaxText(name.toString, text => saveText(id, "name", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "30", Null) }  
 			</td>
@@ -138,7 +151,7 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
 				{SHtml.ajaxText(length.toString, text => saveText(id, "length", text)) % new UnprefixedAttribute("size", "8", Null) % new UnprefixedAttribute("maxlength", "8", Null) }
 			</td>
 			<td>
-				{SHtml.ajaxText(precision.toString, text => saveText(id, "precision", text)) % new UnprefixedAttribute("size", "8", Null) % new UnprefixedAttribute("maxlength", "8", Null) }
+				{SHtml.ajaxText(scale.toString, text => saveText(id, "scale", text)) % new UnprefixedAttribute("size", "8", Null) % new UnprefixedAttribute("maxlength", "8", Null) }
 			</td>
             <td>
 				{SHtml.ajaxCheckbox(notNullable, selected => chooseTableAttribute (id, "isNotNullable", selected))}
@@ -147,7 +160,7 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
 				{SHtml.ajaxCheckbox(primaryKey, selected => chooseTableAttribute (id, "isPrimaryKey", selected))}
 			</td>
 			<td>
-				{SHtml.ajaxText("", text => saveText(id, "reference", text)) % new UnprefixedAttribute("size", "20", Null) % new UnprefixedAttribute("maxlength", "100", Null) }
+				{SHtml.ajaxText(getRef(reference).toString, text => saveText(id, "reference", text)) % new UnprefixedAttribute("size", "20", Null) % new UnprefixedAttribute("maxlength", "100", Null) }
 			</td>
 			<td>
 				{SHtml.ajaxCheckbox(partOfUniqueKey, selected => chooseTableAttribute (id, "isPartOfUniqueKey", selected))}

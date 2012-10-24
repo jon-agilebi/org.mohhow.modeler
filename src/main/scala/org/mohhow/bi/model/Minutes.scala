@@ -35,19 +35,11 @@ class Minutes extends LongKeyedMapper[Minutes] with IdPK {
    override def dbColumnName = "DATE_CREATED"
  }
 
- def tr = {
-	<tr><td>{fkMeeting}</td><td>{version}</td><td>{dateCreated}</td></tr>
- }
-
- def header = { if(status == "published") {
-	 	"Version " + version.is.toString + ", published on " + MyUtil.formatDate(datePublished.is)
-  }
-  else {
-	  "Version " + version.is.toString + ", not yet published"
-  }
+ def header = { 
+  if(status == "published") S.?("version") + " " + version.is.toString + ", " + S.?("publishedOn") + " " + MyUtil.formatDate(datePublished.is)
+  else S.?("version") + " " + version.is.toString + ", " + S.?("notYetPublished")
  }
  
  def findMeeting() = Meeting.findAll(By(Meeting.id, fkMeeting)).apply(0)
- 
- 
+
 }

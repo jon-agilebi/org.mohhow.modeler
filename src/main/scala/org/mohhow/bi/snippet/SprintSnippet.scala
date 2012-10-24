@@ -25,6 +25,7 @@ import org.mohhow.bi.util.{Utility => MyUtil}
 object SelectedSprint extends SessionVar[Sprint](null)
 object Candidates extends SessionVar[Set[Long]](Set())
 object EmptySprint extends SessionVar[Set[Long]](Set())
+object EarliestBegin extends RequestVar[Long](19000101)
 
 class SprintSnippet {
 	
@@ -75,7 +76,6 @@ class SprintSnippet {
 	if(isCompleted) f.completionDate(new Date).save
 	if(!isCompleted) f.completionDate(null).save
   }
-  //EmptySprint
   RedirectTo("/sprint")
  }
  
@@ -88,10 +88,110 @@ class SprintSnippet {
 		              	"unComplete" -> ajaxButton("Unmark Completion", unComplete _) % ("class" -> "standardButton"))
  }
  
+ def serializeBurndown(sp: Sprint): Node = {
+  
+  def drtn(begin: Date, end: Date) = MyUtil.duration(MyUtil.dateAsNumber(begin), MyUtil.dateAsNumber(end))
+  
+  def goDown(m: Int, l:List[Int]): List[Int] = l match {
+   case Nil => Nil
+   case n :: ns => (m - n) :: goDown(m - n, ns) 
+  }
+  
+  val ftrs = Feature.findAll(By(Feature.fkSprint, sp.id))
+  val sumPoints = (0 /: ftrs.map(_.storyPoints.toString.toInt)) (_ + _)
+  val completionDays = ftrs.map(_.completionDate).sort(MyUtil.dateAsNumber(_) < MyUtil.dateAsNumber(_)).filter(MyUtil.dateAsNumber(_)  > 19000101).distinct
+  println(completionDays.toString)
+  val points = completionDays.map(d =>  (0 /: ftrs.filter(_.completionDate == d).map(_.storyPoints.toString.toInt)) (_ + _))
+  println(points.toString)
+  val daysAndPoints = completionDays zip goDown(sumPoints, points)
+  
+  val burndownList = daysAndPoints.map(d => <item><date>{drtn(sp.sprintBegin, d._1).toString}</date><remainder>{d._2.toString}</remainder></item>)
+  
+  <burndown>
+  	<points>{sumPoints.toString}</points>
+  	<begin>{MyUtil.formatDate(sp.sprintBegin)}</begin>
+  	<end>{MyUtil.formatDate(sp.sprintEnd)}</end>
+    <duration>{drtn(sp.sprintBegin, sp.sprintEnd)}</duration>
+    {burndownList}
+  </burndown>
+  
+ } 
+ 
+ def burnItDown():NodeSeq = {
+  if(SelectedSprint.is != null) {
+	  val burndownXml = serializeBurndown(SelectedSprint.is)
+	  val cmd1 = SetHtml("burndownData", burndownXml)
+	  val cmd2 = JsRaw("showBurndown();")
+	  Script(CmdPair(cmd1, cmd2))
+  }
+  else NodeSeq.Empty
+ }
+ 
+ def serializePlan(): Node = {
+  def serializeRow(row: (Long, String, String, String, String, String, Long, Long)) = {
+	  <row>
+	  	<kind>{row._2}</kind>
+	  	<name>{row._3}</name>
+	  	<begin>{row._4}</begin>
+	  	<end>{row._5}</end>
+	  	<duration>{row._6}</duration>
+        <absoluteDuration>{row._8}</absoluteDuration>
+	  </row>
+  }
+  
+  def serializeSprint(sp: Sprint) = {
+   val beginAsNumber = MyUtil.dateAsNumber(sp.sprintBegin)
+   val endAsNumber = MyUtil.dateAsNumber(sp.sprintEnd)
+   val spBegin = MyUtil.formatDate(sp.sprintBegin, S.?("dateFormat"))
+   val spEnd = MyUtil.formatDate(sp.sprintEnd, S.?("dateFormat"))
+   val duration = MyUtil.duration(MyUtil.dateAsNumber(sp.sprintBegin), MyUtil.dateAsNumber(sp.sprintEnd))
+   val durationFromStart = MyUtil.duration(EarliestBegin.is, MyUtil.dateAsNumber(sp.sprintEnd))
+	  
+   (beginAsNumber, "sprint", "Sprint" + sp.sprintNumber.toString, spBegin, spEnd, duration.toString, endAsNumber, durationFromStart)
+  }
+  
+  def serializeRelease(r: Release) = {
+   val endAsNumber = MyUtil.dateAsNumber(r.scheduledEnd)
+   val rBegin = MyUtil.formatDate(r.begin, S.?("dateFormat"))
+   val rEnd = MyUtil.formatDate(r.scheduledEnd, S.?("dateFormat"))
+   val duration = MyUtil.duration(MyUtil.dateAsNumber(r.begin), MyUtil.dateAsNumber(r.scheduledEnd))
+   val durationFromStart = MyUtil.duration(EarliestBegin.is, MyUtil.dateAsNumber(r.scheduledEnd))
+	  
+   (endAsNumber, "release", "Release " + r.prettyNumber, rBegin, rEnd, duration.toString, endAsNumber, durationFromStart)
+  }
+		  								
+   
+  val sprintDates = Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id)).map(sp => (MyUtil.dateAsNumber(sp.sprintBegin), MyUtil.dateAsNumber(sp.sprintEnd))).toList
+  val releaseDates = Release.findAll(By(Release.fkScenario, SelectedScenario.is.id)).map(r => (MyUtil.dateAsNumber(r.begin), MyUtil.dateAsNumber(r.end))).toList
+  
+  if(!sprintDates.isEmpty || !releaseDates.isEmpty) {
+	  val earliestBegin = (sprintDates ::: releaseDates).map(_._1).min
+	  EarliestBegin(earliestBegin)
+	  val latestEnd = (sprintDates ::: releaseDates).map(_._2).max
+	  
+	  val sprints = Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id), OrderBy(Sprint.sprintBegin, Ascending)).map(serializeSprint).toList
+	  val releases = Release.findAll(By(Release.fkScenario, SelectedScenario.is.id), OrderBy(Release.begin, Ascending)).map(serializeRelease).toList
+	 
+	  val allRows = ((sprints ++ releases) sort(_._1 < _._1)).map(serializeRow).toSeq
+	  
+	  <plan>
+  		<observationLine>{MyUtil.formatDate(new Date, S.?("dateFormat"))}</observationLine>
+	  	<earliestBegin>{MyUtil.formatDate(MyUtil.dateFromNumber(earliestBegin),S.?("dateFormat"))}</earliestBegin>
+	  	<latestEnd>{MyUtil.formatDate(MyUtil.dateFromNumber(latestEnd),S.?("dateFormat"))}</latestEnd>
+	  	<completeDuration>{MyUtil.duration(earliestBegin, latestEnd).toString}</completeDuration>
+	  	<observationDuration>{MyUtil.duration(earliestBegin, MyUtil.dateAsNumber(new Date)).toString}</observationDuration>
+	  	{allRows}
+	  </plan>
+  }
+  else <plan />
+ }
+ 
  def sprintInPlan (xhtml: NodeSeq): NodeSeq = {
-  bind("sprint", xhtml, "addSprint" -> ajaxButton("Add Sprint", addSprint _) % ("class" -> "standardButton"),
-		              	"removeLatestSprint" -> ajaxButton("Remove Latest Sprint", removeSprint _) % ("class" -> "standardButton"),
-		              	"sprints" -> Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id)).map(createSprintListItem))
+  bind("sprint", xhtml, "addSprint" -> ajaxButton(S.?("addSprint"), addSprint _) % ("class" -> "standardButton"),
+		              	"removeLatestSprint" -> ajaxButton(S.?("removeLatestSprint"), removeSprint _) % ("class" -> "standardButton"),
+		              	"sprints" -> Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id), OrderBy(Sprint.sprintNumber, Ascending)).map(createSprintListItem),
+		              	"burndown" -> burnItDown(),
+		              	"releasePlan" -> serializePlan())
  }
 
  def toggleFeature(featureId: Long, mode: String, selection: Boolean) = {
@@ -103,20 +203,22 @@ class SprintSnippet {
  }
  
  def sprintDisplay(mode: String, f: Feature) = {
-  def completion() =  if(mode == "sprint") <td>{MyUtil.formatDate(f.completionDate)}</td> else Empty
+  def completion() =  if(mode == "sprint") <td>{MyUtil.formatDate(f.completionDate)}</td> else NodeSeq.Empty
   <tr>
 	 <td>{SHtml.ajaxCheckbox(false, selected => toggleFeature(f.id, mode, selected))}</td>
      <td>{f.name}</td>
      <td>{f.featureType}</td>
      <td>{f.storyPoints}</td>
      <td>{f.priority}</td>
-     <td>{MyUtil.formatDate(f.completionDate)}</td> <!-- {completion()} -->
+     {completion()}
   </tr>
  }
  
  def backlogStories(): NodeSeq = {
+  def hasNoChildren(f: Feature) = Feature.findAll(By(Feature.parentFeature,f.id)).isEmpty	 
+	 
   if(ChosenBacklog.is != null) {
-	Feature.findAll(By(Feature.fkPb, ChosenBacklog.is.id), NullRef(Feature.fkSprint)).map( f => sprintDisplay("backlog", f))
+	Feature.findAll(By(Feature.fkPb, ChosenBacklog.is.id), NullRef(Feature.fkSprint)).filter(feature => hasNoChildren(feature)).map( f => sprintDisplay("backlog", f))
   }
   else <empty />
  }
@@ -149,22 +251,22 @@ class SprintSnippet {
   RedirectTo("/sprint")
  }
  
- def sumStories(sprint: Sprint): String = {
-  def addPoints(p1: String, p2: String) = if(p1 == "Gogol" || p2 == "Gogol") "Gogol" else {
-	  val sum = p1.toLong + p2.toLong
-	  sum.toString
-  }
-	 
+ def addPoints(p1: String, p2: String) = if(p1 == "Gogol" || p2 == "Gogol") "Gogol" else {
+  val sum = p1.toLong + p2.toLong
+  sum.toString
+ }
+ 
+ def sumStories(sprint: Sprint): String = { 
   val points = Feature.findAll(By(Feature.fkSprint, sprint.id)).map(f => f.storyPoints.toString)
   ("0" /: points) (addPoints)
  }
  
  def scope(sprint: Sprint): Node = {
   <div>
-	<label><b>Begin:</b></label>{MyUtil.formatDate(sprint.sprintBegin)} <br />
-	<label><b>End:</b></label>{MyUtil.formatDate(sprint.sprintEnd)} <br />
-	<label><b>Number of Working Days:</b></label>{sprint.numberOfWorkingDays} <br /><br />
-	<label><b>Sprint Objective</b></label><br />
+	<label><b>{S.?("begin")}: </b></label>{MyUtil.formatDate(sprint.sprintBegin)} <br />
+	<label><b>{S.?("end")}: </b></label>{MyUtil.formatDate(sprint.sprintEnd)} <br />
+	<label><b>{S.?("numberWorkingDays")}: </b></label>{sprint.numberOfWorkingDays} <br /><br />
+	<label><b>{S.?("sprintObjective")}</b></label><br />
 		 {sprint.purpose}
   </div>	 
  }
@@ -199,11 +301,6 @@ class SprintSnippet {
 	else <span><b>Median Velocity: </b>--</span>
  }
  
- def criteria(): NodeSeq = {
-  def ac(f: Feature) = MyUtil.flattenNodeSeq(AcceptanceCriterion.findAll(By(AcceptanceCriterion.fkFeature, f.id)).map(c => <li>{c.text}</li>).toList)
-  MyUtil.flattenNodeSeq(Feature.findAll(By(Feature.fkSprint, SelectedSprint.is.id)).map(f => ac(f)).toList)
- }
- 
  def sprint (xhtml: NodeSeq): NodeSeq = {
   
   bind("sprint", xhtml, "toProduct"  -> ajaxButton("<<", toProduct _) % ("class" -> "standardButton"),
@@ -214,7 +311,6 @@ class SprintSnippet {
 		              	"latestVelocity" -> findLatestVelocity(SelectedSprint.is),
 		              	"medianVelocity" -> findMedianVelocity(),
 		              	"scope" -> scope(SelectedSprint.is),
-		              	"scopeEditor" -> <div class="mohhowFormLight"><div class="lift:SprintForm"></div></div>,
-		              	"acceptanceCriteria" -> criteria())
+		              	"scopeEditor" -> <div class="mohhowFormLight"><div class="lift:SprintForm"></div></div>)
  }
 }

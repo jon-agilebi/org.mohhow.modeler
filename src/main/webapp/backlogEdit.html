@@ -19,13 +19,8 @@
 		 	<br /><br />
 		 	<lift:BacklogSnippet.featureEdit>
 		 		<table>
-		 			<col width="48%" />
-					<col width="4%" />
-					<col width="48%" />
 		 			<tr>
 		 				<td><h3>Protocol References</h3></td>
-		 				<td> </td>
-		 				<td><h3>Acceptance Criteria</h3></td>
 		 			</tr>
 		 			<tr>
 		 				<td valign="top">
@@ -39,15 +34,9 @@
 										</tr>
 								</thead>
 								<tbody id="backlogProtocolRefercences">
+									<feature:givenProtocolItems />
 								</tbody>
 							</table>
-						</td>
-						<td> </td>
-						<td valign="top">
-					  		<span><feature:addCriterion /><feature:removeCriterion /></span>
-						  	<ul id="acceptanceCriteriaList" style="list-style-position:inside">
-								<feature:acceptanceCriteria />
-							</ul>
 						</td>
 					</tr>
 				</table>

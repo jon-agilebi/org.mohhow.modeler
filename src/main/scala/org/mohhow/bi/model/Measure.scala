@@ -24,6 +24,10 @@ class Measure extends LongKeyedMapper[Measure] with IdPK {
  object fkSynonym extends MappedLongForeignKey(this, Measure) {
    override def dbColumnName = "FK_SYNONYN"
  }
+ 
+ object fkCube extends MappedLongForeignKey(this, ModelVertex) {
+   override def dbColumnName = "FK_CUBE"
+ }
 	
  object shortName extends MappedPoliteString(this, 50) {
    override def dbColumnName = "SHORT_NAME"
@@ -33,8 +37,8 @@ class Measure extends LongKeyedMapper[Measure] with IdPK {
    override def dbColumnName = "LONG_NAME"
  }
 	
- object domain extends MappedPoliteString(this, 50) {
-   override def dbColumnName = "MEASURE_DOMAIN"
+ object subject extends MappedPoliteString(this, 50) {
+   override def dbColumnName = "MEASURE_SUBJECT"
  }
  
  object status extends MappedPoliteString(this, 50) {

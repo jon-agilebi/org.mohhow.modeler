@@ -66,7 +66,5 @@ class Feature extends LongKeyedMapper[Feature] with IdPK {
  object isCurrent extends MappedLong(this) {
    override def dbColumnName = "IS_CURRENT"
  }
-
  
-     
 }

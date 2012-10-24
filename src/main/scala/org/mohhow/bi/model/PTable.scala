@@ -4,12 +4,18 @@ import net.liftweb._
 import mapper._
 import http._
 import SHtml._
+import S._
+import net.liftweb.common.Full
+
+import mapper._
 import util._
+import Helpers._
 
 import js._
 import JsCmds._
 import JE.{JsRaw,Str}
 import scala.xml._
+import org.mohhow.bi.util.{Utility => MyUtil}
 
 object PTable extends PTable with LongKeyedMetaMapper[PTable] {
    override def dbTableName = "P_TABLE"
@@ -82,40 +88,22 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
  	val attr = PAttribute.create
  	attr.name("new_column").fkPTable({id})
  	attr.save
- 	val newRow = attr.tr2.toString.trim
- 	val command = "$('#physicalRows').append('" + newRow + "');"
-  JsRaw(command)
+ 	SetHtml("physicalRows", List.flatten(PAttribute.findAll(By(PAttribute.fkPTable, id), OrderBy(PAttribute.id, Ascending)).map(_.tr2.toList)).toSeq)
+ 	
  }
  
- def deleteIt(attributeId : String) : JsCmd = {
-    val attribute = PAttribute.findAll(By(PAttribute.id, attributeId.toLong)).apply(0)
-    attribute.delete_!
-    Noop
+ def deleteIt(attributeId: String): JsCmd = {
+  println("attributeId" + attributeId) 
+  try {
+	  PAttribute.findAll(By(PAttribute.id, attributeId.toLong)).apply(0).delete_!
   }
- 
- def editHeader(): JsCmd = {
-  val head = myHeader("edit")
-  val command = "$('#physicalTableHead').replaceWith('" + head.toString + "')"
-  JsRaw(command) 
+  catch {
+	 case e: Exception => println(e.toString)
+  }
+   
+  SetHtml("physicalRows", List.flatten(PAttribute.findAll(By(PAttribute.fkPTable, id), OrderBy(PAttribute.id, Ascending)).map(_.tr2.toList)).toSeq)
  }
  
- def cancelEditHeader(): JsCmd = {
-  val head = myHeader("display")
-  
-  JsRaw("$('#physicalTableHead').replaceWith('" + head.toString + "')") 
- }
- 
- def commandLine(mode: String) = {
-  if(mode == "display") 
-    <span>{ajaxButton("edit header", editHeader _) % new UnprefixedAttribute("class", "standardButton", Null)}</span>
-  else
-    <span>{ajaxButton("cancel", cancelEditHeader _) % new UnprefixedAttribute("class", "standardButton", Null)}</span>
- }
- 
- def myHeaderId(mode: String) = if(mode == "display") "physicalTableHead" else "physicalTableEditHead"
- 
- def header = myHeader("display") //JxIfElse(JsRaw("$('#physicalTable[mode='display']).length > 0"), myHeader("display"), myHeader("edit"))
-	
  def saveText(tableId: Long, selectionKind: String, text : String) : JsCmd = {
   val table = PTable.findAll(By(PTable.id, tableId)).apply(0)
   
@@ -123,31 +111,33 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
   	case "schema" => table.schema(text)
 	case "name" => table.name(text)
 	case "description" => table.description(text)
+	case "tableType" => table.tableType(text)
   }
 	 
   table.save	  
   if(selectionKind == "name") RedirectTo("/attribute") else Noop
  }
  
- def myHeader(mode: String) = {
+ def header = {
  	val addIt = SHtml.ajaxButton("+", add _) % new UnprefixedAttribute("class", "standardButton", Null) 
- 	val command = "$('#physicalTable').attr('currentSelection')"
- 	//val removeIt = <button onclick={SHtml.ajaxCall(JsRaw(command), deleteIt _)._2}> - </button> % new UnprefixedAttribute("class", "standardButton", Null) 
+ 	val removeAction =  SHtml.ajaxCall(JsRaw("$('.physicalEditRow.zebraHover').attr('rowID')"), deleteIt _)._2
+ 	val removeIt = <button>-</button>  % ("onclick" -> removeAction) % new UnprefixedAttribute("class", "standardButton", Null) 
+ 	val chooseTableType = SHtml.ajaxSelect(MyUtil.tableTypes.map(t => (t, S.?(t))), Full(tableType) , tt => saveText(id, "tableType", tt))
  	
- 	<thead id={myHeaderId(mode)}>
+ 	<thead>
 		<tr>
- 			<td>Schema</td>
- 			<td>{SHtml.ajaxText(schema.toString, text => saveText(id, "schema", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "30", Null) }</td>
- 			<td></td><td></td><td></td><td></td><td></td><td></td><td>{commandLine(mode)}</td>
+ 			<td>{S.?("schema")}</td>
+ 			<td colspan="3">{SHtml.ajaxText(schema.toString, text => saveText(id, "schema", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "30", Null) }</td>
+ 			<td></td><td></td><td colspan="3">{chooseTableType}</td>
  		</tr>
 		<tr>
- 			<td>Table Name</td><td>{SHtml.ajaxText(name.toString, text => saveText(id, "name", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "30", Null) }</td>
- 			<td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+ 			<td>{S.?("tableName")}</td><td colspan="3">{SHtml.ajaxText(name.toString, text => saveText(id, "name", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "30", Null) }</td>
+ 			<td></td><td></td><td></td><td></td><td></td>
  		</tr>
-		<tr><td>Description</td><td>{SHtml.ajaxText(description.toString, text => saveText(id, "description", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "1024", Null) }</td>
-			<td></td><td></td><td></td><td></td><td></td><td></td><td>{SHtml.ajaxButton("+", add _) % new UnprefixedAttribute("class", "standardButton", Null)}</td>
+		<tr><td>{S.?("description")}</td><td colspan="3">{SHtml.ajaxText(description.toString, text => saveText(id, "description", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "1024", Null) }</td>
+			<td></td><td></td><td></td><td></td><td>{addIt}{removeIt}</td>
 		</tr>
-		<tr><td>Attributes</td><td>SQL Data Type</td><td>Length</td><td>Precision</td><td>Is Not Null</td><td>Is Primary Key</td><td>References</td><td>Part of Unique Key</td><td>Comment</td></tr>
+		<tr><td>{S.?("attributes")}</td><td>{S.?("sqlDataType")}</td><td>{S.?("length")}</td><td>{S.?("precision")}</td><td>{S.?("isNotNull")}</td><td>{S.?("isPrimaryKey")}</td><td>{S.?("references")}</td><td>{S.?("partOfUniqueKey")}</td><td>{S.?("comment")}</td></tr>
 	</thead>
  }
 }

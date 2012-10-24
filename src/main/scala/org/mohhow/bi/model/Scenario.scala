@@ -17,8 +17,12 @@ class Scenario extends LongKeyedMapper[Scenario] with IdPK {
    override def dbColumnName = "NAME"
  }
     
+ object fkClient extends MappedLongForeignKey(this, Client) {
+   override def dbColumnName = "FK_CLIENT"
+ }
+    
  object prefix extends MappedPoliteString(this, 50) {
-   override def dbColumnName = "URL"
+   override def dbColumnName = "PREFIX"
  }
     
  object url extends MappedPoliteString(this, 1000) {

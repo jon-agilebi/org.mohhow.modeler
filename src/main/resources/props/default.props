@@ -1,1 +1,10 @@
+
 # Properties in this file will be read when running in dev mode
+
+superAdmin=bert.business@agile-bi.de
+configurationRoot = /Users/Jon/MOHHOW/test/configuration/
+deploymentRoot = /Users/Jon/MOHHOW/test/deployment/
+scenarioRoot = /Users/Jon/MOHHOW/test/scenario/
+usage=both
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://localhost:5432/postgres?user=postgres&password=postgres

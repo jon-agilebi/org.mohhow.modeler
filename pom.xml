@@ -96,11 +96,17 @@
       <version>${scala.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+ 		<groupId>postgresql</groupId>
+ 		<artifactId>postgresql</artifactId>
+ 		<version>9.1-901.jdbc4</version>
+	</dependency>
   </dependencies>
 
   <build>
     <sourceDirectory>src/main/scala</sourceDirectory>
     <testSourceDirectory>src/test/scala</testSourceDirectory>
+    <finalName>modeler</finalName>
     <plugins>
       <plugin>
         <groupId>org.scala-tools</groupId>

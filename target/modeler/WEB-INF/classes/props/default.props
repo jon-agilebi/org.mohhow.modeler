@@ -1,0 +1,9 @@
+# Properties in this file will be read when running in dev mode
+
+superAdmin=bert.business@agile-bi.de
+configurationRoot = /opt/repository/configuration/
+deploymentRoot = /opt/repository/deployment/
+scenarioRoot = /opt/repository/scenario/
+usage=both
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://87.106.84.33:5432/postgres?user=postgres&password=b587+Af*

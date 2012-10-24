@@ -8,15 +8,17 @@
 			}); 
 		</script>
 	</head>
+	<lift:RoleSnippet.inScenario>
 	<div class="upper_right">
 		<h1>Product Vision</h1>
 		<div class="menuBar">
 			<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
 		</div>
 	</div> 
-	 <div class="rightContent">
+	 <div class="rightScrollableContent">
 		<lift:ScenarioSnippet.showVisionText>
-			<vision:text />
+			<div id="visionTextContainer"><vision:text /></div>
 		</lift:ScenarioSnippet.showVisionText>
 	 </div>
+	 </lift:RoleSnippet.inScenario>
 </lift:surround>

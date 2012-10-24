@@ -4,11 +4,6 @@
 		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
 		<script  src="/script/raphael-min.js" type="text/javascript"></script>
 		<script  src="/script/gantt.js" type="text/javascript"></script>
-		<script type="text/javascript">
-			$(document).ready(function() { 
-				showBurndown();
-			}); 
-		</script>
 	</head>
 	
 	<lift:RoleSnippet.inScenario>
@@ -20,8 +15,9 @@
 			</div>
 		</div>
 		<lift:SprintSnippet.sprint>
-		 	<div class="insideTopLeftBroadContent">
-				<h3>Story Selection</h3>
+			<div class="rightContent">
+		 	<div class="threeQuarterContentWithoutScrolling">
+				<h3>Story Selection</h3><br />
 				 <table>
 					<tr>
 						<td valign="top">
@@ -63,7 +59,7 @@
 					</tr>
 				</table>
 				</div> 
-				<div class="insideTopRightContent">
+				<div class="quarterContent">
 					<h3>Sprint Scope and Objectives</h3>	
 					<br /><br />	
 					<sprint:sumStories /><br />
@@ -71,14 +67,6 @@
 					<sprint:medianVelocity /><br />
 					<sprint:scope />
 				</div>
-				<div class="insideBottomLeftContent">
-					<h3>Sprint Burndown</h3>
-				</div>
-				<div class="insideBottomMiddleContent">
-					<h3>Acceptance Criteria</h3><br />
-					<ul style="list-style-position:inside">
-						<sprint:acceptanceCriteria />
-					</ul>
 				</div>
 		</lift:SprintSnippet.sprint>
 	</lift:RoleSnippet.inScenario>

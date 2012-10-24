@@ -9,16 +9,21 @@ body{
  font-size:12px;
 }
 
-.commentRow {
-	
+.commentRow {	
  background: #C0C0C0 ;
-	
+}
+
+.used {
+ text-decoration: line-through;
 }
 
 .blockDialogue {
-	
  padding: 5px;
-	
+}
+
+.alert * {
+ list-style:none;
+ color:red;
 }
 
 .upper_left {
@@ -29,10 +34,6 @@ body{
  height:58px;
  color: #2E2E2E;
  background: #2E2E2E;
-}
-
-.dropMeasure {
- background: cyan;
 }
 
 .upper_right {
@@ -62,8 +63,12 @@ body{
 }
 
 .navigation ul {
- width:176px;
+ width:168px;
  border: 1px solid;
+}
+
+.navigation > ul {
+ width:176px;
 }
 
 .navigation ul li {
@@ -71,6 +76,12 @@ body{
  padding:2px;
  list-style:none;
  border:1px solid #ccc;
+}
+
+.navigation ul > li > ul > li {
+ margin:0;
+ padding:2px;
+ list-style:none;
 }
 
 .listItem {
@@ -97,8 +108,6 @@ body{
 }
 
 .handle {
- display: block;
- float: left;
  cursor: pointer;
  width: 20px;
  color: white;
@@ -106,13 +115,11 @@ body{
 }
 
 .leaf {
- display: block;
- float: left;
  cursor: pointer;
  background-image:url('../images/bullet.gif'); 
  background-repeat:no-repeat; 
  background-color:transparent;
- background-position:2px -2px;
+ background-position:-4px -2px;
  color: white;
  width: 20px;
 }
@@ -121,14 +128,14 @@ body{
  background-image:url('../images/plus.gif'); 
  background-repeat:no-repeat; 
  background-color:transparent;
- background-position:2px -2px;
+ background-position:-4px -2px;
 }
 
 .opened { 
  background-image:url('../images/minus.gif'); 
  background-repeat:no-repeat; 
  background-color:transparent;
- background-position:2px -2px;
+ background-position:-4px -2px;
 }
 
 .menuBar {
@@ -171,6 +178,18 @@ body{
   border:1px solid #D9DDDE;
 }
 
+.smallContent {
+  display: inline;
+  padding: 2px;
+  margin: 5px;
+  margin-top:0px;
+  margin-left:0px;
+  float: left;
+  width:15%; 
+  height:99%;
+  border:1px solid #D9DDDE;
+}
+
 .quarterContent {
   display: inline;
   padding: 2px;
@@ -196,6 +215,18 @@ body{
   overflow: scroll;
 }
 
+.threeQuarterContentWithoutScrolling {
+  display: inline;
+  padding: 2px;
+  margin: 5px;
+  margin-top:0px;
+  margin-left:0px;
+  float: left;
+  width:74%; 
+  height:99%;
+  border:1px solid #D9DDDE;
+}
+
 .rightContent {
  position:absolute; 
  top:60px; 
@@ -203,6 +234,16 @@ body{
  width:1096px; 
  height:684px;
  border:1px solid #D9DDDE;
+}
+
+.rightScrollableContent {
+ position:absolute; 
+ top:60px; 
+ left:180px; 
+ width:1096px; 
+ height:684px;
+ border:1px solid #D9DDDE;
+ overflow: scroll;
 }
 
 .rightHalfContent {
@@ -229,6 +270,16 @@ body{
  left:180px; 
  width:538px; 
  height:420px;
+ padding: 2px;
+ border:1px solid #D9DDDE; 
+}
+
+.insideDeepLeftContent {
+ position:absolute; 
+ top:60px; 
+ left:180px; 
+ width:538px; 
+ height:680px;
  padding: 2px;
  border:1px solid #D9DDDE; 
 }
@@ -319,6 +370,11 @@ body{
 
 .protocolTable tr { 
  border:1px solid #D9DDDE;
+}
+
+.protocolTable thead tr { 
+ background-color: #dddddd;
+ color: #666666;
 }
 
 .blockTable tr { 
@@ -440,7 +496,6 @@ input[type="button"], input[type="submit"] {
  padding:7px;
  border:solid 2px #b7ddf2;
  background:#ebf4fb;
-	
 }
 
 .mohhowForm h1 {
@@ -486,10 +541,22 @@ input[type="button"], input[type="submit"] {
  width:400px;
  height: 400px
  padding:5px;
- 
+ margin: 5px;
 }
 
 .wikiEditor {
  margin: 5px;
  padding:5px;
+}
+
+#releasePlanData plan {
+	color: #FFFFFF;
+}
+
+#burndownData, #logicalModel  {
+	color: #FFFFFF;
+}
+
+.editProtocolItem textarea {
+ width: 100%;	
 }

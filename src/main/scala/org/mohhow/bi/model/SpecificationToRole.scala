@@ -26,4 +26,6 @@ class SpecificationToRole extends LongKeyedMapper[SpecificationToRole] with IdPK
  }
  
  def getRoleName = UserRole.findAll(By(UserRole.id, fkRole))(0).roleName
+ 
+ def getUserRole = UserRole.findAll(By(UserRole.id, fkRole))(0)
 }

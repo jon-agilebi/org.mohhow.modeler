@@ -1,0 +1,67 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+	</head>
+	<lift:RoleSnippet.inScenario>
+		<div class="upper_right">
+	        <h1>Administration</h1>
+	         <div class="menuBar">
+					<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+			</div>
+	    </div>
+		<div class="rightContent">
+		    <br /><br />
+			There are dialogues for the following administration tasks:<br /><br />
+			<table>
+				<tr>
+					<td>
+						<a href="/release"><img src='images/kmmsgattachment.png' alt='Design' text-align='center' /></a>
+					</td>
+					<td>
+						The <a href="/release">Release-Management</a> manages the releases of a given scenario. An overview on all artefacts of a release is given. 
+						Furthermore, the status of a release can be changed and the generation of the release artefacts can be started.
+					</td>
+				</tr>
+				<tr></tr>
+				<tr>
+					<td>
+						<a href="/node"><img src='images/klines.png' alt='Design' text-align='center' /></a>
+					</td>
+					<td>
+						Within the <a href="/node">Node Management</a> you can register and manage server nodes.
+					</td>
+				</tr>
+				<tr></tr>
+				<tr>
+					<td>
+						<a href="/deployment"><img src='images/launch.png' alt='Design' text-align='center' /></a>
+					</td>
+					<td>
+					  On the <a href="/deployment">Deployment Page</a> you can see, which releases are deployed on which server nodes. You can initiate 
+					  deployments on development nodes and you can transport releases into other environments.
+					</td>
+				</tr>
+				<tr></tr>
+				<tr>
+					<td>
+						<a href="/user"><img src='images/amsn.png' alt='Design' text-align='center' /></a>
+					</td>
+					<td>
+                  		The <a href="/user">User Management</a> is about the link between users and Scorecards and REST Services, respectively. The link is not 
+                  		direct: User can belong to groups, groups are linked to roles and roles are linked to specifications.
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="/clientAdministration"><img src='images/userconfig.png' alt='Design' text-align='center' /></a>
+					</td>
+					<td>
+						In the context of the <a href="/clientAdministration">Client Administration</a> all users are linked to at least one client. 
+						If a user is not linked to a client, he cannot work with this web tool.
+					</td>
+				</tr>
+			</table>
+		</div>
+	</lift:RoleSnippet.inScenario>
+</lift:surround>

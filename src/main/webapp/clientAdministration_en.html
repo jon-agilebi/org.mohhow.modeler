@@ -1,0 +1,35 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+	</head>
+	<lift:RoleSnippet.inAsClientAdmin>
+		<lift:RoleSnippet.clientMapping>
+			<div class="upper_right">
+			   <h1>Client Mapping</h1>
+			   <div class="menuBar">
+					<mapping:addClient /><mapping:editClient /><mapping:removeClient /><mapping:link /><mapping:linkWithOwnership /><mapping:removeLink />
+			   </div>
+			 </div>
+			 <div class="rightContent">
+				<div class="thirdContent">
+					<h3>Client</h3><br />
+					<ul class=''>
+						<mapping:clientList />
+					</ul>
+				</div>
+				<div class="thirdContent">
+					<h3>User of Client</h3><br />
+					<ul id="userListOfClient"></ul>
+				</div>
+				<div class="thirdContent">
+					<h3>All User</h3><br />
+					<label>Filter </label><mapping:filter /><br /><br />
+					<ul id="userListForClientSelection">
+						<mapping:allUser />
+					</ul>
+				</div>
+			 </div>
+		</lift:RoleSnippet.clientMapping>
+	</lift:RoleSnippet.inAsClientAdmin>
+</lift:surround>

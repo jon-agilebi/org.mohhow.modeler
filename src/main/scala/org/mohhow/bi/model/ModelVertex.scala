@@ -33,6 +33,10 @@ class ModelVertex extends LongKeyedMapper[ModelVertex] with IdPK {
    override def dbColumnName = "ELEMENT_DETAIL"
  }
  
+ object elementKind extends MappedPoliteString(this, 50) {
+   override def dbColumnName = "ELEMENT_KIND"
+ }
+ 
  object x extends MappedLong(this) {
    override def dbColumnName = "X"
  }

@@ -10,11 +10,15 @@ object Specification extends Specification with LongKeyedMetaMapper[Specificatio
    override def dbTableName = "SPECIFICATION"
 }
 
-class Specification extends LongKeyedMapper[Specification] with IdPK {
+class Specification extends LongKeyedMapper[Specification] with IdPK  {
     def getSingleton = Specification
 	
  object fkScenario extends MappedLongForeignKey(this, Scenario) {
    override def dbColumnName = "FK_SCENARIO"
+ }
+    
+ object fkFeature extends MappedLongForeignKey(this, Feature) {
+   override def dbColumnName = "FK_FEATURE"
  }
     
  object status extends MappedPoliteString(this, 50) {
@@ -38,8 +42,9 @@ class Specification extends LongKeyedMapper[Specification] with IdPK {
  }
  
  def findRoles = {
-  def getRole(sTr: SpecificationToRole) = UserRole.findAll(By(UserRole.id, sTr.fkRole))(0)
-	 
-  SpecificationToRole.findAll(By(SpecificationToRole.fkSpecification, id)).map(getRole)
+  def getRole(sTr: SpecificationToRole) = UserRole.findAll(By(UserRole.id, sTr.fkRole))
+
+  List.flatten(SpecificationToRole.findAll(By(SpecificationToRole.fkSpecification, id)).map(getRole))
  }
+ 
 }

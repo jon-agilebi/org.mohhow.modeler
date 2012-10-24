@@ -1,0 +1,158 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript"> 
+			$(document).ready(function() {
+				$('.singleSelection tbody tr:even').addClass('zebra'); 
+				$('.choiceSetup[group="vision"]').addClass('zebraHover');
+				$('.pivot[group !="vision"]').fadeOut(); 
+				$('.choiceSetup').click(function() {
+					var actualChoice = $('.zebraHover').attr('group');
+				  	$('.choiceSetup').removeClass('zebraHover');
+					$(this).addClass('zebraHover');
+					var group = $(this).attr('group');
+					if(group != actualChoice){
+						$('.pivot').fadeOut();
+						$('.pivot[group=' + group + ']').fadeIn();
+					}
+				});
+			}); 
+		</script>
+	</head>
+	<lift:RoleSnippet.inScenario>
+		<div class="upper_right">
+			<h1>Scenario Setup</h1>
+			<div class="menuBar">
+				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+			</div>
+		</div> 
+		<div class="rightContent">
+			<div class="quarterContent">
+				<h3>Setup</h3><br />
+				<ul>
+					<li class="listItem choiceSetup" group="vision">Vision</li>
+					<li class="listItem choiceSetup" group="roles">Roles</li>
+					<!--  <li class="listItem choiceSetup" group="scenarioConfiguration">Scenario Configuration</li> -->
+					<li class="listItem choiceSetup" group="units">Units</li>
+					<li class="listItem choiceSetup" group="design">Design Guidelines</li>
+				</ul>
+			</div>
+			<div class="threeQuarterContent pivot" group="vision">
+				<h3>Sections of Vision</h3>
+				<br />
+				<lift:ScenarioSnippet.visionSetup>
+						<sections:add /> <sections:remove /> <sections:up /> <sections:down /> <sections:save />
+					<br /><br />
+					<table id="visionTable" class="protocolTable">
+						<col width="10%" text-align="center"/>
+			 			<col width="90%" />
+						<thead>
+	                    	<td>Section Number</td>
+	                    	<td>Title</td>
+	                	</thead>
+	                	<tbody id="visionTableRows">
+	                    	<sections:rows />
+	                	</tbody>
+	            	</table>
+	            </lift:ScenarioSnippet.visionSetup>
+			</div>
+			<div class="threeQuarterContent pivot" group="scenarioConfiguration">
+				<h3>Scenario Configuration</h3>
+				<br />
+				<table class="protocolTable">
+					<col width="40%" text-align="left"/>
+					<col width="10%" text-align="center"/>
+			 		<col width="25%" text-align="left"/>
+			 		<col width="25%" text-align="left"/>
+			 		<thead>
+	                    <td>Part of Scenario</td>
+	                    <td>is used</td>
+	                    <td>like in</td>
+	                    <td>as</td>
+	                	</thead>
+			 		<tbody>
+	                  <tr><td><b>Scenario Setup</b></td><td></td><td></td><td></td></tr>
+	                  <tr><td>Unit Definitions</td><td></td><td></td><td></td></tr>
+	                  <tr><td>Design Guidelines</td><td></td><td></td><td></td></tr>
+	                  <tr><td><b>Design</b></td><td></td><td></td><td></td></tr>
+	                  <tr><td>Catalogue and Logical Model</td><td></td><td></td><td></td></tr>
+	                  <tr><td>Catalogue, Logical Model and Specifications</td><td></td><td></td><td></td></tr>
+	                  <tr><td><b>Implementation</b></td><td></td><td></td><td></td></tr>
+	                  <tr><td>Scorecard Design</td><td></td><td></td><td></td></tr>
+	                  <tr><td>Physical Model</td><td></td><td></td><td></td></tr>
+	                </tbody>
+				</table>
+			</div>
+			<div class="quarterContent pivot" group="roles">
+				<lift:RoleSnippet.scenarioRoles>
+					<role:add /><role:remove />
+					<br /><br />
+	    			
+	    			<h3>Already assigned roles</h3><br />
+	    			<div id="userRoleTableContainer">
+	    				<role:userRoles />
+	    			</div>
+				</lift:RoleSnippet.scenarioRoles>
+			</div>
+			<div class="quarterContent pivot" group="roles">
+				<lift:RoleSnippet.scenarioRoles>
+					<br /><br />
+					<h3>User</h3><br />
+					<div id="userRoleTableContainer">
+						<role:user />
+					</div>
+	        	</lift:RoleSnippet.scenarioRoles>
+			</div>
+			<div class="quarterContent pivot" group="roles">
+				<lift:RoleSnippet.scenarioRoles>
+					<br /><br />
+					<h3>Roles</h3><br />
+					 <role:roles />
+				</lift:RoleSnippet.scenarioRoles>	
+			</div>
+			<div class="threeQuarterContent pivot" group="units">
+				<h3>Units to use</h3><br />
+				<lift:ScenarioSnippet.unitSetup>
+					<div>
+						<unit:add /><unit:remove /><unit:save />
+					</div><br />
+					<table id="unitTable" class="protocolTable">
+	            		<thead>
+	                   		<td>Subject</td>
+	                   		<td>Name</td>
+	                   		<td>Symbol</td>
+	                	</thead>
+	                	<tbody id="unitTableRows">
+	                    	<unit:rows />
+	                	</tbody>
+	            	</table>
+	            </lift:ScenarioSnippet.unitSetup>
+			</div>
+			<div class="threeQuarterContent pivot" group="design">
+				<lift:ScenarioSnippet.design>
+					<h3>Physical Data Model</h3><br />
+					<h4>Star vs. Snowflake</h4><br />
+					<design:snowflake /><br /><br />
+					<h4>Account Model</h4><br />
+					<design:accountModel /><br /><br />
+					<h3>Views</h3><br />
+					<design:extraViewLayer /> Create an extra layer consisting out of views which decouples the data model from the BI tools<br />
+					<design:stableViewLayer /> Enforce to keep the view structure as stable as possible in new versions<br /><br />
+					<h3>Prefixes and Names</h3><br />
+						<table>
+							<tr><td><span>Prefix for transaction fact table:</span></td><td><design:prefixTFact /></td></tr>
+							<tr><td><span>Prefix for snapshot fact table:</span></td><td><design:prefixSFact /></td></tr>
+							<tr><td><span>Prefix for dimension table:</span></td><td><design:prefixDim /><br /></td></tr>
+							<tr><td><span>Name of measure dimension table:</span></td><td><design:nameDimMeasure /><br /></td></tr>
+							<tr><td><span>Naming Convention for primary keys:</span></td><td><design:namePrimaryKey /><br /></td></tr>
+							<tr><td><span>Naming Convention for references:</span></td><td><design:nameReferences /><br /></td></tr>
+						</table><br />
+						
+					<h3>Additional Metadata Attributes</h3><br />
+					<design:additionalAttributes />
+				</lift:ScenarioSnippet.design>
+			</div>
+		 </div>
+	 </lift:RoleSnippet.inScenario>
+</lift:surround>
