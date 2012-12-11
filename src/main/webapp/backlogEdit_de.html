@@ -1,0 +1,46 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			$(document).ready(function() { 
+				$("#backlogEditAdditional").insertAfter($("table").eq(0));
+			})
+		</script>
+	</head>
+	
+     <div class="upper_right">
+        <h1>Feature Bearbeiten</h1>
+    </div> 
+    
+    <div class="mohhowForm">
+		<div class="lift:FeatureForm"></div>
+	 	<div id="backlogEditAdditional">
+		 	<br /><br />
+		 	<lift:BacklogSnippet.featureEdit>
+		 		<table>
+		 			<tr>
+		 				<td><h3>Protokollreferenzen</h3></td>
+		 			</tr>
+		 			<tr>
+		 				<td valign="top">
+					  		<span>Search: <feature:searchProtocolItems /></span>
+						  	<table class="singleSelection">
+								<thead>
+										<tr>
+											<td><img src="../images/idea.png" alt="Choice"/></td>
+											<td>Meeting</td>
+											<td>Protokolleintrag</td>
+										</tr>
+								</thead>
+								<tbody id="backlogProtocolRefercences">
+									<feature:givenProtocolItems />
+								</tbody>
+							</table>
+						</td>
+					</tr>
+				</table>
+			</lift:BacklogSnippet.featureEdit>
+		</div>
+	</div>
+</lift:surround>

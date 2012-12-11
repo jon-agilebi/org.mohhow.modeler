@@ -101,6 +101,11 @@
  		<artifactId>postgresql</artifactId>
  		<version>9.1-901.jdbc4</version>
 	</dependency>
+	<dependency>
+		<groupId>org.apache.xmlgraphics</groupId>
+		<artifactId>fop</artifactId>
+		<version>1.0</version>
+	</dependency>
   </dependencies>
 
   <build>

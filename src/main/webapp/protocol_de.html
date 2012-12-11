@@ -1,0 +1,56 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script  src="/script/jquery.blockUI.js" type="text/javascript"></script>
+        <script type="text/javascript">
+			$(document).ready(function() {
+				$('#protocolEdit').hide();
+				$('#cancelProtocolEdit').click(function() {
+					$('#protocolEdit').fadeOut();
+					$('#protocolDisplay').fadeIn();
+				});
+			}); 
+		</script>
+	</head>
+	<lift:RoleSnippet.inScenario>
+	    <div class="upper_right">
+	        <h1>Protokolle</h1>
+	        <lift:BacklogSnippet.protocolMenu>
+	            <div class="menuBar">
+					<protocol:newVersion /><protocol:delete /><protocol:edit /><protocol:publish />
+					<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+				</div>
+	        </lift:BacklogSnippet.protocolMenu>
+	    </div>
+	    <div class="rightContent">
+	        <div class="quarterContent">
+	        	<ul id="protocol_overview" >
+	            	<lift:BacklogSnippet.protocolDisplay><protocol:list /></lift:BacklogSnippet.protocolDisplay>
+	            </ul>
+	        </div>
+	        <div class="threeQuarterContent">
+	            <lift:BacklogSnippet.protocolDisplay>	                
+	                <protocol:header />
+	                <div id="protocolDisplay">
+	                    <protocol:participants />
+	                    <protocol:items />
+	                    <br /><br />
+	                    <protocol:review />
+	                </div>
+	            </lift:BacklogSnippet.protocolDisplay>
+	            <div id="protocolEdit">
+	                <lift:BacklogSnippet.protocolItemEdit>
+	                	<div>
+	                		<protocol:addItem /><protocol:removeItem /><protocol:saveQuit />
+	                	</div>
+	                	<br />
+	                	<div id="protocolItemEditTableContainer">
+		                	<protocol:itemEdit />
+	                    </div>
+	                </lift:BacklogSnippet.protocolItemEdit>
+	            </div> 
+	        </div>
+	    </div>
+    </lift:RoleSnippet.inScenario>
+</lift:surround>

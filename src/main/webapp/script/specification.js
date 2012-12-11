@@ -1,6 +1,23 @@
 
-function initializeBlockInformation() {
-	$('#dropResults').data('blockInformation', []);
+function initializeBlockInformation(blockInformation) {	
+	var blocks = [];
+	
+	$('#dropResults').html(blockInformation);
+	
+	$('#dropResults').find("block").each(function(){
+		var blockId = $(this).attr("blockId");
+		var filter = $(this).find("filter").text();
+		var attrList = [];
+		$(this).find("attribute").each(function(){attrList.push({name:$(this).attr('name'), order:$(this).attr('order')})});
+		
+		var msrList = [];
+		$(this).find("measure").each(function(){msrList.push($(this).text())});
+	
+		var block = {blockId: blockId, measures: msrList, attributes: attrList, filter: filter};
+		blocks.push(block);
+	});
+	
+	$('#dropResults').data('blockInformation', blocks);  
 }
 
 function sort(list, item, direction) {
@@ -25,7 +42,7 @@ function sort(list, item, direction) {
 function changeOrder(attributeList, text) {
 	
 	for(var i = 0; i < attributeList.length; i++) {
-		alert(attributeList[i].name);
+		
 		if(attributeList[i].name == text) {
 			attributeList[i].order = (attributeList[i].order + 1) % 3;
 			return attributeList;
@@ -48,7 +65,7 @@ function removeElement(list, text) {
 }
 
 function changeSomeBlock(action, text, detail, block) {
-	
+
 	switch(action) {
 	
 		case "addMeasure": block.measures.push(text);
@@ -72,6 +89,7 @@ function changeSomeBlock(action, text, detail, block) {
 }
 
 function changeBlockInformation(blockId, action, text, detail) {
+	
 	var foundBlock = false;
 	var blocks = $('#dropResults').data('blockInformation');
 	
@@ -89,6 +107,12 @@ function changeBlockInformation(blockId, action, text, detail) {
 	}
 	
 	$('#dropResults').data('blockInformation', blocks); 
+	
+	for(var i = 0; i < blocks.length; i++) {
+		for(var j = 0; j < blocks[i].measures.length; j++) {
+			
+		}
+	}
 }
 
 function activateSorting() {
@@ -102,10 +126,7 @@ var up = function() {
 	if($(this).parent().find(".emphasized")) {
 		var node = $(this).parent().find(".emphasized");
 		node.insertBefore(node.prev("li"));
-		if($(this).is('.measureRelevant')) {
-			alert($(this).parent().parent().attr('blockId'));
-			changeBlockInformation($(this).parent().parent().attr('blockId'), "up", node.text(), "measure");
-		}
+		if($(this).is('.measureRelevant')) changeBlockInformation($(this).parent().parent().attr('blockId'), "up", node.text(), "measure");
 		if($(this).is('.attributeRelevant')) changeBlockInformation($(this).parent().parent().attr('blockId'), "up", node.text(), "attribute");
 	}
 }

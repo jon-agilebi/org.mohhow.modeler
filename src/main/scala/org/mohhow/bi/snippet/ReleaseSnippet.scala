@@ -24,6 +24,8 @@ import org.mohhow.bi.lib.Repository;
 import org.mohhow.bi.lib.ModelUtility;
 import org.mohhow.bi.lib.BIService;
 import org.mohhow.bi.lib.ConnectionInformation;
+import org.mohhow.bi.lib.PDFUtility
+import org.mohhow.bi.lib.WikiParser
 import java.util.Date
 import org.mohhow.bi.util.{Utility => MyUtil}
 
@@ -79,10 +81,12 @@ class ReleaseSnippet {
    else <ul style="list-style-position:inside">{ddlsOfRelease.map(ddl => <li>{ddl}</li> % ("onclick" -> action))}</ul>
   }
 
-  def metadata(r: Release) = {
-   val artefact = Repository.getArtefactList(r.id, List("xml"))
+  def metadata(r: Release, kind: String) = {
+   val artefact = Repository.getArtefactList(r.id, List(kind))
    val action = SHtml.ajaxCall(JsRaw("$(this).text()"), showArtefact _)._2
+   val docLink = "/documentation/" + r.id.toString
    if(artefact.isEmpty) NodeSeq.Empty 
+   else if(kind == "pdf") <a href={docLink}>documentation.pdf</a>
    else <span>{artefact}</span> % ("onclick" -> action)
   }
 	 
@@ -91,9 +95,13 @@ class ReleaseSnippet {
   if(release == null) <nothing />
   else {
 	   <div>
+	     <h4>{S.?("documentation")}</h4>
+	   		<br />
+	  			{metadata(release, "pdf")}
+	  		<br /><br />
 	   	 <h4>{S.?("metadata")}</h4>
 	   		<br />
-	  			{metadata(release)}
+	  			{metadata(release, "xml")}
 	  		<br /><br />
 	   	<h4>DDL</h4>
 	  		<br />
@@ -263,6 +271,32 @@ class ReleaseSnippet {
 	  }
   }
   
+  def translateFilter(filterText: String): String = {
+   val genericPattern = """<[m|d]\d+>""".r
+   val digits = """\d+""".r
+   
+   genericPattern findFirstIn filterText match {
+	   case None => filterText
+	   case Some(generic) => {
+	  	   
+	  	  digits findFirstIn generic match {
+	  	  	  	case Some(anId) => {
+	  	  	  		
+	  	  	  		val isAttribute = anId.substring(1,2) == "d"
+	  	  	  	  	findPhysics(anId.toLong, isAttribute) match {
+	  	  	  	  	  	  	   case (Some(field), Some(table)) => translateFilter(genericPattern replaceFirstIn(filterText, table + "." + field))
+	  	  	  	  	  	  	   case _ => filterText
+	  	  	  	  	}
+	  	  	  	}
+	  	  	  	  	     
+	  	  	  	case _ => filterText  
+	  	  }
+	   }
+	     
+	   case _ => filterText    	   
+   }
+  }
+  
   def findAttribute(name: String): ModelVertex = {
    val attrs = ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.elementName, name), By(ModelVertex.fkScenario, SelectedScenario.is.id))	  
    if(attrs.isEmpty) null else attrs(0)
@@ -293,7 +327,7 @@ class ReleaseSnippet {
 	  case _ => "DESCENDING"
   }
   
-  def sql(fact: Option[PTable], msrs: List[Measure], attrs: List[(ModelVertex, String)] ): Node = {
+  def sql(fact: Option[PTable], msrs: List[Measure], attrs: List[(ModelVertex, String)], filter: String): Node = {
    def tName(t: Option[PTable]): String = t match {
 	   case None => ""
 	   case Some(pt) => pt.name.toString
@@ -323,7 +357,7 @@ class ReleaseSnippet {
    <select>
 		  {attrXML}
 		  {msrXML}
-		  <sql>{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), "")}</sql>
+		  <sql>{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), filter)}</sql>
    </select>
   }
   
@@ -334,6 +368,7 @@ class ReleaseSnippet {
   
   val blockId = (bl \ "@blockId").text
   val blockType = MyUtil.getSeqHeadText(bl \ "presentationType") 
+  val filter = translateFilter("""&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(bl \ "filter"), "<"), ">"))
   val attrs = (bl \\ "attribute").map(a => (findAttribute(MyUtil.getSeqHeadText(a \ "name")), setOrder(MyUtil.getSeqHeadText(a \ "order")))).filter(_._1 != null)
   val msrs = (bl \\ "measure").map(m => findMeasure(MyUtil.getNodeText(m)))
   val relevantMeasures = List.flatten(msrs.toList.map(getRelevantMeasures)).toList
@@ -341,7 +376,7 @@ class ReleaseSnippet {
   
   val attrXML = attrs.map(attr => <attribute><id>{attr._1.id.toString}</id><order>{attr._2}</order><emphasize></emphasize></attribute>).toSeq
   val msrXML = relevantMeasures.map(msr => <measure><id>{msr.id.toString}</id><formula>{msr.formula.toString}</formula></measure>).toSeq
-  val sqlXML = factTables.map(fact => sql(fact, msrs.map(aMeasure).toList, attrs.toList))
+  val sqlXML = factTables.map(fact => sql(fact, msrs.map(aMeasure).toList, attrs.toList, filter))
   
   <block id={blockId}>
 		<blockType>{blockType}</blockType>
@@ -369,12 +404,193 @@ class ReleaseSnippet {
   Repository.write("release", 0, null, "metadata", SelectedRelease.is.id, metadata)
  }
  
+ def documentAsXml() = {
+  
+  def meetingAsXml(m: Meeting) = {
+	def itemXml(item: ProtocolItem) = <item><number>{item.itemNumber.toString}</number><classification>{item.classification}</classification><text>{item.itemText}</text></item>
+	  
+	val minutes = Minutes.findAll(By(Minutes.fkMeeting, m.id), By(Minutes.status, "published"), OrderBy(Minutes.version, Descending))  
+	val minutesXml = if(minutes.isEmpty) <minutes /> 
+				 else {
+					 
+					 val items = ProtocolItem.findAll(By(ProtocolItem.fkMinutes, minutes(0).id), OrderBy(ProtocolItem.itemNumber, Ascending))
+					 
+					 <minutes>
+					 	<version>{minutes(0).version}</version><datePublished>{MyUtil.formatDate(minutes(0).datePublished, S.?("dateFormat"))}</datePublished>
+					 	<items>{items.map(itemXml).toSeq}</items>
+					 </minutes>
+				 }
+	
+	<meeting>
+		<category>{S.?("category") + ": " + m.category}</category>
+		<topic>{S.?("topic") + ": " + m.topic}</topic>
+		<date>{S.?("meetingDate") + ": " + MyUtil.formatDate(m.meetingBegin, S.?("dateFormat")) + ", " + MyUtil.timeInDay(m.meetingBegin) + " - " + MyUtil.timeInDay(m.meetingEnd)}</date>
+        {minutesXml}
+	</meeting> 
+  }
+  
+  def getContext(m: Measure): NodeSeq = {
+   def contextTr(key: MeasureToModelVertex) = {
+    val allLevel = ModelVertex.findAll(By(ModelVertex.id, key.fkLevel))
+   
+    if(allLevel.isEmpty) <ctx><dim></dim><level></level><aggr>{S.?(key.aggregation)}</aggr></ctx>
+    else {
+	   val level = allLevel.apply(0)
+	   val dimensions = ModelVertex.findAll(By(ModelVertex.id, level.referenceId), By(ModelVertex.elementType, "dimension"))
+	   val dim = if(!dimensions.isEmpty) dimensions(0).elementName else ""
+	   <ctx><dim>{dim}</dim><level>{level.elementName}</level><aggr>{S.?(key.aggregation)}</aggr></ctx>
+    }
+   }
+
+   MeasureToModelVertex.findAll(By(MeasureToModelVertex.fkMeasure, m.id)).map(contextTr).toSeq
+  }
+  
+  def serializeMeasure(m: Measure) = {
+	 
+   val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, m.id), OrderBy(MeasureRange.lowerBound, Ascending))
+   val rangeList = ranges.map(r => <range><lb>{r.lowerBound.toString}</lb><ub>{r.upperBound.toString}</ub><value>{r.rangeValue.toString}</value><meaning>{r.meaning}</meaning></range>).toSeq	
+   
+   <measure>
+      <shortName>{m.shortName}</shortName>
+      <longNameLabel>{S.?("longName")}</longNameLabel>
+      <longName>{m.longName}</longName>
+      <definitionLabel>{S.?("definition")}</definitionLabel>
+      <definition>{m.definition}</definition>
+      <formulaLabel>{S.?("formula")}</formulaLabel>
+      <formula>{m.formula}</formula>
+      <unitLabel>{S.?("unit")}</unitLabel>
+      <unit>{m.unit}</unit>
+      <lifecycle>{S.?("lifecycle")}</lifecycle>
+      <actualityLabel>{S.?("requiredActuality")}</actualityLabel>
+      <actuality>{m.requiredActualityValue.toString + " " + S.?(m.requiredActualityUnit)}</actuality>
+      <timeOfInterestLabel>{S.?("timespanOfInterest")}</timeOfInterestLabel>
+      <timeOfInterest>{m.timespanOfInterestValue.toString + " " + S.?(m.timespanOfInterestUnit)}</timeOfInterest>
+      <storageTime>{m.requiredStorageValue.toString + " " + S.?(m.requiredStorageUnit)}</storageTime>
+      <storageTimeLabel>{S.?("requiredStorageTime")}</storageTimeLabel>
+      <contextTitle>{S.?("context")}</contextTitle>
+      <context>{getContext(m)}</context>
+      <rangesTitle>{S.?("ranges")}</rangesTitle>
+      <ranges>{rangeList}</ranges>
+      <dimensionTitle>{S.?("dimension")}</dimensionTitle>
+      <levelTitle>{S.?("level")}</levelTitle>
+      <aggregationTitle>{S.?("aggregation")}</aggregationTitle>
+      <lbTitle>{S.?("lowerBound")}</lbTitle>
+      <ubTitle>{S.?("upperBound")}</ubTitle>
+      <rvTitle>{S.?("rangeValue")}</rvTitle>
+      <meaningTitle>{S.?("meaning")}</meaningTitle>
+   </measure>
+  }
+  
+  def measuresAsXml() = {
+   def measuresOfSubjects(subject: String, l: List[Measure]) = l.filter(_.subject == subject) 
+   val msrs = Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), By(Measure.status, "approved")).toList
+   val subjects = msrs.map(_.subject.toString).sort(_ < _).distinct.toList
+   val subjectList = subjects.map(s => <subject><name>{s}</name><measures>{measuresOfSubjects(s,msrs).map(serializeMeasure).toSeq}</measures></subject>)
+   
+   <subjects>{subjectList}</subjects>
+  }
+  
+  def visionSection(section: Node) = <section><title>{MyUtil.getSeqHeadText(section \\ "title")}</title><displayText>{MyUtil.tagIt(MyUtil.getSeqHeadText(section \\ "displayText"))}</displayText></section>
+  
+  def featuresAsXml() = {
+   def fn(f: Feature, fs: List[Feature]): String = {
+	   if(f.parentFeature == 0) f.featureNumber.toString
+	   else {
+	  	   val parent = fs.filter(_.id == f.parentFeature)
+	  	   if(parent.isEmpty) "9999" else fn(parent(0), fs) + "." + f.featureNumber.toString
+	   }
+   }
+   
+   def findDescription(f: Feature) = {
+	   if(f.description != null && f.description.length > 0 && (f.featureType == S.?("businessQuestion") || f.featureType == S.?("complianceRequest"))) MyUtil.tagIt(WikiParser.parseBusinessQuestion(f.description)._2)
+	   else f.description 
+   }
+   
+   def toXml(item: (String, Feature)) = {
+	   <feature>
+	   		<featureId>{item._1}</featureId>
+	   		<featureName>{item._2.name}</featureName>
+	   		<featureTypeLabel>{S.?("featureType")}</featureTypeLabel>
+	   		<featureType>{item._2.featureType}</featureType>
+	   		<storyPointsLabel>{S.?("storyPoints")}</storyPointsLabel>
+	   		<storyPoints>{item._2.storyPoints.toString}</storyPoints>
+	   		<priorityLabel>{S.?("priority")}</priorityLabel>
+            <priority>{item._2.priority.toString}</priority>
+	   		<descriptionLabel>{S.?("description")}</descriptionLabel>
+	   		<featureDescription>{findDescription(item._2)}</featureDescription>
+	   </feature>
+   }
+   
+   val features = Feature.findAll(By(Feature.fkPb, ChosenBacklog.is.id)).toList
+   val featureList = (features.map(f => fn(f, features)) zip features).sort(_._1 < _._1)
+   featureList.map(toXml).toSeq
+  }
+  
+  val creationDate = MyUtil.formatDate(new Date, S.?("dateFormat"))
+  val prettyR = S.?("release") + " " + SelectedRelease.is.prettyNumber
+  
+  val scenario = <scenario>
+  					<name>{SelectedScenario.is.name}</name>
+  					<description>{SelectedScenario.is.description}</description>
+  					<release>{prettyR}</release>
+  					<subTitle>{S.?("documentationSubtitle")}</subTitle>
+  					<creationDate>{creationDate}</creationDate>
+  				</scenario>
+  					
+  val vision = (Repository.read("scenario", SelectedScenario.is.id, "vision", "vision", -1) \\ "vision").apply(0)
+  val purgedVision = <vision>{(vision \\ "section").map(visionSection).toSeq}</vision>
+  
+  val aboutText = S.?("documentationIntroduction").replaceAll("xxscenarioxx", SelectedScenario.is.name).replaceAll("xxcreationDatexx", creationDate).replaceAll("xxreleasexx", prettyR)
+  
+  <documentation>
+  	<header>{scenario}</header>
+    <chapter>
+    	<chapterTitle>{S.?("aboutDocument")}</chapterTitle>
+    	<about><document>{aboutText}</document><scenarioHeader>{S.?("aboutScenario")}</scenarioHeader></about>
+    </chapter>
+    <chapter>
+    	<chapterTitle>{S.?("vision")}</chapterTitle>
+    	<content>{purgedVision}</content>
+    </chapter>
+     <chapter>
+    	<chapterTitle>{S.?("backlog")}</chapterTitle>
+    	<backlog>{featuresAsXml()}</backlog>
+    </chapter>
+    <chapter>
+    	<chapterTitle>{S.?("logicalModel")}</chapterTitle>
+    	<content>bla bla</content>
+    </chapter>
+    <chapter>
+    	<chapterTitle>{S.?("catalogue")}</chapterTitle>
+    	<content>{measuresAsXml()}</content>
+    </chapter>
+    <chapter>
+    	<chapterTitle>{S.?("minutes")}</chapterTitle>
+    	<content><meetings>{Meeting.findAll(By(Meeting.fkScenario, SelectedScenario.is), OrderBy(Meeting.meetingBegin, Ascending)).map(meetingAsXml).toSeq}</meetings></content>
+    </chapter>
+  </documentation>
+ }
+ 
+ def createDocumentation() = {
+  Repository.write("configuration", 0, "metadata", "documentation", -1, documentAsXml())
+  val source = Repository.readAsFile("configuration", 0, "metadata", "documentation", -1)
+  val pdf = Repository.emptyDocumentation(SelectedRelease.is.id)
+  PDFUtility.transform(source, pdf)
+ }
+ 
  def generateRelease(): JsCmd = {
   if(SelectedRelease.is != null) {
-	Repository.emptyRelease(SelectedRelease.is.id.toLong)
-	PTable.findAll(By(PTable.fkScenario, SelectedScenario.is.id), By(PTable.isCurrent, 1)).map(createDDL)
-	createMetadata()
-	Noop
+	  
+	val checks = ModelUtility.checkAllGraphs(SelectedScenario.is.id)
+	
+	if(checks.isEmpty) {
+		Repository.emptyRelease(SelectedRelease.is.id.toLong)
+		PTable.findAll(By(PTable.fkScenario, SelectedScenario.is.id), By(PTable.isCurrent, 1)).map(createDDL)
+		createMetadata()
+		createDocumentation()
+		Alert(S.?("artefactsCreated"))
+	}
+	else SetHtml("resultsOfScenarioCheck", ModelUtility.presentGraphResult(checks))
   }
   else Alert(S.?("noReleaseChosen"))
  }
@@ -384,7 +600,7 @@ class ReleaseSnippet {
 		              "announce" -> ajaxButton(S.?("announceReleaseFreeze"), announce _) % ("class" -> "standardButton"),
 		              "freeze" -> ajaxButton(S.?("freeze"), freeze _) % ("class" -> "standardButton"),
 		              "generate" -> ajaxButton(S.?("generate"), generateRelease _) % ("class" -> "standardButton"),
-		              "show" -> Release.findAll().map(createListItem),
+		              "show" -> Release.findAll(By(Release.fkScenario, SelectedScenario.is.id)).map(createListItem),
 		              "showStatus" -> showStatus(),
 		              "artefacts" -> artefacts(),
 		              "delta" -> delta())
@@ -486,7 +702,7 @@ class ReleaseSnippet {
  }
  
  def releasesOfNode(n: Node):List[Release] = {
-  val releaseIds =  MyUtil.getSeqHeadText(n \\ "deployment").split(";").toList.filter(r => r != null && r.length > 0)
+  val releaseIds =   (n \\ "deployment" \ "release").map(r => (r \ "@releaseId").text).toList
   List.flatten(releaseIds.map(id => Release.findAll(By(Release.id, id.toLong))))
  }
  
@@ -503,8 +719,7 @@ class ReleaseSnippet {
 	 	  else {
 	 	 	  
 	 	 	  if(isInitial && SelectedAlias.is == null) Alert(S.?("noDataStoreAliasSelected"))
-	 	 	  else {
-
+	 	 	  else { 
 	 	 	 	  val node = nodesWithReleases.apply(nodesWithTargetRelease.size)
 	 	 	 	  deployOnEnvironment(node._1, ReleaseForDeployment.is, node._2)
 	 	 	  }
@@ -520,7 +735,7 @@ class ReleaseSnippet {
   LiftRules.unloadHooks.append(() => vendor.closeAllConnections_!())
   connInf
  }
- 
+ /*
  def dropTablesOfRelease(r: Release, n: Node, aliasName: String) = {
   val tableNames = Repository.getArtefactList(r.id, List("sql")).map(fileName => fileName.substring(0, fileName.indexOf(".")))
   val store = (n \\ "store").filter(st => MyUtil.getSeqHeadText(st \ "alias") == aliasName)
@@ -538,7 +753,7 @@ class ReleaseSnippet {
 	  fileNames.map(name => DB.use(connectionInformation) { conn => DB.exec(conn, Repository.getArtefactAsString(r.id, name)) {rs => "success"}})
   } 
  }
- 
+ */
  def userGroups(specs: List[Specification]): List[(List[Specification], List[(Provider, String)])] = {
   def member(rtg: RoleToGroup): List[(Provider, String)] = {
 	if(rtg.fkProvider != null) {
@@ -570,9 +785,13 @@ class ReleaseSnippet {
  def updateDeploymentOnNode(node: Node, oldRelease: Release, newRelease: Release, systemName: String): Node = {
   val releases = (node \\ "deployment" \ "release").map(r => ((r \ "@releaseId").text, MyUtil.getNodeText(r)))
   val newReleases = if(oldRelease != null) (newRelease.id.toString, systemName) :: releases.filter(_._1 != oldRelease.id.toString).toList else (newRelease.id.toString, systemName) :: releases.toList
-  val deployment = <deployment>{newReleases.map(r => <release releaseId={r._1}>{r._2}</release>).toSeq}</deployment>
-  val transform = "deployment" #> deployment
+  val transform = "deployment" #> <deployment>{newReleases.map(r => <release releaseId={r._1}>{r._2}</release>).toSeq}</deployment>
   transform(node).apply(0)
+ }
+ 
+ def replaceNodes(item: Node, node: Node, oldRelease: Release, newRelease: Release, systemName: String): Node = {
+  if((item \ "@technicalName").text == (node \ "@technicalName").text) updateDeploymentOnNode(node: Node, oldRelease: Release, newRelease: Release, systemName: String)
+  else item
  }
  
  def deployOnEnvironment(n: Node, targetRelease: Release, releasesSoFar: List[Release]): JsCmd = {
@@ -601,17 +820,13 @@ class ReleaseSnippet {
   val blockXml = <blocks>{blocks}</blocks>
   val blockInformation = ("blocks", blockXml.hashCode.toString, "generic", blockXml)
   deploymentItems += blockInformation	
- 
-  Noop
   
-  /*
- 
   val oldRelease = releasesSoFar.filter(r => r.fkScenario == targetRelease.fkScenario)
-  
+  /*  drop tables and create tables in Zielknoten
   if(!oldRelease.isEmpty) dropTablesOfRelease(oldRelease(0), n, SelectedAlias.is)
   
   createTablesOfRelease(targetRelease, n, SelectedAlias.is)
-  
+  */
   val allUserGroups = userGroups(specs)
   val indexedList = allUserGroups.indices zip allUserGroups
   
@@ -635,22 +850,22 @@ class ReleaseSnippet {
   
   val deploymentInformation = <items>{deploymentItems.map(item => <item><name>{item._1}</name><checksum>{item._2}</checksum></item>)}</items>
   val url = "http://" + MyUtil.getSeqHeadText(n \\ "host") + ":" + MyUtil.getSeqHeadText(n \\ "port")
-  val startCommand = "$.post(" + url + "/deployment/start, " + deploymentInformation.toString + ", function(resp){});"
+  val user = User.currentUser openOr null
+  val startCommand = "$.ajax({type: 'POST', dataType: 'xml', headers: {accept: 'application/xml'}, url: '" + url + "/deployment/start', username: '" +  user.email + "', password: '" + user.password + "', data: '" + deploymentInformation.toString + "', success: function(resp){}});".replaceAll("\n", "")
+ 
   val transferCommands = deploymentItems.map(item => transfer(url, item._3, item._1, "complete", item._4)).toList
   
   // node transformation
   
   val allNodes = Repository.read("configuration", -1, "nodes", "nodes",0).map(Utility.trim) \\ "node"
   val old = if(!oldRelease.isEmpty) oldRelease(0) else null
-  val searchTerm = "technicalName = " + (n \ "@technicalName").text
-  val transform = searchTerm #> updateDeploymentOnNode(n, old, targetRelease, SelectedAlias.is)
-  val transformedNodes = <nodes>{transform(allNodes)}</nodes>
+  val transformedNodes = <nodes>{ allNodes.map(item => replaceNodes(item, n, old, targetRelease, SelectedAlias.is))}</nodes>
   
   Repository.write("configuration", -1, "nodes", "nodes", 0, transformedNodes)
   Nodes(transformedNodes)
-  
-  // fire the Java command
-  JsRaw((startCommand /: transferCommands) (_ + _))  */
+  println(startCommand)
+  JsRaw(startCommand);
+  //JsRaw((startCommand /: transferCommands) (_ + _))
  }
  
  def allSystems(): NodeSeq = {
@@ -698,7 +913,7 @@ class ReleaseSnippet {
  
  def getPTable(tableName: String, r: Release): PTable = {
   val ps = PTable.findAll(By(PTable.fkScenario, r.fkScenario), By(PTable.name, tableName))
-  val psInTime = ps.filter(pt => MyUtil.dateAsNumber(pt.validFrom) <= MyUtil.dateAsNumber(r.freezeDate) && (pt.validUntil == null || MyUtil.dateAsNumber(pt.validUntil) > MyUtil.dateAsNumber(r.freezeDate)))
+  val psInTime = ps //.filter(pt => MyUtil.dateAsNumber(pt.validFrom) <= MyUtil.dateAsNumber(r.freezeDate) && (pt.validUntil == null || MyUtil.dateAsNumber(pt.validUntil) > MyUtil.dateAsNumber(r.freezeDate)))
   if(psInTime.isEmpty) null else psInTime.apply(0)	 
  }
  
@@ -725,22 +940,21 @@ class ReleaseSnippet {
 	 
 	  if(devNode.isEmpty) Alert(S.?("noDevNode"))
 	  else {
-	 	  /*
+	 	  
 	 	  val releases = releasesOfNode(devNode.apply(0))
 	 	  
 	 	  if(releases.isEmpty) Alert(S.?("noReleasesOnNode"))
 	 	  else { 	  
 	 	
 	 	 	  val tableNames = releases.map(r => (r, Repository.tableNamesOfRelease(r.id).toList)).toList
-	 	 	  val tables = List.flatten(tableNames.map(pair => pair._2.map(tn => getPTable(tn, pair._1)).filter(_ != null))).sort(sortTable(_) < sortTable(_))
+	 	 	  val tables = List.flatten(tableNames.map(pair => pair._2.map(tn => getPTable(tn, pair._1)).filter(_ != null))).distinct.sort(sortTable(_) < sortTable(_))
 	 	 	  val tablesAndModels = tables zip tables.map(getTableModel)
 	 	 	  
 	 	 	  TestDataNode(devNode.apply(0))
 	 	 	  TestDataModel(tablesAndModels)
 	 	 	   	 	  
 	 	 	  RedirectTo("/testData")
-	 	  } */
-	 	  RedirectTo("/testData")
+	 	  }
 	  }
   }
   else Alert(S.?("noSystemChosen"))

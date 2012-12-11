@@ -385,6 +385,14 @@ function drawIndicator(raphael, presentationDetail, x, y, width, height) {
 	return indicatorElements;
 }
 
+function drawPlain(raphael, presentationDetail, x, y, width, height) {	
+	var plainElements = [];
+	var text = raphael.text(x + width/2, y + height/2, "12 $");
+	plainElements.push(text);
+	
+	return plainElements;
+}
+
 function getPadBox() {
 	if(orientation == "portrait") return [356, 91, 384, 502]; else return [297, 150, 502, 384];
 }
@@ -490,6 +498,9 @@ Raphael.fn.block = function(presentationType, presentationDetail, x, y, width, h
 	} 
 	else if (presentationType == "indicator") {
 		drawing = drawIndicator(designPaper, presentationDetail, x, y + 12, width, height - 12);
+	}
+	else if (presentationType == "plain") {
+		drawing = drawPlain(designPaper, presentationDetail, x, y + 12, width, height - 12);
 	}
 	else {
 		drawing = drawTable(designPaper, presentationDetail, x, y + 12, width, height - 12);
@@ -988,7 +999,7 @@ function drawInitialLine(x1, y1, x2, y2) {
 
 function updateLine(x1, y1, x2, y2, lineElement, cX, cY, cWidth, cHeight) {
 	var newKind;
-	var cX2, cY2, cWidth2, cHeight2, ratio, newWidth, newHeight;
+	var ratio, newWidth, newHeight, cXFirst, cXSecond, cYFirst, cYSecond, cHeightFirst, cHeightSecond, cWidthFirst, cWidthSecond;
 	
 	var hitsFirst = false;
 	var hitsSecond = false;
@@ -1029,67 +1040,73 @@ function updateLine(x1, y1, x2, y2, lineElement, cX, cY, cWidth, cHeight) {
 			return lineElement;
 		}
 		
-		if(isFirstCandidate) {
+		if(lineElement.kind == "column") { 
 			
-			cX2 = cX; 
-			cY2 = cY;
-			
-			if(lineElement.kind == "column") { 
-				
-				cWidth2 = newWidth;
-				cHeight2 = cHeight;
-			}
-			else {
-				
-				cWidth2 = cWidth;
-				cHeight2 = newHeight;		
-			}
-			
-			if(lineElement.first) {
-				
-				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, updateLine(x1, y1, x2, y2, lineElement.first, cX2, cY2, cWidth2, cHeight2), lineElement.second);
-			}
-			else {
-				if(hitsSecond) {
-					var newLine = designPaper.scLine(newKind, 0, ratio, null, null);
-					return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, newLine, lineElement.second);
-				}
-				else {
-					return lineElement;
-				}
-			}
+			cWidthFirst = newWidth;
+			cWidthSecond = cWidth - newWidth;
+			cHeightFirst = cHeight;
+			cHeightSecond = cHeight;
+			cXFirst = cX;
+			cXSecond = cX + newWidth;
+			cYFirst = cY;
+			cYSecond = cY;
 		}
 		else {
 			
-			if(lineElement.kind == "column") { 
-				
-				cX2 = cX + newWidth; 
-				cY2 = cY;
-				cWidth2 = cWidth - newWidth;
-				cHeight2 = cHeight;
+			cWidthFirst = cWidth;
+			cWidthSecond = cWidth;
+			cHeightFirst = newHeight;
+			cHeightSecond = cHeight - newHeight;
+			cXFirst = cX;
+			cXSecond = cX;
+			cYFirst = cY;
+			cYSecond = cY + newHeight;	
+		}
+		
+		if(hitsFirst && hitsSecond) {
+			
+			if(lineElement.first && isFirstCandidate) {
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, updateLine(x1, y1, x2, y2, lineElement.first, cXFirst, cYFirst, cWidthFirst, cHeightFirst), lineElement.second);
+			}
+			else if(lineElement.second && isSecondCandidate) {
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, lineElement.first, updateLine(x1, y1, x2, y2, lineElement.second, cXSecond, cYSecond, cWidthSecond, cHeightSecond));
+			}
+			if(isFirstCandidate) {
+				var newLine = designPaper.scLine(newKind, 0, ratio, null, null);
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, newLine, lineElement.second);
 			}
 			else {
-				
-				cX2 = cX; 
-				cY2 = cY + newHeight;
-				cWidth2 = cWidth;
-				cHeight2 = cHeight - newHeight;		
+				var newLine = designPaper.scLine(newKind, 0, ratio, null, null);
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, lineElement.first, newLine);
 			}
+			
+		}
+		else if(hitsFirst) {
+			
+			if(lineElement.first) {
+				
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, updateLine(x1, y1, x2, y2, lineElement.first, cXFirst, cYFirst, cWidthFirst, cHeightFirst), lineElement.second);
+			}
+			else if(newKind == lineElement.kind) {
+				
+				var newLine = designPaper.scLine(newKind, 0, ratio, null, null);
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, newLine, lineElement.second);
+			}
+			else return lineElement;
+			
+		}
+		else if(hitsSecond) {
 			
 			if(lineElement.second) {
-				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, lineElement.first, updateLine(x1, y1, x2, y2, lineElement.second, cX2, cY2, cWidth2, cHeight2));
+				
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, lineElement.first, updateLine(x1, y1, x2, y2, lineElement.second, cXSecond, cYSecond, cWidthSecond, cHeightSecond));
 			}
-			else {
-				if(hitsFirst) {
-					
-					var newLine = designPaper.scLine(newKind, 0, ratio, null, null);
-					return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, lineElement.first, newLine);
-				}
-				else {
-					return lineElement;
-				}
-			}
+			else if(newKind == lineElement.kind) {
 			
+				var newLine = designPaper.scLine(newKind, 0, ratio, null, null);
+				return designPaper.scLine(lineElement.kind, lineElement.blockId, lineElement.width, lineElement.first, newLine);
+			}
+			else return lineElement;	
 		}
 	}
 }
@@ -1184,6 +1201,7 @@ function drawBlockChoice(containerId, presentationType, presentationDetail, isDe
 	else if (presentationType == "table") drawTable(thumbnail, presentationDetail, 2, 2, 76, 76);
 	else if (presentationType == "trendIndicator") drawIndicator(thumbnail, presentationDetail, 2, 2, 76, 76);
 	else if (presentationType == "statusIndicator") drawIndicator(thumbnail, presentationDetail, 2, 2, 76, 76);
+	else if (presentationType == "plain") drawPlain(thumbnail, presentationDetail, 2, 2, 76, 76);
 }  
 
 function serializeChoice(blockId, presentationType, presentationDetail, title, attributeNames, attributeValues) {

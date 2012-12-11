@@ -560,3 +560,7 @@ input[type="button"], input[type="submit"] {
 .editProtocolItem textarea {
  width: 100%;	
 }
+
+.message ul {
+ liststyle: outside;
+}

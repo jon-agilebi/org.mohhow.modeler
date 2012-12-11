@@ -16,6 +16,7 @@ import S._
 import mapper._
 import util._
 import Helpers._
+import org.mohhow.bi.util.{Utility => MyUtil}
 
 object WikiParser {
 	
@@ -36,7 +37,42 @@ object WikiParser {
   replaceContextDependent(wikiSign, tag, text, true)
  }
  
- def transformWikiText(text: String) = replaceWithTags("''", "em", replaceWithTags("'''", "b", replaceWithTags("''''", "em", text)))
+ def transformEnumeration(text: String): String = {
+
+	 def transformLine(line: String, level: Int, isNumbered: Boolean) = {
+		 val pattern = if(isNumbered) """\*+""".r  else """#+""".r 
+		 val firstMatch = pattern findFirstIn line
+		 val startTag = if(isNumbered) "<ol>" else "<ul>" 
+		 val endTag = if(isNumbered) "</ol>" else "</ul>" 
+		 
+		 firstMatch match {
+		 	case None => if(level == 1)  (0, startTag + line) else (0, line) 
+		 	case Some(index) => {
+		 		if(level == 0) (index.length, "<li>" + line.substring(index.length) + "</li>" + MyUtil.repeat(endTag, index.length))
+		 		else if(level == index.length) (index.length, "<li>" + line.substring(index.length) + "</li>")
+		 		else if(level < index.length) (index.length, MyUtil.repeat(startTag, index.length - level) + "<li>" + line.substring(index.length) + "</li>")
+		 		else if(level > index.length) (index.length, MyUtil.repeat(endTag, level - index.length) + "<li>" + line.substring(index.length) + "</li>")
+		 		else (0, line)
+		 	}
+		 }
+		 
+	 }
+	 
+	 def transformLines(lines: List[String], level: Int, isNumbered: Boolean, resultLines:List[String]):List[String] = lines  match {
+		 case Nil => resultLines
+		 case l :: ls => {
+			 val newLine = transformLine(l, level, isNumbered)
+			 transformLines(ls, newLine._1, isNumbered, newLine._2 :: resultLines)
+		 } 
+	 }
+	 
+	 val lines = text.split("\n").toList
+	 val transformedLines = transformLines(transformLines(lines,0,true, Nil),0,false, Nil)
+	 println(transformedLines)
+	 ("" /: transformedLines) (_ + _)
+ }
+ 
+ def transformWikiText(text: String) = transformEnumeration(replaceWithTags("''", "em", replaceWithTags("'''", "b", replaceWithTags("''''", "em", text))))
  def transformVisionText(text: String) = transformWikiText("""</subject>|</domain>""".r replaceAllIn("""<subject>|<domain>""".r replaceAllIn(text, "<em>"),"</em>"))
  
  // parse a term; in case of successful parsing, a Math XML expression will be returned 
@@ -97,6 +133,29 @@ object WikiParser {
 		 val substitutedText = """m\d+""".r replaceFirstIn(text, someValue.toString)
 		 substituteMeasure(substitutedText, tailVals)
 	 }
+ }
+ 
+ def findRange(m: Measure, value: BigDecimal): Option[MeasureRange] = {
+  None	 
+  /*	 
+  val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, m.id), OrderBy(MeasureRange.lowerBound, Ascending))
+  val aRange = ranges.map(range => (range, range.lowerBound <= value && range.upperBound.toDouble > value.toDouble)).filter(_._2)
+  if(aRange.isEmpty) None else Some(aRange(0)) */ 	 
+ }
+ 
+ def meaning(measureId: String, value: BigDecimal, isMeaning: Boolean) = {
+  val msrs = Measure.findAll(By(Measure.id, measureId.toLong))
+  if(msrs.isEmpty) "" else {
+	 findRange(msrs(0), value) match {
+		 case Some(r) => if(isMeaning) r.meaning else r.rangeValue.toString
+		 case _ => ""
+	 }
+  }
+ }
+ 
+ def plain(measureId: String, value: BigDecimal, isMeaning: Boolean) = {
+  val msrs = Measure.findAll(By(Measure.id, measureId.toLong))
+  if(msrs.isEmpty) "" else value.toString + " " + msrs(0).unit
  }
  
  def evaluateTerm(text: String, vals: List[BigDecimal]): Option[BigDecimal] = {
@@ -171,8 +230,8 @@ class Term extends JavaTokenParsers {
  // parse  measure or dimension element
  
  def measureDim: Parser[Any] = """<[d|m]\d+>""".r^^{ case x => prettyAtom(x)}
- 
- def prettyAtom(text: String) = {
+  
+ def evalHelper(text: String, mode: String) = {
   val pattern = """(<)([d|m])(\d+)(>)""".r
   val firstMatch = pattern findFirstIn text
   
@@ -183,7 +242,13 @@ class Term extends JavaTokenParsers {
 	 	  
 	 	if(dm.substring(1,2) == "m") {
 	 		val msrs = Measure.findAll(By(Measure.id, dm.substring(2,dm.length - 1).toLong))
-	 		if(msrs.isEmpty) "<mi>[" + dm.substring(1,dm.length - 1) + "]</mi>" else "<mi>[" + msrs.apply(0).shortName + "]</mi>"
+	 		
+	 		if(mode == "measure") {
+	 			if(msrs.isEmpty) "<mi>[" + dm.substring(1,dm.length - 1) + "]</mi>" else "<mi>[" + msrs.apply(0).shortName + "]</mi>"
+	 		}
+	 		else if (mode == "id") {
+	 			if(msrs.isEmpty) "0" else msrs(0).id.toString
+	 		}
 	 	}
 	 	else {
 	 		val elms = ModelVertex.findAll(By(ModelVertex.id, dm.substring(2,dm.length - 1).toLong))
@@ -194,6 +259,9 @@ class Term extends JavaTokenParsers {
   }
  }
  
+ def prettyAtom(text: String) = evalHelper(text, "measure")
+ def id(text: String) = evalHelper(text, "id")
+ 
  // parse bracket expressions
  
  def brackets: Parser[Any] = "("~expr~")"^^{ case "("~expr~")" => "<mo>(</mo>" + expr +"<mo>)</mo>"}
@@ -202,8 +270,13 @@ class Term extends JavaTokenParsers {
  // meaning, range, plain, random
  
  def meaning: Parser[Any] = "meaning("~measureDim~")"^^{ case "meaning("~m~")" => "<mi>meaning</mi><mfenced>" + m +  "</mfenced>"}
+ //def evalMeaning: Parser[Any] = "meaning("~measureDim~")"^^{ case "meaning("~m~")" => meaning(id(m), evalNumber(m), true)}
+  
  def range: Parser[Any] = "range("~measureDim~")"^^{ case "range("~m~")" => "<mi>range</mi><mfenced>" + m +  "</mfenced>"}
+ //def evalRange: Parser[Any] = "meaning("~measureDim~")"^^{ case "range("~m~")" => meaning(id(m), evalNumber(m), false)}
+ 
  def plain: Parser[Any] = "plain("~measureDim~")"^^{ case "plain("~m~")" => "<mi>plain</mi><mfenced>" + m +  "</mfenced>"}
+ //def evalPlain: Parser[Any] = "plain("~measureDim~")"^^{ case "plain("~m~")" => plain(id(m), evalNumber(m))}
 
  def rnd: Parser[Any] = "rnd("~number~","~number~";"~repsep(naturalNumber~","~number,",")~")"^^{ case "rnd("~min~","~max~";"~appendix~")" => "<mi>rnd</mi><mfenced>" + min + max + ";" + "..." + "</mfenced>"}
 	
@@ -267,7 +340,9 @@ class Term extends JavaTokenParsers {
  def ce(l: List[Any]) = ("" /: l) (concAndEnriche)
  
  def literal: Parser[Any] = "'"~"""[^']*""".r~"'"^^{case "'"~someText~"'" => "<mi>'" + someText + "'</mi>"}
- def timePattern: Parser[Any] = "?"~("today"|"yesterday"|"previous_business_day")~"?"^^{case "?"~pattern~"?" => "?" + pattern + "?"}
+ def timePattern: Parser[Any] = "?"~("today"|"yesterday"|"previous_business_day"|"tomorrow" |"actual_week"|"actual_month"|"actual_quarter"|"actual_year"
+		                                    |"previous_week"|"previous_month"|"previous_quarter"|"previous_year")~"?"^^{case "?"~pattern~"?" => "?" + pattern + "?"}
+ 
  def parameter: Parser[Any] = "?"
  
  def separate (x: ~[String, Any]) = x match {
@@ -276,29 +351,25 @@ class Term extends JavaTokenParsers {
  
  def filterAtom = expr|literal|timePattern|parameter
  
- 
  def relation: Parser[Any] = filterAtom~("="|"<"|">"|"<="|">=")~filterAtom^^{case expr1~r~expr2 => expr1 + "<mo>" + r + "</mo>" + expr2}
  def between: Parser[Any] = filterAtom~"between"~expr~"and"~expr^^{case atom~"between"~expr1~"and"~expr2 => atom + "<mo>between</mo>" + expr1 + "<mo>and</mo>" + expr2}
  
- def in: Parser[Any] = expr~"in("~filterAtom~rep(","~filterAtom)~")"^^{case expr1~"in("~item~moreItems~")" => 
+ def in: Parser[Any] = expr~"in"~"("~filterAtom~rep(","~filterAtom)~")"^^{case expr1~"in" ~"("~item~moreItems~")" => 
  																	   val serializedItems = ("" /: moreItems.map(separate)) (_ + _)
  																	   expr1 + "in(" + item + serializedItems + ")"
  }
  
  def filterItem = relation | between | in
  
- def filterPart = filterItem~rep(("and"|"or")~filterItem)^^{case f1~f2 => 
- 	val serializedParts = ("" /: f2.map(separate)) (_ + _)
- 	f1 + serializedParts
- }
+ def filter: Parser[Any] = filterItem~rep(("and"|"AND"|"or"|"OR")~filterItem)^^{case cond~conds => 
+ 																				val condsString = ("" /: conds.map(separate)) (_ + _)
+ 																				cond + condsString}
+ /*
+ def filterBrackets: Parser[Any] = "("~(filterItem | filterCombination )~")"^^{case "("~inner~")" => "<mo>(</mo>" + inner + "<mo>)</mo>" }
  
- def filterBrackets = "("~filterPart~")" //^^{"<mo>(</mo>" + filterPart.toString + "<mo>)</mo>"}
- def filterPart2 = filterPart | filterBrackets
- 
- def filter = filterPart2~rep(("and"|"or")~filterPart2)^^{case f1~f2 => 
-	 val serializedParts = ("" /: f2.map(separate)) (_ + _)
- 	f1 + serializedParts
- }
+ def filter: Parser[Any] = filterBrackets~rep(("and"|"AND"|"or"|"OR")~filterBrackets)^^{case cond2~conds2 => 
+ 																				val conds2String = ("" /: conds2.map(separate)) (_ + _)
+ 																				cond2 + conds2String}  */
 }
 
 class Wiki extends JavaTokenParsers {

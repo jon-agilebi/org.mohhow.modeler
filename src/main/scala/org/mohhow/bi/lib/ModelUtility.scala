@@ -9,6 +9,11 @@ import util._
 import Helpers._
 import java.lang.Math._
 import org.mohhow.bi.util.{Utility => MyUtil}
+import scala.xml._
+
+import http._
+import SHtml._
+import S._
 
 object ModelUtility {
 	
@@ -67,9 +72,9 @@ object ModelUtility {
   completeChains(hs, ls, edges)
  }
  
- def measureLoadCycle(m: Measure): Long = {
-  val unit = m.requiredActualityUnit
-  val value = m.requiredActualityValue
+ def measureLoadCycle(m: Measure, isAboutActuality: Boolean): Long = {
+  val unit = if(isAboutActuality) m.requiredActualityUnit else m.requiredStorageUnit
+  val value = if(isAboutActuality) m.requiredActualityValue else m.requiredStorageValue
   
   if(unit == null || value == null) 0
   else {
@@ -88,7 +93,7 @@ object ModelUtility {
  }
  
  def cubeLoadCycle(v: ModelVertex) = {
-  val cycles = Measure.findAll(By(Measure.fkCube, v.id)).map(measureLoadCycle)
+  val cycles = Measure.findAll(By(Measure.fkCube, v.id)).map(m => measureLoadCycle(m, true))
   if(cycles.isEmpty) 0 else cycles.min
  }
  
@@ -239,8 +244,10 @@ object ModelUtility {
   val groupBy = if(attrList.size > 0) "\nGROUP BY " + attrList else ""
   val orderedAttributes = attrs.filter(_._4.length > 0).map(a => a._2 + "." + a._3 + " " + a._4)
   val orderBy = if(orderedAttributes.size > 0) "\nORDER BY " + MyUtil.makeSeparatedList(orderedAttributes, ",") else ""
-  
-  select + attrList  + maybeSomething(msrList, ", ") + msrList + "\nFROM "  + from + maybeSomething(joins + filter, "\nWHERE ") + joins + filter  + groupBy + orderBy 
+  val conjunction = if(joins == null || joins.length == 0) "" else " AND " 
+	  
+	  
+  select + attrList  + maybeSomething(msrList, ", ") + msrList + "\nFROM "  + from + maybeSomething(joins + filter, "\nWHERE ") + joins + conjunction + filter  + groupBy + orderBy 
  }
  
  def findOriginal(v: ModelVertex): ModelVertex = {
@@ -251,4 +258,100 @@ object ModelUtility {
 		                         
   if(org.isEmpty) null else org(0)
  } 
+
+
+
+/**
+ * consistency checks: Connectedness of diagrams, correct relation types
+ */
+
+ def checkPair(v1: ModelVertex, v2:ModelVertex): Boolean = {
+  val allowedCombinations = List(("cube", "dimension"), ("dimension", "hierarchy"), ("hierarchy", "level"), ("dimension", "level"), ("level", "level"), ("level", "attribute"), ("level", "scope"), ("level", "element"))	
+  allowedCombinations.exists(item =>  item == (v1.elementType, v2.elementType) || item == (v2.elementType, v1.elementType))
+ }
+
+ def checkEdge(v1: ModelVertex, v2:ModelVertex, edges: List[ModelEdge]): (Int, ModelEdge) = edges match {
+	case Nil => (0, null)
+	case e :: es => {
+		if((e.head == v1.id && e.tail == v2.id) || (e.head == v2.id && e.tail == v1.id)) {
+			if(checkPair(v1, v2)) (1, null) else (2, e)
+		}
+		else checkEdge(v1, v2, es)
+	}
+ }
+
+ def neighbours(v: ModelVertex, otherVertices: List[ModelVertex], edges: List[ModelEdge], alreadyFound: List[(ModelVertex, ModelEdge)]): List[(ModelVertex, ModelEdge)] = otherVertices match {
+	case Nil => alreadyFound
+	case ov :: ovs => {
+		val checkedEdge = checkEdge(v, ov, edges)
+		checkedEdge._1 match {
+			case 0 => neighbours(v, ovs, edges, alreadyFound)
+			case 1 => neighbours(v, ovs, edges, (ov, null) :: alreadyFound)
+			case 2 => neighbours(v, ovs, edges, (ov, checkedEdge._2) :: alreadyFound)
+		}
+	}
+ }
+ 
+ def component(alreadyFound: List[ModelVertex], otherVertices: List[ModelVertex], edges: List[ModelEdge], badEdges: List[ModelEdge]): (List[ModelVertex], List[ModelEdge]) = {
+	 
+  if(otherVertices.isEmpty) (alreadyFound, badEdges) 
+  else {
+	  val matches = alreadyFound.map(v => (v, neighbours(v, otherVertices, edges, Nil)))
+	  val newVertices = List.flatten(matches.map(_._2.map(_._1))).distinct
+	  val withNewMatches = alreadyFound ::: newVertices
+	  val remainingVertices = otherVertices.filter(ov => !newVertices.exists(_ == ov))
+	  val newBadEdges = List.flatten(matches.map(item => item._2.map(innerItem => (item._1, innerItem._1, innerItem._2)))).filter(_._3 != null)
+	  
+	  if(newVertices.isEmpty) (alreadyFound, badEdges) 
+	  else component(withNewMatches, remainingVertices, edges, badEdges ::: newBadEdges.map(_._3))
+  }
+ }
+
+ def checkGraph(vertices: List[ModelVertex], edges: List[ModelEdge]): List[(String, Long, Long, Long)] = {
+	 
+  if(vertices.isEmpty && !edges.isEmpty) List(("noVertices", edges(0).referenceId,0,0))
+  else {
+	 val checkResult = component(List(vertices.head), vertices.tail, edges, Nil)
+	 val badEdges = checkResult._2.map(badEdge => ("badEdge", badEdge.referenceId.toLong, badEdge.head.toLong, badEdge.tail.toLong))
+	 val zero = 0
+	 println("found " + checkResult._1.size.toString + " absolute " + vertices.size.toString)
+	 if(checkResult._1.size < vertices.size) ("isolatedVertices", vertices.head.referenceId.toLong,zero.toLong, zero.toLong) :: badEdges else badEdges
+  }
+ }
+
+ def checkAllGraphs(scenarioId: Long): List[(String, Long, Long, Long)] = {
+  val vertices = ModelVertex.findAll(By(ModelVertex.fkScenario, scenarioId), By(ModelVertex.isCurrent, 1))
+  val edges = ModelEdge.findAll(By(ModelEdge.fkScenario, scenarioId), By(ModelEdge.isCurrent, 1))
+  val rIds = vertices.map(_.referenceId).distinct
+  
+  val results = for {
+	 rId <- rIds
+	 val vs = vertices.filter(_.referenceId == rId)
+	 val es = edges.filter(_.referenceId == rId)
+  } yield checkGraph(vs, es)
+  
+  List.flatten(results)
+ }
+ 
+ def presentGraphResult(errors: List[(String, Long, Long, Long)]): Node = {
+  def v(id: Long): (String, String) = {
+   if(id == 0) ("", "") 
+   else {
+	   val vs = ModelVertex.findAll(By(ModelVertex.id, id))
+	   if(vs.isEmpty) ("", "")  else (vs(0).elementType.toString, vs(0).elementName.toString)
+   }
+  }
+  
+  def row(item: (String, Long, Long, Long)): Node = {
+	val referringVertex = v(item._2)
+	val badHead = v(item._3)
+    val badTail = v(item._4)
+	val badEdge = if(item._3 > 0 && item._4 > 0) ", " + S.?(badHead._1) + " " + badHead._2 + ", " +  S.?(badTail._1) + " " + badTail._2 else ""
+    		  
+	<li>{S.?("diagram") + " " + S.?(referringVertex._1) + " " + S.?(referringVertex._2) + ": " +  S.?(item._1) + badEdge}</li>
+  }
+
+  <ul style="list-style-position:inside">{errors.map(row).toSeq}</ul>	 
+ 
+ }
 }

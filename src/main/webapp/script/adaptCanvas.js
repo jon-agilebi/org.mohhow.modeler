@@ -15,6 +15,16 @@ var someoneHasFocus = false;
 var hasSource = false;
 var superfluousClones = [];
 var justALineToRemove = false;
+var keywords;
+var dimensionMode = true;
+var dimensions;
+var allLevel;
+
+function setKeywords(kwds, dms, lvls) {
+	keywords = kwds;
+	dimensions = dms;
+	allLevel = lvls;
+}
 
 function setSymbolAttributes(symbol) {
 	symbol.attr("fill", "lightgray");
@@ -284,7 +294,7 @@ function moveSymbol(symbol) {
  updateElements(Number(x), Number(y), symbol.kind, symbol.elements);
 }
 
-Raphael.fn.elementTitle = function(text, frame, elementType, detail, vertexId) {
+Raphael.fn.elementTitle = function(text, frame, elementType, detail, vertexId, usage, description) {
 	var x = Number(frame.getBBox().x);
 	var y = Number(frame.getBBox().y);
 	
@@ -298,7 +308,9 @@ Raphael.fn.elementTitle = function(text, frame, elementType, detail, vertexId) {
 		text: text,
 		elementType: elementType,
 		detail: detail,
-		vertexId: vertexId
+		vertexId: vertexId,
+		usage: usage,
+		description: description
 	};
 }
 
@@ -308,6 +320,7 @@ var showDialog = function () {
 	var thisKind;
 	var someDetail;
 	var someUsage;
+	var someDescription;
 	
 	for(var i = 0; i < elementTitles.length; i++) {
 		if(elementTitles[i].element == this) {	
@@ -315,23 +328,32 @@ var showDialog = function () {
 			thisKind = elementTitles[i].elementType;
 			someDetail = elementTitles[i].detail;
 			someUsage = elementTitles[i].usage;
+			someDescription = elementTitles[i].description;
 		}
-	 }
+	}
 	
 	if(thisStatus != "prototype")
 	{
 		textToEdit = this;
 		var text = "";
-		
-		
+			
 		if(!(this.attr("text").substring(0,2) == "<<")) text = this.attr("text");
 		
-		var label1 = "<label>Name</label>";
-		var nameInput1 = "<input type='text' id= 'modalModelTextInput' value='";
+		var label1 = "<label style='float:left'>" + keywords.name + "</label>";
+		var label2 = "<label style='float:left'>" + keywords.pattern + "</label>";
+		var label3 = "<label style='float:left'>" + keywords.realises + "</label>";
+		var label4 = "<label style='float:left'>" + keywords.initialSize + "</label>";
+		var label5 = "<label style='float:left'>" + keywords.growthPerLoad + "</label>";
+		var label6 = "<label style='float:left'>" + keywords.degeneratedDimension + "</label>";
+		var label7 = "<label style='float:left'>" + keywords.description + "</label>";
+		var label8 = "<label style='float:left'>" + keywords.isRoleChoice + "</label>";
+		var label9 = "<label style='float:left'>" + keywords.roleName + "</label>";
+			
+		var nameInput1 = "<input type='text' width='100%' id= 'modalModelTextInput' value='";
 		var nameInput2 = "' />";
 		
-		var cancel = "<input type='button' value='Cancel' class='standardButton' style='float: right' onclick='$.unblockUI();' />";
-		var save = "<input type='button' value='Save' class='standardButton' style='float: right' onclick='saveText()' />";
+		var cancel = "<input type='button' value='" + keywords.cancel + "' class='standardButton' style='float: right' onclick='$.unblockUI();' />";
+		var save = "<input type='button' value='" + keywords.save + "' class='standardButton' style='float: right' onclick='saveText()' />";
 		
 		if(thisKind == "attribute") {
 			var pattern;
@@ -343,34 +365,92 @@ var showDialog = function () {
 			if(someUsage) realize = "<input type='text' id= 'modalModelAttributeUsageInput' value='" + someUsage + "'/>";
 			else realize = "<input type='text' id= 'modalModelAttributeUsageInput' />";
 			
-			$.blockUI({message: "<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>" + 
-				                 nameInput1 + text + nameInput2 + "</td></tr><tr><td><label>Pattern</label></td><td>" 
-				                 + pattern + "</td></tr><tr><td><label>Realises</label></td><td>" + realize + "</td></tr></table><br />"+ cancel + save + "</div>"});
+			$.blockUI({message: "<div class='blockDialogue'><table><tr><td>" + label1 + "</td><td>" + nameInput1 + text + nameInput2 + "</td></tr>" +
+				                "<tr><td>" + label2 + "</td><td>" + pattern + "</td></tr><tr><td>" + label3 +"</td><td>" + realize + 
+				                "</td></tr></table><br />"+ cancel + save + "</div>"});	
+		}
+		else if(thisKind == "level" && !dimensionMode) {
+			var levelChoice;
 			
+			if(text.length > 0) levelChoice = "<select id= 'modalModelTextInput' value='" + text + "'>";
+			else levelChoice = "<select id= 'modalModelTextInput' value=''><option selected=''></option>";
+			
+			for(var i = 0; i < allLevel.length; i++) {
+				if(allLevel[i] == text) levelChoice = levelChoice + "<option selected=''>" + allLevel[i] + "</option>";
+				else levelChoice = levelChoice + "<option>" + allLevel[i] + "</option>";
+			}
+			
+			levelChoice = levelChoice + "</select>";
+			$.blockUI({message: "<div class='blockDialogue'>" + label1 + levelChoice + "<br />" + "<br />" + save + cancel + "</div>"});
+		}
+		else if(thisKind == "dimension" && !dimensionMode) {
+			var dimensionChoice;
+			
+			if(someDescription) dimensionChoice = "<select id= 'modalModelTextInput' value='" + someDescription + "'>";
+			else dimensionChoice = "<select id= 'modalModelTextInput' value=''><option selected=''></option>";
+			
+			for(var i = 0; i < dimensions.length; i++) {
+				if(dimensions[i] == text) dimensionChoice = dimensionChoice + "<option selected=''>" + dimensions[i] + "</option>";
+				else dimensionChoice = dimensionChoice + "<option>" + dimensions[i] + "</option>";
+			}
+			
+			dimensionChoice = dimensionChoice + "</select>";
+			
+			var roleChoice;
+			var roleCheckbox;
+			
+			if(someDetail == "role") roleCheckbox = "<input type='checkbox' style='float:left' id='checkRole' checked=''/>";
+			else roleCheckbox = "<input type='checkbox' style='float:left' id='checkRole' />";
+			roleChoice = "<tr><td>" + label8 + "</td><td>" + roleCheckbox + "</td></tr>";
+			
+			var roleName;
+			
+			if(someDetail == "role" && text) roleName = "<input type='text' id= 'modalModelRoleNameInput' value='" + text + "'/>";
+			else if(someDetail == "role") roleName = "<input type='text' id= 'modalModelRoleNameInput' value=''/>";
+			else roleName = "<input type='text' id= 'modalModelRoleNameInput' value='' disabled=''/>";
+			
+			$.blockUI({message: "<div class='blockDialogue'><table><tr><td>" + label1 + "</td><td>" + dimensionChoice + "</td></tr>" +
+				roleChoice + "<tr><td>" + label9 + "</td><td>" + roleName + "</td></tr></table>" +
+                cancel + save + "</div>"}); 
 		}
 		else if(thisKind == "dimension" || thisKind == "cube") {
 			
 			var initialGrowth;
 			var growthPerLoad;
+			var degenerationChoice = "";
+			var description;
 		
 			if(someDetail && someDetail.split(";").length == 2) {
 				var bothValues = someDetail.split(";")
 				initialGrowth = "<input type='text' id= 'modalModelAttributePatternInput' value='" + bothValues[0] + "'/>";
 				growthPerLoad = "<input type='text' id= 'modalModelAttributeAdditionalPatternInput' value='" + bothValues[1] + "'/>";
+				
 			}
 			else {
 				initialGrowth = "<input type='text' id= 'modalModelAttributePatternInput' />";
 				growthPerLoad = "<input type='text' id= 'modalModelAttributeAdditionalPatternInput'/>";
 			}
 			
-			$.blockUI({message: "<div class='blockDialogue'><table><tr><td><label>Name</label></td><td>" + 
-				                 nameInput1 + text + nameInput2 + "</td></tr><tr><td><label>Estimated initial size</label></td><td>" 
-				                 + initialGrowth + "</td></tr><tr><td><label>Estimated growth per load</label></td><td>" 
-				                 + growthPerLoad + "</td></tr></table><br />"+ cancel + save + "</div>"});
+			if(thisKind == "dimension") {
+				var dgn;
+				
+				if(someUsage == "degenerated") dgn = "<input type='checkbox' style='float:left' id='checkDegeneration' checked=''/>";
+				else dgn = "<input type='checkbox' style='float:left' id='checkDegeneration' />";
+				degenerationChoice = "<tr><td>" + label6 + "</td><td>" + dgn + "</td></tr>";
+			}
+			
+			if(someDescription) description = "<textarea cols='40' rows='10' id='modalModelDescriptionInput'>" + someDescription +"</textarea><br />"
+			else description = "<textarea cols='40' rows='10' id='modalModelDescriptionInput'></textarea><br />"
+						
+			$.blockUI({message: "<div class='blockDialogue'><table><tr><td>" + label1 + "</td><td>" + nameInput1 + text + nameInput2 + "</td></tr>" +
+				                "<tr><td>" + label4 + "</td><td>" + initialGrowth + "</td></tr>" +
+				                "<tr><td>" + label5 + "</td><td>" + growthPerLoad + "</td></tr>" + degenerationChoice + 
+				                "<tr><td>" + label7 + "</td><td></td></tr></table><br />"
+				                +  description + "<br />" + cancel + save + "</div>"});
 		}
 		else {
 	
-			$.blockUI({message: "<div class='blockDialogue'>" + label1 + nameInput1 + text + nameInput2 + "<br />" + cancel + save + "</div>"});
+			$.blockUI({message: "<div class='blockDialogue'>" + label1 + nameInput1 + text + nameInput2 + "<br />" + "<br />" + save + cancel + "</div>"});
 		}
 	}
 }
@@ -379,24 +459,51 @@ function saveText() {
 
  var modelId = null;
  var vertexId = 0;
+ var index;
  
  for(var i = 0; i < elementTitles.length ;i++) {
 	if(elementTitles[i].element  == textToEdit) {
 		modelId = 	elementTitles[i].frame.id;
 		vertexId = elementTitles[i].vertexId;
+		index = i;
 	}
  }
-	
+ 
+ // usage is either a statement about the realisation of an attribute or a statement whether a dimension is degenerated
+ 
+ var usageText;
+ 
+ if($('#checkDegeneration').is(':checked') ) usageText = "degenerated";
+ else usageText = $('#modalModelAttributeUsageInput').val();
+ 
+ // detail contains either the information on role playing or load cycle information
+ 
+ var detailText;
+ var descriptionText;
+ 
+ if($('#checkRole').is(':checked')){
+	 detailText = "role";
+	 descriptionText = $('#modalModelRoleNameInput').val();
+ }
+ else {
+	 detailText = $('#modalModelAttributePatternInput').val();
+	 descriptionText = $('#modalModelDescriptionInput').val();
+ }
+ 
  var text = $('#modalModelTextInput').val();
- var detailText = $('#modalModelAttributePatternInput').val();
  var additionalDetailText = $('#modalModelAttributeAdditionalPatternInput').val();
- var usageText = $('#modalModelAttributeUsageInput').val();
  
  if(additionalDetailText && additionalDetailText.length > 0) detailText = detailText + ";" + additionalDetailText;
  
  if(vertexId > 0) {
-	  textToEdit.attr('text',text);
-	  textToEdit.attr('detail', detailText);
+	  elementTitles[index].usage = usageText;
+	  elementTitles[index].text = text;
+	  elementTitles[index].detail = detailText;
+	  elementTitles[index].description = descriptionText;
+	  
+	  if($('#checkRole').is(':checked')) textToEdit.attr('text', descriptionText + " (" + text + ")");
+	  else textToEdit.attr('text', text);
+	  
 	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] elementName").empty();
 	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] elementName").append(text);
 	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] detail").empty();
@@ -405,19 +512,29 @@ function saveText() {
 	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").append(usageText);
 	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] status").empty();
 	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] status").append("changed");
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] description").empty();
+	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] description").append(descriptionText);
 	  $.unblockUI();
  }
  else if(modelId) {
-	  textToEdit.attr('text',text);
-	  textToEdit.attr('detail', detailText);
+	  elementTitles[index].usage = usageText;
+	  elementTitles[index].text = text;
+	  elementTitles[index].detail = detailText;
+	  elementTitles[index].description = descriptionText;
+	  
+	  if($('#checkRole').is(':checked')) textToEdit.attr('text', descriptionText + " (" + text + ")");
+	  else textToEdit.attr('text', text);
+	  
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] elementName").empty();
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] elementName").append(text);
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] detail").empty();
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] detail").append(detailText);
-	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").empty();
-	  $("#logicalModelVertices v[vertexId='" + vertexId + "'] usage").append(usageText);
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] usage").empty();
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] usage").append(usageText);
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] status").empty();
 	  $("#logicalModelVertices v[modelId='" + modelId + "'] status").append("changed");
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] description").empty();
+	  $("#logicalModelVertices v[modelId='" + modelId + "'] description").append(descriptionText);
 	  $.unblockUI();
  }
 }
@@ -501,7 +618,7 @@ var startMove = function() {
 		
 		for(var i = 0; i < elementTitles.length; i++) {
 			 if(elementTitles[i].frame == this) {	
-				 var newTitle = editPaper.elementTitle(elementTitles[i].text, clone, elementTitles[i].elementType, null, "m" + this.id);
+				 var newTitle = editPaper.elementTitle(elementTitles[i].text, clone, elementTitles[i].elementType, null, "m" + this.id, elementTitles[i].usage, elementTitles[i].description);
 				 elementTitles.push(newTitle);
 			}
 		}
@@ -842,7 +959,9 @@ function drawModel(onlyDisplay) {
 		var detail = $(this).find("detail").text();
 	  	var x =  $(this).find("x").text();
 	  	var y =  $(this).find("y").text();
-	  	drawElement(elementType, onlyDisplay, Number(x), Number(y), elementName, vertexId, detail);  	
+	  	var usage = $(this).find("usage").text();
+	  	var description = $(this).find("description").text();
+	  	drawElement(elementType, onlyDisplay, Number(x), Number(y), elementName, vertexId, detail, usage, description);  	
 	});
 	
 	$('#logicalModelEdges e').each(function(edge){
@@ -874,7 +993,6 @@ function drawFrame(onlyDisplay, isPath, x, y, width, height, r, path) {
 		else {
 			return paper.rect(x, y, width, height, r);
 		}
-		
 	}
 	else {
 		
@@ -891,7 +1009,7 @@ function drawElement(kind, onlyDisplay, x, y, elementName, vertexId) {
 	drawElement(kind, onlyDisplay, x, y, elementName, vertexId, null);
 }
 
-function drawElement(kind, onlyDisplay, x, y, elementName, vertexId, detail) {
+function drawElement(kind, onlyDisplay, x, y, elementName, vertexId, detail, usage, description) {
 	var frame;
 	var newX, newY;
 	
@@ -914,12 +1032,12 @@ function drawElement(kind, onlyDisplay, x, y, elementName, vertexId, detail) {
 	
 	if(onlyDisplay) {		
 		symbols.push(paper.symbol(kind, frame));
-		elementTitles.push(paper.elementTitle(elementName, frame, kind, detail, vertexId));
+		elementTitles.push(paper.elementTitle(elementName, frame, kind, detail, vertexId, usage, description));
 	}
 	else {
 		
 		symbols.push(editPaper.symbol(kind, frame));
-		elementTitles.push(editPaper.elementTitle(elementName, frame, kind, detail, vertexId));
+		elementTitles.push(editPaper.elementTitle(elementName, frame, kind, detail, vertexId, usage, description));
 		frame.drag(move, startMove, stopMove);
 		
 		if(frame.getVertexId() >= 0 || (frame.getVertexId().length > 0 && frame.getVertexId().substring(0,1) == "m")) {
@@ -933,6 +1051,7 @@ function createPalette(elementType) {
 	
 	if(elementType == "dimension") {
 		
+		dimensionMode = true;
 		drawElement("hierarchy", false, 83, 40, "<<hierarchy>>", -1);
 		drawElement("level", false, 83, 90, "<<level>>", -1);
 		drawElement("member", false, 83, 140, "<<member>>", -1);
@@ -941,6 +1060,7 @@ function createPalette(elementType) {
 	}
 	else {
 		
+		dimensionMode = false;
 		drawElement("cube", false, 83, 40, "<<cube>>", -1);
 		drawElement("dimension", false, 83, 130, "<<dimension>>", -1);
 		drawElement("level", false, 83, 180, "<<level>>", -1);

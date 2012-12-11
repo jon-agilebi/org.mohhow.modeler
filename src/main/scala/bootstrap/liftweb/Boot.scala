@@ -47,10 +47,11 @@ class Boot {
     BIService.storeMap = Map.empty[String, ConnectionInformation];
     
     val allStores = Repository.read("deployment", 0, "generic", "stores", 0) \\ "store"
+    val dbs = Repository.read("configuration", 0, "metadata", "conf_db", -1) \\ "database"
   
     for(aStore <- allStores) {
    
-    	val vendor = new StandardDBVendor(txt(aStore, "storeDriver"), 
+    	val vendor = new StandardDBVendor(MyUtil.driverName(txt(aStore, "storeDriver"), dbs), 
                                      txt(aStore, "storeUrl"), 
 	 		                         Full(txt(aStore, "storeUser")), 
 	 		                         Full(txt(aStore, "storePassword")))
@@ -143,10 +144,19 @@ class Boot {
     	case Req("blocks" :: _, _, GetRequest) => Full(AuthRole("biServiceClient"))
     	case Req("blocks" :: _, _, PostRequest) => Full(AuthRole("biServiceClient"))
     }
+    
+    def protectDeploymentService: LiftRules.HttpAuthProtectedResourcePF = {
+    	case Req("deployment" :: _, _, PostRequest) => Full(AuthRole("deployment"))
+    }
 
     LiftRules.httpAuthProtectedResource.append { protectBIService }
+    LiftRules.httpAuthProtectedResource.append { protectDeploymentService }
 	  
     LiftRules.dispatch.append(BIService);
+    
+    LiftRules.dispatch.append{
+    	case Req("documentation" :: releaseId :: Nil, _, _) => () => DocumentationDispatcher.sendDocumentation(releaseId)
+    }
     
     Authentification.initialize()
 	
@@ -161,7 +171,21 @@ class Boot {
 	  else false
 	 }
 	 case _ => false
-	}  
+	}
+    
+    LiftRules.authentication = HttpBasicAuthentication("DeploymentService") {
+	 case(uid, pwd, req) => {
+	  println("pruefe Berechtigung Deployment")
+	  val aUser = User.findAll(By(User.email, uid))
+	  
+	  if(!aUser.isEmpty && aUser(0).password.match_?(pwd)) {
+	 	  userRoles(AuthRole("deployment"))
+	 	  true
+	  }
+	  else false
+	 }
+	 case _ => false
+    }
   }
 
   /**

@@ -28,6 +28,11 @@ object Repository {
   getXML(folder + artefactName + getSuffix(artefactKind))
  }
  
+ def readAsFile(category: String, scenarioId: Long, artefactKind: String, artefactName: String, releaseId: Long): File = {
+  val folder = getScenarioSubFolder(category, scenarioId.toString, artefactKind, releaseId, false)
+  new File(folder + artefactName + getSuffix(artefactKind))
+ }
+ 
  def emptyTransfer() = {
   val transferGeneric = new File(transferRoot + "/generic")
   FileUtils.cleanDirectory(transferGeneric)
@@ -79,6 +84,7 @@ object Repository {
   case "sql" => ".sql"
   case "blocks" => ".xml"
   case "metadata" => ".xml"
+  case "documentation" => ".pdf"
   case _ => ".xml"
  }
  
@@ -150,6 +156,12 @@ object Repository {
   val ddlPath = scenarioRoot + "release/" + releaseId.toString + "/" + tableName + ".sql" 
   val f = new File(ddlPath)
   FileUtils.writeStringToFile(f, text)
+ }
+ 
+ def emptyDocumentation(releaseId:Long): File = {
+  val releasePath = scenarioRoot + "release/" + releaseId.toString + "/"
+  val f = new File(releasePath + "documentation.pdf")
+  f
  }
  
  def getArtefactList(releaseId: Long, extensions: List[String]): List[String] = {

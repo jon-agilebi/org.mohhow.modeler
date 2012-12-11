@@ -25,15 +25,14 @@
 				</lift:BacklogSnippet.backlogMenu>
 		</div>
 		<div class="rightContent" >
-			<div class="quarterContent">
-				<lift:BacklogSnippet.backlogTree>
-					<ul id="feature_tree">
-						<backlog:tree />
-			  		</ul>
-			  	</lift:BacklogSnippet.backlogTree>
-			</div>
-			<div id="featureDisplay" >
-			</div>
+			<lift:BacklogSnippet.backlogTree>
+				<div class="quarterContent">
+					<ul id="feature_tree"><backlog:tree /></ul>
+				</div>
+				<div id="featureDisplay" >
+					<backlog:details />
+				</div>
+			</lift:BacklogSnippet.backlogTree>
 		</div>
 	</lift:RoleSnippet.inScenario>
 </lift:surround>

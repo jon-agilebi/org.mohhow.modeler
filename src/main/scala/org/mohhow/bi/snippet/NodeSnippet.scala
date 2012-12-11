@@ -63,7 +63,6 @@ class NodeSnippet {
    val host = MyUtil.getSeqHeadText(SelectedNode.is \\ "host")
    val port = MyUtil.getSeqHeadText(SelectedNode.is \\ "port")
    val cmd = "$.get('http://" + host + ":" + port + "/bi/ping', function(resp){alert('" + S.?("pingSuccess") + " " + host + "')});"
-   println(cmd)
    JsRaw(cmd) 
   }
   else Alert(S.?("noNodeChoice"))
@@ -159,10 +158,7 @@ class NodeSnippet {
  def storeEditTable() = {
    val node = SelectedNode.is
    
-   if(node != null) {
-	   val stores = node \\ "store"
-	   showStoreTable("edit", stores)
-   }
+   if(node != null) showStoreTable("edit", node \\ "store")
    else <nothing />
  }
  
@@ -223,6 +219,7 @@ class NodeSnippet {
 				<system>{inp2Node(trs(3))}</system>
 				<environment>{sel2Node(trs(4))}</environment>
 				<dataStores>{DataStores.is}</dataStores>
+				<deployment>{SelectedNode.is \\ "deployment"}</deployment>
 			</node>
 				
 	(n, tn == "newNode")

@@ -9,6 +9,10 @@
 			$(document).ready(function() {
 				$('#logicEditMenu').hide();
 			}); 
+			$('#checkRole').live('click', function() {
+				if($('#checkRole').is(':checked')) $('#modalModelRoleNameInput').removeAttr('disabled');
+			  	else $('#modalModelRoleNameInput').attr('disabled','');
+			});
 		</script>
 	</head>
 		<modelContainer id="logicalModelContainer">
@@ -19,6 +23,7 @@
 		</modelContainer>
 		<lift:RoleSnippet.inScenario>
 			<lift:LogicalModelSnippet.model>
+				<adapt:diagram />
 				<div class="upper_right">
 					<h1>Logisches Datenmodell</h1>
 					<div class="menuBar">

@@ -25,6 +25,7 @@ import org.mohhow.bi.util.{Utility => MyUtil}
 import org.mohhow.bi.lib.Repository
 import org.mohhow.bi.lib.WikiParser
 import org.mohhow.bi.lib.ModelUtility
+import org.mohhow.bi.lib.JsonUtility
 import scala.collection.mutable
 
 object SelectedSpecification extends SessionVar[Specification](null)
@@ -50,7 +51,12 @@ class MockupSnippet {
  def selectSpecification(id : String) : JsCmd = {
   val sp = Specification.findAll(By(Specification.id, id.toLong)).apply(0)
   SelectedSpecification(sp)
-  JsCmds.SetHtml("specifications", createSpec(sp))
+  
+  val blocks = Block.findAll(By(Block.fkSpecification, sp.id))
+  val blockXml = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => blocks.exists(aBlock => aBlock.id.toString == (b \ "@blockId").text))
+  
+  val blocksAsJson =  prepareInit(blockXml)
+  CmdPair(JsCmds.SetHtml("specifications", createSpec(sp)), JsRaw("initializeBlockInformation(\"" + blockXml.toString.replaceAll("\"", "'").replaceAll("\n", "")  + "\");"))
  } 
 	
  def createSpecificationItem(sp: Specification) = {
@@ -287,7 +293,6 @@ class MockupSnippet {
 			case (true, resultText) => Alert(resultText)
 			case (false, resultText) => {
 				val cmd = "changeBlockInformation(" + blockId + ", 'editFilter', \"" + resultText + "\", null);"
-				println("The save filter command is " + cmd)
 				JsRaw(cmd)
 		}
 	  }
@@ -385,8 +390,10 @@ class MockupSnippet {
    implicit val formats = net.liftweb.json.DefaultFormats
    
    try {
-	   val blocks  = parse(blockString)	    
+	   val blocks  = parse(blockString)	
+	   println("ok blocks is " + blocks)
 	   val blockContent = blocks.extract[List[BlockContent]]
+	   println("ok blockContent is " + blockContent)
 	   blockContent.map(toStructure).toList
    }
    catch {
@@ -421,7 +428,7 @@ class MockupSnippet {
    var blocksWithNewStructure:List[(String, Node)] = Nil
 	  
    if(blockString != null && blockString.length > 0) blocksWithNewStructure  = serializeStructure(blockString)
-   
+   println("I finish " + blocksWithNewStructure.toString)
    val blocks = Block.findAll(By(Block.fkSpecification, SelectedSpecification.is.id)).toList
    val serializedBlocks = Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block"
    val result = serializedBlocks.map(b => changeTitle(b, blocks)).map(b => changeStructure(b, blocksWithNewStructure)).toSeq
@@ -538,6 +545,15 @@ class MockupSnippet {
   	MyUtil.flattenNodeSeq(treeList.toList)
  }
  
+ def prepareInit(blocks: NodeSeq): String = {
+  def pAttr(attr: Node) = MyUtil.getSeqHeadText(attr \ "name") + ":" + MyUtil.getSeqHeadText(attr \ "order")
+  def prAttr(attrs: NodeSeq) = if(attrs.isEmpty) "" else pAttr(attrs(0))
+  def pBlock(bl: Node): String = (bl \ "@blockId").text + ";" + MyUtil.makeSeparatedList((bl \\ "measure").map(m => MyUtil.getNodeText(m)).toList,",") + ";" +
+		                            MyUtil.makeSeparatedList((bl \\ "attribute").map(pAttr).toList, ",") + ";" + MyUtil.getSeqHeadText(bl \\ "filter")
+		 
+  JsonUtility.list2Json(blocks.map(pBlock).toList)	                                     
+ }
+ 
  /**
   * Scorecard Design
   * 
@@ -643,6 +659,7 @@ class MockupSnippet {
     	<tr><td>Table</td><td class="presentationThumbnail"  id="tableThumbnail" presentationType="table" presentationDetail="plain"></td></tr>
 	    <tr><td>Status Indicator</td><td class="presentationThumbnail" id="statusIndicatorThumbnail" presentationType="statusIndicator" presentationDetail="circle"></td></tr>
 	    <tr><td>Trend Indicator</td><td class="presentationThumbnail" id="trendIndicatorThumbmail" presentationType="trendIndicator" presentationDetail="arrow"></td></tr>
+	 	<tr><td>Plain Presentation</td><td class="presentationThumbnail" id="plainThumbmail" presentationType="plain" presentationDetail="plain"></td></tr>
     </tbody>
    </table>
  }
@@ -682,6 +699,7 @@ class MockupSnippet {
 	  }
 	   else block
   }
+  println(xml)
   val block = XML.loadString(xml)
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").map(b => replaceBlock(b, block)).toSeq
   Repository.write("scenario", SelectedScenario.is.id, "blocks", "blocks", -1, <blocks>{blocks}</blocks>)

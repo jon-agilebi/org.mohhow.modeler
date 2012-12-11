@@ -1,0 +1,45 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<link rel="stylesheet" type="text/css" href="/style/ui-lightness/jquery-ui-1.8.16.custom.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script  src="/script/jquery-ui-1.8.21.custom.min.js" type="text/javascript"></script>
+		
+		<script type="text/javascript">
+			$(document).ready(function() { 
+				$(".dateInput").datepicker({dateFormat: 'dd.mm.yy'});
+				$(".prototype").insertAfter($("table").eq(0));
+				$(".prototype").removeClass("prototype");
+			});
+		</script>
+	</head>
+	
+    <div class="upper_right">
+        <h1>Create and Edit Meetings</h1>
+    </div> 
+    
+    <div class="mohhowForm">
+		<div class="lift:MeetingForm"></div>
+  		
+	  	<div class="prototype">
+	  		<br /><br />
+		  	<h3>Participants</h3>
+		  	<br />
+		  	<table class="singleSelection" id="scenarioTable" >
+				<thead>
+					<tr>
+						<td>Participant</td>
+						<td>Informed</td>
+						<td>Name</td>
+						<td>Roles</td>
+					</tr>
+				</thead>
+				<tbody>
+					<lift:BacklogSnippet.participants><meeting:participants /></lift:BacklogSnippet.participants>
+				</tbody>
+			</table>
+			<br/><br/>
+	  	</div>
+	</div>
+
+</lift:surround>

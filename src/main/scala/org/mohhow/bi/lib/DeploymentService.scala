@@ -34,7 +34,7 @@ object DeploymentService extends RestHelper {
  serve {
 	 
   case "deployment" :: "start" :: _ XmlPost xml -> _ => {
-	  
+   println("starte deployment")	  
    deploymentItems.clear
    
    for(item <- xml \\ "item") {

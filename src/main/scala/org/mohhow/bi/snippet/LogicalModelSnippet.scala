@@ -23,20 +23,37 @@ import js.jquery.JqJsCmds._
 import org.mohhow.bi.util.{Utility => MyUtil}
 import scala.collection.mutable.HashMap
 import org.mohhow.bi.lib.WikiParser
+import org.mohhow.bi.lib.JsonUtility
+import org.mohhow.bi.lib.ModelUtility
 
 object SelectedModelItem extends SessionVar[ModelVertex](null)
 
 class LogicalModelSnippet {
 	
  def serializeVertex(v: ModelVertex): Node = {
+	 
+   val usage = if(v.elementType == "attribute") v.elementKind 
+               else if(v.elementType == "dimension" && v.isDegenerated == 1) "degenerated"
+               else "0"
+            	   
+   val detail = if(v.elementType == "dimension" && v.roleOf != null && v.roleOf > 0) "role"
+	   			else v.elementDetail 
+	   			
+   val description = if(v.elementType == "dimension" && v.roleOf != null && v.roleOf > 0) {
+	   val reference = ModelVertex.findAll(By(ModelVertex.id, v.roleOf))
+	   if(reference.isEmpty) ""else reference(0).elementName
+   }
+   else v.elementDescription
+	 
    <v vertexId={v.id.toString} modelId='-1'>
   	<elementType>{v.elementType}</elementType>
   	<elementName>{v.elementName}</elementName>
   	<x>{v.x}</x>
   	<y>{v.y}</y>
-    <detail>{v.elementDetail}</detail>
+    <detail>{detail}</detail>
+    <description>{description}</description>
   	<scale>{v.scale}</scale>
-    <usage>0</usage>
+    <usage>{usage}</usage>
   	<status>sync</status>
    </v> 
  }
@@ -55,15 +72,28 @@ class LogicalModelSnippet {
   */
  
  def draw(referenceId: Long): JsCmd = {
+  val keywords = Map("cancel" -> S.?("cancel"), "ok" -> S.?("ok"), "name" -> S.?("name"), "pattern" -> S.?("pattern"),
+		             "realises" -> S.?("realises"), "save" -> S.?("save"), "initialSize" -> S.?("initialSize"),
+		             "growthPerLoad" -> S.?("growthPerLoad"), "degeneratedDimension" -> S.?("degeneratedDimension"),
+		             "description" -> S.?("description"), "isRoleChoice" -> S.?("isRoleChoice"), "roleName" -> S.?("roleName"))
+		             
+  val dimensions = ModelVertex.findAll(By(ModelVertex.elementType, "dimension"), By(ModelVertex.fkScenario, SelectedScenario.is.id),
+		                               By(ModelVertex.elementKind, "original")).map(_.elementName.toString).sort(_ < _)
+		                               
+  val allLevel = ModelVertex.findAll(By(ModelVertex.elementType, "level"), By(ModelVertex.fkScenario, SelectedScenario.is.id),
+		                               By(ModelVertex.elementKind, "original")).map(_.elementName.toString).sort(_ < _)
+		                               
+ 
+		  
   val vertices = MyUtil.flattenNodeSeq(ModelVertex.findAll(By(ModelVertex.referenceId, referenceId), By(ModelVertex.isCurrent, 1)).map(serializeVertex).toList)
   val edges = MyUtil.flattenNodeSeq(ModelEdge.findAll(By(ModelEdge.referenceId, referenceId), By(ModelEdge.isCurrent, 1)).map(serializeEdge).toList)
   val command1 = SetHtml("logicalModelVertices", vertices)
   val command2 = SetHtml("logicalModelEdges", edges)
-  CmdPair(CmdPair(command1, command2), JsRaw("drawModel(true);"))
+  val command3 = JsRaw("setKeywords(" + JsonUtility.map2Json(keywords) + ", " + JsonUtility.list2Json(dimensions) + ", " + JsonUtility.list2Json(allLevel) + ");")
+  CmdPair(CmdPair(CmdPair(command1, command2), command3), JsRaw("drawModel(true);"))
  }
 	
  def selectModelItem(id: String): JsCmd = {
-  println("ich werde immer noch gestartet")
   val m = ModelVertex.findAll(By(ModelVertex.id, id.toLong)).apply(0)
   SelectedModelItem(m)
   CmdPair(draw(m.id), JsRaw("$('.listItem').removeClass('zebraHover');$(\".listItem[referenceId='" + id + "']\").addClass('zebraHover');"))
@@ -149,6 +179,13 @@ class LogicalModelSnippet {
   if(formated.isEmpty) <span /> else MyUtil.flattenNodeSeq(List.flatten(formated.tail.map(item => List(item, <span>, </span>))) ::: List(formated.head))
  }
  
+ def initialDrawing() = {
+  val m = SelectedModelItem.is
+  
+  if(m != null) CmdPair(draw(m.id), JsRaw("$('.listItem').removeClass('zebraHover');$(\".listItem[referenceId='" + m.id.toString + "']\").addClass('zebraHover');"))	 
+  else Noop
+ }
+ 
  def model (xhtml: NodeSeq): NodeSeq = {
   bind("adapt", xhtml, "cubes" -> getSelectionItems("cube"),
 		               "dimensions" -> getSelectionItems("dimension"),
@@ -158,10 +195,19 @@ class LogicalModelSnippet {
 		               "edit"  -> ajaxButton(S.?("edit"), editAdapt _) % ("class" -> "standardButton"),
 		               "cancel"  -> ajaxButton(S.?("cancel"), cancel _) % ("class" -> "standardButton"),
 		               "suggestions" -> makeSuggestions(),
+		               "diagram" -> Script(initialDrawing()),
 		               "save"  -> <button class='standardButton'>{S.?("save")}</button> % ("onclick" -> SHtml.ajaxCall(JsRaw("$('#logicalModelContainer').html()"), saveLogicalModel _)._2)) 
  }
+ 
+ def groupSeparator(m: Measure, subjectSeparation: Boolean, simpleLifecycleSeparation: Boolean, complexLifecycleSeparation: Boolean): String = {
+  val subject = if(subjectSeparation) m.subject else ""
+  val actuality = if(simpleLifecycleSeparation) ModelUtility.measureLoadCycle(m, true) else ""
+  val storage = if(complexLifecycleSeparation) ModelUtility.measureLoadCycle(m, false) else ""
+  
+  subject + "_" + actuality + "_" + storage
+ }
 	
- def computeCube() : JsCmd = {
+ def computeCube(): JsCmd = {
   
   def copyVertex(v: ModelVertex, referenceId: Long) = {
    val newVertex = ModelVertex.create
@@ -222,10 +268,17 @@ class LogicalModelSnippet {
    if(allMatches.isEmpty) createCube(level, measures) else allMatches(0)._1
   }
   
-  def measuresOfAGroup(group: (String,List[Long])) = Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id)).filter(m => m.subject == group._1 && findLevel(m) == group._2).toList
-   
+  val setup = Repository.read("scenario", SelectedScenario.is.id, "setup","setup", -1) \\ "setup"
+  
+  val subjectSeparated = MyUtil.getSeqHeadText(setup \\ "subjectSeparation") == "Y"
+  val simpleLCSeparated = MyUtil.getSeqHeadText(setup \\ "simpleLifecycleSeparation") == "Y"   
+  val complexLCSeparated = MyUtil.getSeqHeadText(setup \\ "complexLifecycleSeparation") == "Y"
+  
+  def sep(m:Measure) = groupSeparator(m, subjectSeparated, simpleLCSeparated, complexLCSeparated)
+  def measuresOfAGroup(group: (String,List[Long])) = Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id)).filter(m => sep(m) == group._1 && findLevel(m) == group._2).toList
+  
   val msrs = Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), By(Measure.status, "approved")).filter(m => m.formula == null || m.formula.length == 0)
-  val groups = msrs.map(m => (m.subject.toString, findLevel(m))).distinct.toList
+  val groups = msrs.map(m => (sep(m), findLevel(m))).distinct.toList
   println("The groups are " + groups.toString)
   val cubes = ModelVertex.findAll(By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.elementType, "cube")).map(c => (c, findLevelVertices(c))).toList
   println("The cubes are " + cubes.toString)
@@ -241,12 +294,6 @@ class LogicalModelSnippet {
   
   RedirectTo("/adapt")
  }
- 
- def getNodeText(node: Node): String = node match {
-  case Elem(_, _, _, _, Text(myText)) => myText
-  case _ => ""
- }
- 
  
  def saveLogicalModel(modelString: String) : JsCmd = {
   val vertexIdTranslation = new HashMap[String, Long]
@@ -275,21 +322,23 @@ class LogicalModelSnippet {
   }
   
   def nvl(text: String) = if(text == null) "" else text
+  def txt(n:NodeSeq):String = MyUtil.getSeqHeadText(n)
   
   val model = XML.loadString(modelString)
   val vertices = model \\ "v"
 	
   for(vertex <- vertices) {
-		val status = getNodeText((vertex \\ "status").apply(0))
+		val status = txt(vertex \\ "status")
 		
 		if(status != "sync") {
 			val vertexId = (vertex \ "@vertexId").text
-			val elementType = getNodeText((vertex \\ "elementType").apply(0))
-			val elementName = getNodeText((vertex \\ "elementName").apply(0))
-			val x = getNodeText((vertex \\ "x").apply(0))
-			val y = getNodeText((vertex \\ "y").apply(0))
-			val scale = getNodeText((vertex \\ "scale").apply(0))
-			val detail = getNodeText((vertex \\ "detail").apply(0))
+			val elementType = txt(vertex \\ "elementType")
+			val elementName = txt(vertex \\ "elementName")
+			val x = txt(vertex \\ "x")
+			val y = txt(vertex \\ "y")
+			val scale = txt(vertex \\ "scale")
+			val detail = txt(vertex \\ "detail")
+			val description = txt(vertex \\ "description")
 			val mv = getVertex(vertexId);
 			
 			if(status == "removed" && !vertexId.startsWith("m")) {
@@ -298,10 +347,24 @@ class LogicalModelSnippet {
 			}
 			else {
 				try {
-					mv.elementType(elementType).elementName(nvl(elementName)).elementDetail(nvl(detail)).x(x.toLong).y(y.toLong).scale(scale.toLong).isCurrent(1).referenceId(SelectedModelItem.is.id).fkScenario(SelectedScenario.is)
+					mv.elementType(elementType).elementName(nvl(elementName)).elementDescription(nvl(description)).elementDetail(nvl(detail)).x(x.toLong).y(y.toLong).scale(scale.toLong).isCurrent(1).referenceId(SelectedModelItem.is.id).fkScenario(SelectedScenario.is)
 					if((elementType == "level" || elementType == "hierarchy") && getReferenceType(SelectedModelItem.is.id) == "dimension") mv.elementKind("original")
 					
-					if(elementType == "attribute") mv.elementKind(getNodeText((vertex \\ "usage").apply(0)))
+					if(elementType == "attribute") mv.elementKind(txt(vertex \\ "usage"))
+					
+					if(elementType == "dimension" && getReferenceType(SelectedModelItem.is.id) == "dimension") {
+						if(txt(vertex \\ "usage") == "degenerated") mv.isDegenerated(1) else mv.isDegenerated(0)
+					}
+					
+					// corrections when dimension is role playing
+					
+					if(elementType == "dimension" && detail == "role") {
+						mv.elementKind("role")
+						mv.elementName(description)
+						
+						val refs = ModelVertex.findAll(By(ModelVertex.fkScenario, SelectedScenario.is), By(ModelVertex.elementName, elementName), By(ModelVertex.elementType, "dimension"), By(ModelVertex.elementKind, "original"))
+						if(refs.isEmpty) mv.roleOf(0) else mv.roleOf(refs(0).id)
+					}
 					
 					mv.save
 					
@@ -320,12 +383,12 @@ class LogicalModelSnippet {
   def findVertexId(text: String): Long = if (text.startsWith("m")) vertexIdTranslation(text) else text.toLong
     
   for(edge <- edges) {
-    	val status = getNodeText((edge \\ "status").apply(0))
+    	val status = txt(edge \\ "status")
 		
 		if(status != "sync") {
 			val edgeId = (edge \ "@edgeId").text;
-			val head = findVertexId(getNodeText((edge \\ "h").apply(0)))
-			val tail = findVertexId(getNodeText((edge \\ "t").apply(0)))
+			val head = findVertexId(txt(edge \\ "h"))
+			val tail = findVertexId(txt(edge \\ "t"))
 			
 			val me = getEdge(edgeId);
 			
@@ -338,7 +401,6 @@ class LogicalModelSnippet {
   }
   
   command = command + "$('#logicalModelVertices v status').empty();$('#logicalModelVertices v status').append('sync');"
-  command = command + "$('#logicDisplay').fadeIn(); $('#logicDisplayMenu').show(); $('#logicEditMenu').hide();editPaper.clear();drawModel(true);" 
   CmdPair(JsRaw(command), RedirectTo("/adapt")) 
  }	
 }

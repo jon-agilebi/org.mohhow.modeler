@@ -33,7 +33,7 @@
 				<ul>
 					<li class="listItem choiceSetup" group="vision">Vision</li>
 					<li class="listItem choiceSetup" group="roles">Rollen</li>
-					<!--  <li class="listItem choiceSetup" group="scenarioConfiguration">Szenariokonfiguration</li> -->
+					<li class="listItem choiceSetup" group="scenarioConfiguration">Szenariokonfiguration</li>
 					<li class="listItem choiceSetup" group="units">Einheiten</li>
 					<li class="listItem choiceSetup" group="design">Designrichtlinien</li>
 				</ul>
@@ -58,7 +58,7 @@
 	            </lift:ScenarioSnippet.visionSetup>
 			</div>
 			<div class="threeQuarterContent pivot" group="scenarioConfiguration">
-				<h3>Szenariokonfiguration</h3>
+				<h3>Szenarioverwendung</h3>
 				<br />
 				<table class="protocolTable">
 					<col width="40%" text-align="left"/>
@@ -131,6 +131,10 @@
 			</div>
 			<div class="threeQuarterContent pivot" group="design">
 				<lift:ScenarioSnippet.design>
+				    <h3>Logisches Datenmodell</h3><br />
+				    <design:subjectSeparation /> Trenne Kennzahlen, die zu verschiedenen Themen geh&ouml;ren<br />
+				    <design:simpleLifecycleSeparation /> Trenne Kennzahlen mit unterschiedlicher Aktualit&auml;t<br />
+				    <design:complexLifecycleSeparation /> Trenne Kennzahlen mit unterschiedlicher Aktualit&auml;t bzw. Lebensdauer<br /><br />
 					<h3>Physikalisches Datenmodell</h3><br />
 					<h4>Stern oder Schneeflocke</h4><br />
 					<design:snowflake /><br /><br />

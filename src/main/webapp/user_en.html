@@ -1,0 +1,66 @@
+<lift:surround with="mohhow_default" at="content">
+	<lift:RoleSnippet.inAsClientAdmin>
+		<head>
+			<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+			<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+			<script>
+				$(document).ready(function() { 
+			    	$('.providerDetails').hide();
+			    	$('.providerDetails').addClass('invisibleDetail');
+			    	$('.providerHeader').click(function() {
+			   		
+			    		if($(this).nextAll('div').is('.visibleDetail')) {
+			    			$(this).nextAll('div').fadeOut();
+			    			$(this).nextAll('div').removeClass('visibleDetail');
+			    			$(this).nextAll('div').addClass('invisibleDetail');
+			    		}
+			    		else {
+			    			$(this).nextAll('div').fadeIn();
+			    			$(this).nextAll('div').removeClass('invisibleDetail');
+			    			$(this).nextAll('div').addClass('visibleDetail');
+			    		}
+					});
+			    	
+					$('.emphasizable').click(function() {
+					  	$('.emphasizable').removeClass('emphasized');
+						$(this).addClass('emphasized');	
+					});
+					$('#userSpecTree ul').hide();
+					$('.handle').click(function(){
+						$(this).toggleClass('closed opened').nextAll('ul').toggle();
+					});
+				}); 
+			</script>
+		</head>
+		<div class="upper_right">
+			<h1>User Management</h1>
+		</div>
+		<div class="rightWhiteContent">
+			<lift:RoleSnippet.specAndRoles>
+				<div class="quarterContent">
+					<h3>Scorecards and Services</h3><br />
+					<spec:addLink /><spec:removeLink /><br /><br />
+					<ul id='userSpecTree'>
+						<spec:specTree />
+					</ul>
+				</div>
+				<div class="quarterContent">
+					<h3>Roles</h3><br />
+					<spec:addGroupToRole /><spec:removeGroupFromRole />
+					<ul id="roleList"><spec:roles /></ul>
+				</div>
+			</lift:RoleSnippet.specAndRoles>
+			<lift:RoleSnippet.allProvider>
+				<div class="quarterContent">
+					<h3>User</h3><br />
+					<ul id="providerSearchResult" style="list-style:none"></ul>
+				</div>
+				<div class="quarterContent">
+					<h3>Authentification Provider</h3><br />
+					<provider:add /><provider:remove /><provider:edit /><br /><br />
+					<provider:nodes />
+				</div>
+			</lift:RoleSnippet.allProvider>
+		</div>
+	</lift:RoleSnippet.inAsClientAdmin>
+</lift:surround>

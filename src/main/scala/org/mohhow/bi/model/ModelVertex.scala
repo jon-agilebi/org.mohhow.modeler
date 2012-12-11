@@ -33,6 +33,10 @@ class ModelVertex extends LongKeyedMapper[ModelVertex] with IdPK {
    override def dbColumnName = "ELEMENT_DETAIL"
  }
  
+ object elementDescription extends MappedPoliteString(this, 1000) {
+   override def dbColumnName = "ELEMENT_DESCRIPTION"
+ }
+ 
  object elementKind extends MappedPoliteString(this, 50) {
    override def dbColumnName = "ELEMENT_KIND"
  }
@@ -49,8 +53,16 @@ class ModelVertex extends LongKeyedMapper[ModelVertex] with IdPK {
    override def dbColumnName = "SCALE"
  }
  
+ object roleOf extends MappedLong(this) {
+   override def dbColumnName = "ROLE_OF"
+ }
+ 
  object validFrom extends MappedDateTime(this) {
    override def dbColumnName = "VALID_FROM"
+ }
+ 
+ object isDegenerated extends MappedLong(this) {
+   override def dbColumnName = "IS_DEGENERATED"
  }
 	
  object validUntil extends MappedDateTime(this) {

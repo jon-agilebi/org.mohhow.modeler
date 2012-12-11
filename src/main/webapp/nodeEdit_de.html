@@ -1,0 +1,38 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			$(document).ready(function() { 
+				$('#editStoreTableBody tr').click(function() {
+					$('#editStoreTableBody tr').removeClass('zebraHover');
+					$(this).addClass('zebraHover');
+				});  
+				$('#editStoreTableBody input').live('change', function(){
+					$(this).attr('value', $(this).val());
+				});
+				$('.nodeInput input').live('change', function(){
+					$(this).attr('value', $(this).val());
+				});
+				$('.nodeInput select').live('change', function(){
+					$(this).attr('value', $(this).val());
+				});
+			})
+		</script>
+	</head>
+	<lift:NodeSnippet.dataStoreEdit>
+     	<div class="upper_right">
+        	<h1>Knoten Bearbeiten</h1>
+        	<div class="menuBar">
+				<ds:cancel /><ds:save />						
+			</div>
+    	</div> 
+    
+    	<div class="mohhowForm">
+    		<ds:node /><br /><br />
+	  		<h3>Backendsysteme</h3><br />
+	  		<ds:add /><ds:remove /><br /><br /> 
+		  	<ds:stores /><br /><br />
+		</div>
+	 </lift:NodeSnippet.dataStoreEdit>	
+</lift:surround>

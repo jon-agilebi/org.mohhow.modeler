@@ -183,6 +183,14 @@ class PhysicalModelSnippet {
    else ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.fkScenario, SelectedScenario.is.id)).filter(v => MyUtil.isConnected(v.id, vertex.id))
   }
   
+  def degenerated(vertex: ModelVertex) = {
+	val degDims = ModelVertex.findAll(By(ModelVertex.elementType, "dimension"), 
+			                          By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.elementKind, "original"), 
+			                          NullRef(ModelVertex.validUntil), By(ModelVertex.isDegenerated, 1)).filter(v => MyUtil.isConnected(v.id, vertex.id))
+			                          
+    List.flatten(degDims.map(d => ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.referenceId, d.id))))			                          
+  }
+  
   def getPkId(t: PTable): Long = {
    val pk = PAttribute.findAll(By(PAttribute.isPrimaryKey, 1), By(PAttribute.fkPTable, t.id))
    if(pk.isEmpty) 0 else pk(0).id
@@ -218,6 +226,8 @@ class PhysicalModelSnippet {
 	 refs.map(ref => createReference(newTable, ref))
 	 
 	 // add all model attributes and measures
+	 
+	 if(vertex.elementType == "cube") degenerated(vertex).map(attr => createAttribute(newTable, attr, defaultAttributeType))
 	 
 	 if(kind != "accountFact") {
 		 attrs.map(attr => createAttribute(newTable, attr, defaultAttributeType))
@@ -260,7 +270,7 @@ class PhysicalModelSnippet {
 	 
 	 // check model attributes
 	 
-	 for(attr <- attrs) {
+	 for(attr <- attrs ::: degenerated(vertex)) {
 	  val correspondingAttribute = PAttribute.findAll(By(PAttribute.fkPTable, referenceTable.id), By(PAttribute.fkModelAttribute, attr.id), By(PAttribute.isCurrent, 1))
 	  if(correspondingAttribute.isEmpty) createAttribute(referenceTable, attr, defaultAttributeType) else correspondingAttribute.apply(0).name(attr.elementName).save
 	 }
@@ -346,7 +356,7 @@ class PhysicalModelSnippet {
   val measureDimensionName = MyUtil.getSeqHeadText(setup \\ "nameDimMeasure") // either account or noAccount
    
   val dimensions = ModelVertex.findAll(By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.elementType, "dimension"), 
-		  By(ModelVertex.elementKind, "original"), NullRef(ModelVertex.validUntil))
+		  By(ModelVertex.elementKind, "original"), NullRef(ModelVertex.validUntil), NotBy(ModelVertex.isDegenerated, 1))
    
   for(dimension <- dimensions) {
 	 
@@ -402,7 +412,7 @@ class PhysicalModelSnippet {
   bind("physical", xhtml, "add" -> ajaxButton(S.?("addTable"), addTable _) % ("class" -> "standardButton"),
 		  				  "derive" -> ajaxButton(S.?("deriveFromLogic"), deriveFromLogic _) % ("class" -> "standardButton"),
 		                  "header" -> showHeader(),
-		                  "overview" -> PTable.findAll().map(createListItem).toSeq,
+		                  "overview" -> PTable.findAll(By(PTable.fkScenario,SelectedScenario.is.id)).map(createListItem).toSeq,
 		                  "rows" -> showRows())
   }
 }

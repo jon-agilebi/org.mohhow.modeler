@@ -91,9 +91,9 @@ class BacklogSnippet {
   // set the first choice on the feature with the least feature number
   
   if(!features.isEmpty){
-	  ChosenFeature(features.apply(0))
-	  RelevantFeature(features.apply(0))
-	  ItemsOfFeature(findItemsForFeature(features.apply(0)))
+	  if(ChosenFeature.is == null) ChosenFeature(features.apply(0))
+	  if(RelevantFeature.is == null) RelevantFeature(features.apply(0))
+	  ItemsOfFeature(findItemsForFeature(ChosenFeature.is))
   }
   
   MyUtil.flattenNodeSeq(features.map(createBacklogTreeItem))
@@ -148,8 +148,14 @@ class BacklogSnippet {
    		                 "addBelow" -> ajaxButton(S.?("addBelow"), () => addFeature(true)) % ("class" -> "standardButton")) 
  }
  
+ def featureDetails(): NodeSeq = {
+  if(ChosenFeature.is != null) displayFeature(ChosenFeature.is)
+  else NodeSeq.Empty
+ }
+ 
  def backlogTree (xhtml: NodeSeq): NodeSeq = {
-  bind("backlog", xhtml, "tree"  -> createBacklogTree()) 
+  bind("backlog", xhtml, "tree"  -> createBacklogTree(),
+		                 "details" -> featureDetails()) 
  }
  
  /**
@@ -270,7 +276,10 @@ class BacklogSnippet {
   val participants = mutable.Map.empty[Long, (Boolean, Boolean)]
   val recipients = MeetingRecipient.findAll(By(MeetingRecipient.fkMeeting, m.id))
   
-  for(recipient <- recipients)  participants + (recipient.fkUser.toLong -> (recipient.isAttendee, recipient.isReviewer))
+  for(recipient <- recipients) {
+	  participants += (recipient.fkUser.toLong -> (recipient.isAttendee, recipient.isReviewer))
+  }
+  
   Participants(participants) 
  }
  
@@ -310,7 +319,10 @@ class BacklogSnippet {
  }
  
  def editMeeting(): JsCmd = {
-  if(RelevantMeeting.is != null) RedirectTo("/meetingEdit") else Alert(S.?("noMeetingSelection"))
+  if(RelevantMeeting.is != null) {
+	  fillParticipants(RelevantMeeting.is)
+	  RedirectTo("/meetingEdit") 
+  }else Alert(S.?("noMeetingSelection"))
  }
  
  def meetings(xhtml: NodeSeq): NodeSeq = {
@@ -320,11 +332,19 @@ class BacklogSnippet {
  }
  
  def chooseParticipant(isParticipant: Boolean, userId: Long, choice: Boolean) : JsCmd = {
-  if(Participants.is == null) fillParticipants(RelevantMeeting.is)
-   
   if(Participants.is.contains(userId)) {
 	  val p = Participants.is(userId)
-	  Participants(Participants.is - userId)
+	  
+	  if(!choice ){
+	 	  
+	 	  Participants(Participants.is - userId)
+	 	  
+	 	  if(p._1 && p._2) {
+	 	 	  if(isParticipant) Participants(Participants.is + (userId -> (false, true)))
+	 	 	  else Participants(Participants.is + (userId -> (true, false)))
+	 	  }
+	  }
+	 	  
 	  if(isParticipant && choice) Participants(Participants.is + (userId -> (choice, p._2)))
 	  else if (choice) Participants(Participants.is + (userId -> (p._1, choice)))
   }
@@ -332,6 +352,7 @@ class BacklogSnippet {
 	  if(isParticipant && choice) Participants(Participants.is + (userId -> (choice, false)))
 	  else if(choice) Participants(Participants.is + (userId -> (false, choice)))
   }
+  
   Noop
  }
  

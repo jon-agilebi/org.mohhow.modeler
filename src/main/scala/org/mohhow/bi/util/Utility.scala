@@ -25,32 +25,6 @@ object Utility {
  
  def toNode(seq: NodeSeq): Option[Node] = if(seq.length == 1) Some(seq(0)) else None
  
- def findNode(node: Node, path: List[(String,Option[(String, String)])]): Option[Node] =  path match  {
- 
-	 case List((tag, None)) => toNode(node \ tag)
-	 case List((tag, Some((attr, attrValue)))) => {
-		 for(child <- (node \ tag)) {
-			 val pattern1 = "@" + attr
-			 if((child \ pattern1).text == attrValue) return Some(child)
-		 }
-		 
-		 None
-	 }
-	 case (tag, None) :: tail => toNode(node \ tag) match {
-		 case Some(child) => findNode(child, tail)
-		 case None => None
-	 }
-	 case (tag, Some((attr, attrValue))) :: tail => {
-		 for(child <- (node \ tag)) {
-			 val pattern2 = "@" + attr
-			 if((child \ pattern2).text == attrValue) return findNode(child, tail)
-		 }  
-		 
-		 None
-	 }
-	 case _ => None
- }
- 
  def getNodeText(node: Node): String = node match {
   case Elem(_, _, _, _, Text(myText)) => myText
   case _ => ""
@@ -79,7 +53,9 @@ object Utility {
    		}
    }
  }
-	
+ 
+ def repeat(text: String, n: Int): String = if(n <= 0) "" else text + repeat(text, n-1)
+	 
 /*
  * Methods for date formatting
  */
@@ -206,7 +182,23 @@ def weekInYear(dateAsNumber: Int) = {
  val first = dayInWeek(y * 10000 + 101).toInt 
  if(first > 4) (d - first + 2) / 7 + 1 else  (d + first - 2) /  7 + 1
 } 
- 
+/*
+def replaceTimeParameter(prm: String): String = {
+	
+	val today = new Date
+	
+	prm match {
+		case "?today?" => "to_date(" + formatDate(today) + ", 'DD.MM.YYYY')"
+		case "?tomorrow?" => "to_date(" + dateFromNumber(succDate(formatDate(dateAsNumber(today)))) + ", 'DD.MM.YYYY')"
+		case "?actual_year?" =>  year(dateAsNumber(today)).toString
+		case "?previous_year?" =>  (year(dateAsNumber(today)) - 1).toString
+		case "?actual_quarter?" =>  quarter(dateAsNumber(today)).toString
+		case "?actual_month?" =>  month(dateAsNumber(today)).toString
+	}
+	
+	//"yesterday"|"previous_business_day"|"actual_week"|"previous_week"|"previous_month"|"previous_quarter"
+}
+ */
  /**
   * generic methods for the user management
   * 
@@ -295,20 +287,24 @@ def weekInYear(dateAsNumber: Int) = {
   def prettyTerm(text: String, isFilter: Boolean): String = {
    if(text== null || text.length == 0) text
    else {
-	  
-	  
+	    
 	  val pattern = """<(d|m)\d+>""".r
 	  val firstMatch = pattern findFirstIn text
-	  
 	  
 	  firstMatch match {
 	 	case Some(content) => {
 	 	
 		 	if(content.substring(1,2) == "m") {
-		 		val bracket = if(isFilter) "*" else "$"
+		 		val bracket = if(isFilter) "*" else "\\$"
 		 		val msrs = Measure.findAll(By(Measure.id, content.substring(2,content.length - 1).toLong))
-		 		val replaceMsr = (pattern replaceFirstIn(text, bracket + msrs.apply(0).shortName + bracket)).toString
-		 		if(!msrs.isEmpty) prettyTerm(replaceMsr, isFilter)
+		 		
+		 		if(!msrs.isEmpty) {
+		 			val prettyMeasure = bracket + msrs.apply(0).shortName + bracket
+		 			println(text)
+		 			println(prettyMeasure)
+		 			val replaceMsr = (pattern replaceFirstIn(text, prettyMeasure.toString)).toString
+		 			prettyTerm(replaceMsr, isFilter)
+		 		}
 		 		else text 
 		 	}
 		 	else {
@@ -320,8 +316,16 @@ def weekInYear(dateAsNumber: Int) = {
 		 	}
 	 	}
 	 	case _ => text
-	 	 
 	  }
    }
+  }
+  
+  /**
+   * database configuration
+   */
+  
+  def driverName(alias: String, dbs: NodeSeq) = {
+   val db = dbs.filter(n => getSeqHeadText(n \ "alias") == alias)
+   if(db.isEmpty) "" else getSeqHeadText(db(0) \ "driver")
   }
 }

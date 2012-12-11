@@ -174,7 +174,8 @@ class ScenarioSnippet {
  
  def selectedDescription(): NodeSeq = {
   def getLatestSprint(): Option[Sprint] = {
-	val sprints =  Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id), OrderBy(Sprint.sprintNumber, Descending))
+	val allSprints =  Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id), OrderBy(Sprint.sprintNumber, Descending))
+	val sprints = allSprints.filter(s => MyUtil.dateAsNumber(s.sprintBegin) <=  MyUtil.dateAsNumber(new Date))
 	if (sprints.isEmpty) None else Some(sprints.apply(0)) 
   }	
   
@@ -210,10 +211,10 @@ class ScenarioSnippet {
 	 val sprint = getLatestSprint()
 	 
 	 <div>
-	  <h4>{S.?("description")}</h4>
+	  <h4>{S.?("description")}</h4><br />
 	  {SelectedScenario.is.description}
 	  <br /><br />
-	  <h4>{S.?("namespace")}</h4>
+	  <h4>{S.?("namespace")}</h4><br />
 	  {S.?("prefix")}: {SelectedScenario.is.prefix} <br />
 	  {S.?("url")}: {SelectedScenario.is.url}<br />
 	  {S.?("client")}: {clientLongName(SelectedScenario.is)}
@@ -408,10 +409,10 @@ class ScenarioSnippet {
  def swapList(l: List[(Long, String, Long, String)], sectionNumber: Long, direction: String): List[(Long, String, Long, String)] = l match  {
   case Nil => Nil
   case (sn, st, snOld, status) :: tail => {
-	if((direction == "down" && sn == sectionNumber) || (direction == "up" && sn == sectionNumber + 1)) {
+	if((direction == "down" && sn == sectionNumber && sectionNumber > 1) || (direction == "up" && sn == sectionNumber + 1)) {
 		(sn - 1, st, snOld, status) :: swapList(tail, sectionNumber, direction)
 	}
-	else if ((direction == "down" && sn == sectionNumber - 1) || (direction == "up" && sn == sectionNumber)) {
+	else if ((direction == "down" && sn == sectionNumber - 1) || (direction == "up" && sn == sectionNumber && sectionNumber < l.size)) {
 		(sn + 1, st, snOld, status) :: swapList(tail, sectionNumber, direction)
 	}
 	else (sn, st, snOld, status) :: swapList(tail, sectionNumber, direction)
@@ -571,9 +572,19 @@ class ScenarioSnippet {
   
   def extraViewOption(selection: Boolean) = viewOption(selection, "extraViewLayer")
   def stableViewOption(selection: Boolean) = viewOption(selection, "stableViewLayer")
+  
+  def subjectOption(selection: Boolean) = viewOption(selection, "subjectSeparation")
+  def simpleLCOption(selection: Boolean) = viewOption(selection, "simpleLifecycleSeparation")
+  def complexLCOption(selection: Boolean) = viewOption(selection, "complexLifecycleSeparation")
+  
   def isChoice(tagName: String) = if(MyUtil.getSeqHeadText(setup \\ tagName) == "Y") true else false
+  
   val extraViewChoice = isChoice("extraViewLayer")
   val stableViewChoice = isChoice("stableViewLayer")
+  val subjectChoice = isChoice("subjectSeparation")
+  val simpleLifecycleChoice = isChoice("simpleLifecycleSeparation")
+  val complexLifecycleChoice = isChoice("complexLifecycleSeparation")
+  
   def editTFact(prefix: String) = updateDesignConfiguration("prefixTFact", prefix, "prefixTFact")
   def editSFact(prefix: String) = updateDesignConfiguration("prefixSFact", prefix, "prefixSFact")
   def editDim(prefix: String) = updateDesignConfiguration("prefixDim", prefix, "prefixDim")
@@ -678,6 +689,9 @@ class ScenarioSnippet {
   bind("design", xhtml, 
 	   "snowflake" -> snowflake(),
 	   "accountModel" -> accountModel(),
+	   "subjectSeparation"  ->  SHtml.ajaxCheckbox(subjectChoice, subjectOption _),
+	   "simpleLifecycleSeparation" ->  SHtml.ajaxCheckbox(simpleLifecycleChoice, simpleLCOption _),
+	   "complexLifecycleSeparation" ->  SHtml.ajaxCheckbox(complexLifecycleChoice, complexLCOption _),
 	   "extraViewLayer" -> SHtml.ajaxCheckbox(extraViewChoice, extraViewOption _),
 	   "stableViewLayer" -> SHtml.ajaxCheckbox(stableViewChoice, stableViewOption _),
 	   "prefixTFact" -> ajaxText(prefixTFact, text => editTFact(text)),
