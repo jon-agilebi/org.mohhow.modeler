@@ -64,6 +64,10 @@ class Provider extends LongKeyedMapper[Provider] with IdPK {
  object displayAttribute extends MappedPoliteString(this, 100) {
    override def dbColumnName = "DISPLAY_ATTRIBUTE"
  }
+ 
+ object bindPattern extends MappedPoliteString(this, 100) {
+   override def dbColumnName = "BIND_PATTERN"
+ }
 
  object dateCreated extends MappedDateTime(this) {
    override def dbColumnName = "DATE_CREATED"

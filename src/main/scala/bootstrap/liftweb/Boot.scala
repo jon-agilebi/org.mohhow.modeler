@@ -44,24 +44,25 @@ class Boot {
     
     def txt(node: Node, tag: String) = MyUtil.getSeqHeadText(node \\ tag)
     
-    BIService.storeMap = Map.empty[String, ConnectionInformation];
+    BIService.storeMap = Map.empty[String, (ConnectionInformation, String)];
     
     val allStores = Repository.read("deployment", 0, "generic", "stores", 0) \\ "store"
     val dbs = Repository.read("configuration", 0, "metadata", "conf_db", -1) \\ "database"
   
     for(aStore <- allStores) {
-   
-    	val vendor = new StandardDBVendor(MyUtil.driverName(txt(aStore, "storeDriver"), dbs), 
+        println("and the driver is " + MyUtil.dbInfo(txt(aStore, "storeDriver"), dbs, "driver"))
+    	val vendor = new StandardDBVendor(MyUtil.dbInfo(txt(aStore, "storeDriver"), dbs, "driver"), 
                                      txt(aStore, "storeUrl"), 
 	 		                         Full(txt(aStore, "storeUser")), 
 	 		                         Full(txt(aStore, "storePassword")))
 	  
     	val connInf = new ConnectionInformation(txt(aStore, "alias"))
+    	val toDatePattern = MyUtil.dbInfo(txt(aStore, "storeDriver"), dbs, "to_date")
    
     	DB.defineConnectionManager(connInf, vendor)
     	LiftRules.unloadHooks.append(() => vendor.closeAllConnections_!())
     	
-    	BIService.storeMap += (txt(aStore, "alias") -> connInf)
+    	BIService.storeMap += (txt(aStore, "alias") -> (connInf, toDatePattern))
     }
     
     // where to search snippet
@@ -140,17 +141,13 @@ class Boot {
 	  * now the stuff for the REST services used for the communication with the iPad devices
 	  */
     
-    def protectBIService : LiftRules.HttpAuthProtectedResourcePF = {
+    def protectRestService : LiftRules.HttpAuthProtectedResourcePF = {
     	case Req("blocks" :: _, _, GetRequest) => Full(AuthRole("biServiceClient"))
     	case Req("blocks" :: _, _, PostRequest) => Full(AuthRole("biServiceClient"))
-    }
-    
-    def protectDeploymentService: LiftRules.HttpAuthProtectedResourcePF = {
     	case Req("deployment" :: _, _, PostRequest) => Full(AuthRole("deployment"))
     }
-
-    LiftRules.httpAuthProtectedResource.append { protectBIService }
-    LiftRules.httpAuthProtectedResource.append { protectDeploymentService }
+    
+    LiftRules.httpAuthProtectedResource.append { protectRestService }
 	  
     LiftRules.dispatch.append(BIService);
     
@@ -158,9 +155,11 @@ class Boot {
     	case Req("documentation" :: releaseId :: Nil, _, _) => () => DocumentationDispatcher.sendDocumentation(releaseId)
     }
     
+    LiftRules.dispatch.append(DeploymentService);
+    
     Authentification.initialize()
 	
-	LiftRules.authentication = HttpBasicAuthentication("BIService") {
+	LiftRules.authentication = HttpBasicAuthentication("RestService") {
 	 case ("jon", "jon", req) => userRoles(AuthRole("biServiceClient")); BIServiceUser("jon"); true  
 	 case(uid, pwd, req) => {
 	  if(Authentification.authorize(uid, pwd)) {
@@ -168,24 +167,19 @@ class Boot {
 	 	  BIServiceUser(uid)
 	 	  true
 	  }
-	  else false
+	  else {
+	 	  val aUser = User.findAll(By(User.email, uid))
+	  
+	 	  if(!aUser.isEmpty && aUser(0).password.match_?(pwd)) {
+	 		  userRoles(AuthRole("deployment"))
+	 		  println("Pruefung erfolgreich")
+	 		  true
+	 	  }
+	 	  else false  
+	  }
 	 }
 	 case _ => false
 	}
-    
-    LiftRules.authentication = HttpBasicAuthentication("DeploymentService") {
-	 case(uid, pwd, req) => {
-	  println("pruefe Berechtigung Deployment")
-	  val aUser = User.findAll(By(User.email, uid))
-	  
-	  if(!aUser.isEmpty && aUser(0).password.match_?(pwd)) {
-	 	  userRoles(AuthRole("deployment"))
-	 	  true
-	  }
-	  else false
-	 }
-	 case _ => false
-    }
   }
 
   /**

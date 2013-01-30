@@ -8,8 +8,10 @@ function initializeBlockInformation(blockInformation) {
 		var blockId = $(this).attr("blockId");
 		var filter = $(this).find("filter").text();
 		var attrList = [];
-		$(this).find("attribute").each(function(){attrList.push({name:$(this).attr('name'), order:$(this).attr('order')})});
-		
+		$(this).find("attribute").each(function(){
+			attrList.push({name:$(this).find("name").text(), order:$(this).find("order").text()});
+		});
+	
 		var msrList = [];
 		$(this).find("measure").each(function(){msrList.push($(this).text())});
 	

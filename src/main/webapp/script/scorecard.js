@@ -746,6 +746,7 @@ var dropBlock = function() {
 					}
 				}
 				else {
+					
 					var areas = computeAreas(mainLine, getPadBox());
 					mainLine = considerBlockInLine(blocks[i], mainLine, areas[0], areas[1]);
 					modelBlocks.push(blockToModelBlock(blocks[i]));
@@ -814,7 +815,7 @@ function computeAreas(line, rect) {
 	else {
 		var scale = line.width/1000;
 		if(line.kind == "column") return [[rect[0], rect[1], scale * rect[2], rect[3]],[rect[0] + scale * rect[2], rect[1], (1 - scale) * rect[2], rect[3]]];
-		else return [[rect[0], rect[1], rect[2], scale * rect[3]],[rect[0], rect[1] + scale * rect[3], rect[2], (1- scale) * rect[3]]];
+		else return [[rect[0], rect[1], rect[2], scale * rect[3]],[rect[0], rect[1] + scale * rect[3], rect[2], (1 - scale) * rect[3]]];
 	}
 }
 
@@ -831,13 +832,13 @@ function considerBlockInLine(block, line, first, second) {
 	
 	if(hitsFirst && !line.first) line.first = designPaper.scLine("block", block.blockId, 0, null, null);
 	else if(hitsFirst) {
-		var areas = computeAreas(line, first);
+		var areas = computeAreas(line.first, first);
 		line.first = considerBlockInLine(block, line.first,  areas[0], areas[1]);
 	}
 	
 	if(hitsSecond && !line.second) line.second = designPaper.scLine("block", block.blockId, 0, null, null);
 	else if(hitsSecond) {
-		var areas = computeAreas(line, second);
+		var areas = computeAreas(line.second, second);
 		line.second = considerBlockInLine(block, line.second,  areas[0], areas[1]);
 	}
 	
@@ -1301,8 +1302,7 @@ function showScorecard() {
 	
 	scorecardFrame = paper.rect(82,91, 384, 502);
 	
-	scorecardTitle = paper.text(82 + 384/2, 91, "Scorecard Title");
-	//scorecardTitle.transform("t0," + title.getBBox().height/2);
+	scorecardTitle = paper.text(82 + 384/2, 100, "Scorecard Title");
 	scorecardHorizontal = paper.path("M82,320L466,320");
 	scorecardVertical = paper.path("M274,320L274,593"); 
 	var standardTextBackground = Raphael(810, 380, 60, 60);
@@ -1314,7 +1314,10 @@ function showScorecard() {
 
 function updateScorecard(id, value) {
 	if(id == "standardText") {
-		//scorecardStandardText.attr
+		var l = value.split(";");
+		scorecardStandardText.attr('font', l[0]);
+		scorecardStandardText.attr('font-size', l[1]);
+		scorecardStandardText.attr('stroke', 'rgb(200,0,0)');
 	}
 	else if(id == "scorecard_style_margin") {
 		scorecardFrame.attr("x", 82 + value);
@@ -1335,16 +1338,25 @@ function updateScorecard(id, value) {
 		scorecardHorizontal.attr("stroke-dasharray", dashStyle);
 		scorecardVertical.attr("stroke-dasharray", dashStyle);
 	}
+	else if(id == "scorecard_style_border_color") {
+		
+	}
+	else if(id == "scorecard_style_title_position") {
+		var w = scorecardTitle.getBBox().width;
+		
+		if(value == "left") scorecardTitle.attr("x", 82 + w/2);
+		else if(value ="right") scorecardTitle.attr("x", 82 + 384 - w);
+		else scorecardTitle.attr("x", 82 + 384/2 - w/2);
+		
+	}
 	/*
-	scorecard_style_margin' 
-	scorecard_style_padding' p
-	scorecard_style_border_width'
-	scorecard_style_border_color' 
+	
+
 	scorecard_style_border_dash_style
 	scorecard_style_round_the_edge
 	scorecard_style_background
 	scorecard_style_title_style'
-	scorecard_style_title_position'
+	
 	block_style_margin
 	block_style_padding
 	id='block_style_border_width' 

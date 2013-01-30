@@ -385,6 +385,7 @@ class RoleSnippet {
 	   	<label>{S.?("testLookup")}: </label>{p.testLookup} <br/>
 	   	<label>{S.?("retryIntervall")}: </label>{p.retryIntervall} <br/>
 	   	<label>{S.?("maximalRetries")}: </label>{p.maxRetries} <br/>
+	   	<label>{S.?("bindPattern")}: </label>{p.bindPattern} <br/>
 	</div>
   </li> 
  }

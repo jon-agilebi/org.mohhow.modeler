@@ -65,24 +65,17 @@
 					<col width="10%" text-align="center"/>
 			 		<col width="25%" text-align="left"/>
 			 		<col width="25%" text-align="left"/>
-			 		<thead>
-	                    <td>Teil des Szenarios</td>
-	                    <td>verwendet</td>
-	                    <td>wie in</td>
-	                    <td>als</td>
-	                	</thead>
+			 		<thead  style="background-color: #dddddd">
+	                    <td><b>Teil des Szenarios</b></td>
+	                    <td><b>verwendet</b></td>
+	                    <td><b>wie in</b></td>
+	                    <td><b>als</b></td>
+	                </thead>
 			 		<tbody>
-	                  <tr><td><b>Szenarioeinstellungen</b></td><td></td><td></td><td></td></tr>
-	                  <tr><td>Einheitendefinition</td><td></td><td></td><td></td></tr>
-	                  <tr><td>Designrichtlinien</td><td></td><td></td><td></td></tr>
-	                  <tr><td><b>Design</b></td><td></td><td></td><td></td></tr>
-	                  <tr><td>Katalog und Logisches Modell</td><td></td><td></td><td></td></tr>
-	                  <tr><td>Katalog, Logisches Modell und Spezifikation</td><td></td><td></td><td></td></tr>
-	                  <tr><td><b>Implementierung</b></td><td></td><td></td><td></td></tr>
-	                  <tr><td>Scorecard Design</td><td></td><td></td><td></td></tr>
-	                  <tr><td>Physikalisches Modell</td><td></td><td></td><td></td></tr>
+			 			<lift:ScenarioSnippet.usage><usage:table/></lift:ScenarioSnippet.usage>
 	                </tbody>
 				</table>
+				<lift:ScenarioSnippet.usage><usage:change/></lift:ScenarioSnippet.usage>
 			</div>
 			<div class="quarterContent pivot" group="roles">
 				<lift:RoleSnippet.scenarioRoles>

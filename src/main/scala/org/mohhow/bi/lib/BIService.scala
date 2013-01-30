@@ -21,7 +21,7 @@ object BIService extends RestHelper{
 	
  var isInitialized: Boolean = false
  var userMap = Map.empty[String, (String, String, List[Long])];
- var storeMap = Map.empty[String, CI];
+ var storeMap = Map.empty[String, (CI, String)];
  var blockMap = Map.empty[Long, Node];
  var sessionMemory = Map.empty[String, List[Node]]
  
@@ -60,7 +60,7 @@ object BIService extends RestHelper{
  
  // wrapper method for DB.runQuery
  
- def query(sql:String, system:String):(List[String],List[List[String]]) = DB.runQuery(sql, Nil, storeMap(system))
+ def query(sql: String, system: String):(List[String],List[List[String]]) = DB.runQuery(sql, Nil, storeMap(system)._1)
  
  // check whether the given checksum matches the user's checksum
  
@@ -68,7 +68,7 @@ object BIService extends RestHelper{
  
  // set the parameter of the SQL statement
  
- def setSQLParameter(sql: String, filter: NodeSeq): String = {
+ def setSQLParameter(sql: String, filter: NodeSeq, system: String): String = {
   def replaceQuestionMarks(select: String, prms: List[String]): String = prms match {
 	  case Nil => select
 	  case head :: tail => {	  
@@ -82,19 +82,35 @@ object BIService extends RestHelper{
 	  }
   }
   
-  if(filter == null || filter.isEmpty) sql 
+  def replaceTimeParameter(select: String, toDatePattern: String): String = {
+   val timePattern = """\?[a-z\_]\?""".r 
+   val firstMatch = timePattern findFirstIn select
+   
+   firstMatch match {
+		case None => select
+	 	case Some(m) => replaceTimeParameter(timePattern replaceFirstIn(select, MyUtil.timeInSql(m, toDatePattern)) , toDatePattern)  	   
+   }
+  }
+  
+  val toDateSql = storeMap(system)._2
+  
+  if(filter == null || filter.isEmpty) replaceTimeParameter(sql, toDateSql) 
   else {
 	val filterList = filter.map(f => MyUtil.getSeqHeadText(f)).toList
-	replaceQuestionMarks(sql, filterList)
+	replaceQuestionMarks(replaceTimeParameter(sql, toDateSql), filterList)
   }
  }
  
  // main processing method
  
  def ask(blockIds: List[Long], filter: NodeSeq): List[Node] = {
+	 
+  // helper method to extract string from query result, when you expect a single value as query result	 
   
   def getText(queryResult: (List[String], List[List[String]])) = if(!queryResult._2.isEmpty && !queryResult._2.head.isEmpty) queryResult._2.head.head else ""
   
+  // get index of first occurence
+	  
   def first(l: List[Any],x:Any, index: Int): Int = l match {
    case Nil => -1
    case h :: tail => if(h == x) index else first(tail, x, index + 1)
@@ -107,7 +123,7 @@ object BIService extends RestHelper{
   def computeColumn(measureId: Long, answers: List[List[List[String]]], attributes: List[List[String]], metadata: Node) = {
    def row(list: List[String], index: Int) = if(index >= 0) list(index) else ""
    val indices = (metadata \\ "select").map(s => first((s \\ "measureId").map(MyUtil.getNodeText(_).toLong).toList, measureId, 0)).toList
-   val firstRow= attributes.head
+   val firstRow = attributes.head
    
    if(firstRow != null) {
 	   val pairs = (answers zip indices).filter(_._2 > 0).map(x => (extractColumn(x._1, firstRow.size), extractSelectedColumn(x._1, firstRow.size + x._2 - 1)))
@@ -116,6 +132,16 @@ object BIService extends RestHelper{
    }
    else Nil
   }
+  
+  def transpose(rows: List[List[String]]): List[List[String]] = rows match {
+	  case Nil => Nil
+	  case firstRow :: moreRows => {
+	 	  if(firstRow.size == 0) rows
+	 	  else firstRow.indices.map(index => extractSelectedColumn(rows, index)).toList
+	  }
+  }
+  
+  // returns a list of all measure ids in a formula
   
   def measuresInFormula(formula: String): List[Long] = {
    val M = """(m)(\d+)""".r
@@ -175,23 +201,65 @@ object BIService extends RestHelper{
    }
   }
   
-  def serialize(attributes: List[List[String]], measures: List[List[String]], asGrid: Boolean, emphasize: String) = {
+  def measureRow(measureColumns: List[List[String]], attributes: List[List[String]], vertical: String, horizontals: List[String], vPosition: Int, hPosition: Int): List[String] = {
+   def pos(v: String, h: String, vPos: Int, hPos: Int, matrix: List[List[String]], index: Int): Int = matrix match {
+	   case Nil => index
+	   case head :: tail => if(head(hPos) == h && head(vPos) == v) index else pos(v, h, vPos, hPos, matrix, index + 1) 
+   }
    
-   def serializeCell(attr:String, asGrid: Boolean, starts: Boolean, stops: Boolean, emphasize: String): Node = {
-	   if(starts && !asGrid && attr == emphasize) <name em="Y">{attr}</name>
-	   else if(starts && !asGrid) <name em="N">{attr}</name>
-	   else if (starts) <first>{attr}</first>
+   List.flatten(horizontals.map(h => toRow(measureColumns, pos(vertical, h, vPosition, hPosition, attributes, 0))))	  
+  }
+  
+  def hRow(measureColumns: List[List[String]], attributes: List[List[String]], axis: List[String], position: Int): List[String] = {
+   def pos(x: String, p: Int, matrix: List[List[String]], index: Int): Int = matrix match {
+	   case Nil => index
+	   case head :: tail => if(head(p) == x) index else pos(x, p, matrix, index + 1) 
+   }
+   
+   List.flatten(axis.map(h => toRow(measureColumns, pos(h, position, attributes, 0))))
+  }
+  
+  def vRow(measureColumns: List[List[String]], attributes: List[List[String]], item: String, position: Int): List[String] = {
+   def pos(item: String, p: Int, matrix: List[List[String]], index: Int): Int = matrix match {
+	   case Nil => index
+	   case head :: tail => if(head(p) == item) index else pos(item, p, matrix, index + 1) 
+   }
+   
+   toRow(measureColumns, pos(item, position, attributes, 0)).toList
+  }
+  
+  def serializeGrid(matrix: List[List[String]]) = {
+   def serializeGridCell(attr:String, starts: Boolean, stops: Boolean): Node = {
+	   if (starts) <first>{attr}</first>
 	   else if (stops) <last>{attr}</last>
 	   else <next>{attr}</next>
    }
    
-   def serializeRow(attrs: List[String], asGrid: Boolean, starts: Boolean, emphasize: String): NodeSeq = attrs match {
+   def serializeGridRow(row: List[String], starts: Boolean): NodeSeq = row match {
 	   case Nil => NodeSeq.Empty
-	   case head :: Nil => serializeCell(head, asGrid,starts, true, emphasize)  				
-	   case head :: tail => MyUtil.flattenNodeSeq(serializeCell(head, asGrid,starts, false, emphasize) :: serializeRow(tail, asGrid, false, emphasize).toList)
+	   case head :: Nil => serializeGridCell(head, starts, true)  				
+	   case head :: tail => MyUtil.flattenNodeSeq(serializeGridCell(head,starts, false) :: serializeGridRow(tail, false).toList)
    }
    
-   MyUtil.flattenNodeSeq((attributes.indices zip attributes).map(row => serializeRow(row._2 ::: toRow(measures, row._1), asGrid, true, emphasize)).toList)
+   MyUtil.flattenNodeSeq(matrix.map(row => serializeGridRow(row, true)).toList)
+  }
+  
+  def serialize(attributes: List[List[String]], measures: List[List[String]], emphasize: String) = {
+   
+   def serializeCell(attr:String, starts: Boolean, stops: Boolean, emphasize: String): Node = {
+	   if(starts && attr == emphasize) <name em="Y">{attr}</name>
+	   else if(starts) <name em="N">{attr}</name>
+	   else if (stops) <last>{attr}</last>
+	   else <next>{attr}</next>
+   }
+   
+   def serializeRow(attrs: List[String], starts: Boolean, emphasize: String): NodeSeq = attrs match {
+	   case Nil => NodeSeq.Empty
+	   case head :: Nil => serializeCell(head, starts, true, emphasize)  				
+	   case head :: tail => MyUtil.flattenNodeSeq(serializeCell(head,starts, false, emphasize) :: serializeRow(tail, false, emphasize).toList)
+   }
+   
+   MyUtil.flattenNodeSeq((attributes.indices zip attributes).map(row => serializeRow(row._2 ::: toRow(measures, row._1), true, emphasize)).toList)
    
   }
   
@@ -200,10 +268,12 @@ object BIService extends RestHelper{
 	  case head :: tail => if(head == reference) values.head else findValue(reference, tail, values.tail)
   }
   
-  def createGridAxis(toBe: List[String], asIs: List[String]) = {
-	  if(toBe.isEmpty && asIs.isEmpty) Nil
-	  else if(toBe.isEmpty) asIs zip asIs
-	  else toBe zip toBe.map(item => if(asIs.contains(item)) item else null)
+  def rearrangeRow(row: List[String], reference: List[Long], part: List[Long]): List[String] = part match {
+	  case Nil => Nil
+	  case head :: tail => {
+	 	  val index = first(reference, head, 0)
+	 	  if(index == -1) Nil else row(index) :: rearrangeRow(row, reference, tail) 
+	  }
   }
   
   // main processing of method ask starts here
@@ -220,72 +290,60 @@ object BIService extends RestHelper{
 	  if(blockType == "text") {
 		  val select = metadata \\ "select"
 		  val system = MyUtil.getSeqHeadText(select \\ "system")
-		  val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter)
+		  val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter, system)
 		  val text = getText(query(sql, system))
 			 
 		  blocks +=  <block type="text">{text}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 	  } 
 	  else {
 			
-			val allAnswers = for(select <- metadata \\ "select";
+		  val allAnswers = for(select <- metadata \\ "select";
 			                     val system = MyUtil.getSeqHeadText(select \\ "system");
-			                     val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter)
+			                     val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter, system)
 			                  ) yield query(sql, system)
 			
-			val measureIds = (metadata \\ "select" \\ "measureId").map(MyUtil.getNodeText(_).toLong).filter(mId => mId >= 0)
+		  val measureIds = (metadata \\ "select" \\ "measureId").map(MyUtil.getNodeText(_).toLong).filter(mId => mId >= 0)
 			
-			if(blockType == "zero") {
-				val allNumbers = List.flatten(allAnswers.map(answer => answer._2.head).toList)
-				val formula = MyUtil.getSeqHeadText(metadata \\ "formula")
-				if(formula == null || formula == "") blocks += <block type="zero">{allNumbers.head}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
-				else {
-					val indices = (metadata \\ "select" \\ "measureId").map(MyUtil.getNodeText(_).toLong).toList
-					val measureIds = measuresInFormula(formula)
-					val parameter = measureIds.map(measureId => findValue(measureId, indices, allNumbers))
+		  if(blockType == "zero") {
+			  val allNumbers = List.flatten(allAnswers.map(answer => answer._2.head).toList)
+			  val formula = MyUtil.getSeqHeadText(metadata \\ "formula")
+			  
+			  if(formula == null || formula == "") blocks += <block type="zero">{allNumbers.head}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+			  else {
+				  val indices = (metadata \\ "select" \\ "measureId").map(MyUtil.getNodeText(_).toLong).toList
+				  val measureIds = measuresInFormula(formula)
+				  val parameter = measureIds.map(measureId => findValue(measureId, indices, allNumbers))
 				
-					blocks += <block type="zero">{asString(WikiParser.evaluateTerm(formula, parameter.map(new BigDecimal(_))))}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
-				}
-			} 
-			else {
+				  blocks += <block type="zero">{asString(WikiParser.evaluateTerm(formula, parameter.map(new BigDecimal(_))))}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+			 }
+		  } 
+		  else {
 				
-				val attributeCount = (metadata \\ "structure" \\ "attribute").size
-				val attributes = mergeColumns(allAnswers.map(x => extractColumn(x._2,attributeCount)).toList)
-				val cols = measureIds zip measureIds.map(measureId => computeColumn(measureId, allAnswers.map(_._2).toList, attributes, metadata))
-				val measureMetadata = (metadata \\ "structure" \\ "measure")	
-				val measureColumns = measureMetadata.map(m => computeMeasure(m, cols.toList, blockType == "pie")).toList
+			  val attributeCount = (metadata \\ "structure" \\ "attribute").size
+			  val attributes = mergeColumns(allAnswers.map(x => extractColumn(x._2,attributeCount)).toList)
+			  val cols = measureIds zip measureIds.map(measureId => computeColumn(measureId, allAnswers.map(_._2).toList, attributes, metadata))
+			  val measureMetadata = (metadata \\ "structure" \\ "measure")	
+			  val measureColumns = measureMetadata.map(m => computeMeasure(m, cols.toList, blockType == "pie")).toList
 				
-				if(blockType == "grid") {
-					/*
-					val horizontalSpan = MyUtil.getSeqHeadText((metadata \\ "horizontalSpan"))
-					val verticalSpan = MyUtil.getSeqHeadText((metadata \\ "verticalSpan"))
-					val attrs = metadata \\ "structure" \\ "attribute"
+			  if(blockType == "grid") {
 					
-					val horizontalCandidates = (attrs.indices zip attrs).map(item => (item._1, MyUtil.getNodeText(item._2) == horizontalSpan)).filter(_._2)
-					val verticalCandidates = (attrs.indices zip attrs).map(item => (item._1, MyUtil.getNodeText(item._2) == verticalSpan)).filter(_._2)
+					val horizontalSpan = MyUtil.getSeqHeadText((metadata \\ "horizontalSpan")).split(";").toList.map(_.toLong)
+					val verticalSpan = MyUtil.getSeqHeadText((metadata \\ "verticalSpan")).split(";").toList.map(_.toLong)
+					val attrIds = (metadata \\ "structure" \\ "attribute" \\ "id").map(MyUtil.getNodeText(_).toLong).toList
 					
-					if(horizontalCandidates.isEmpty && verticalCandidates.isEmpty) {
-						blocks += <block type="one">{serialize(attributes, measureColumns, true, null)}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
-					}
-					else {
-						
-						val horizontalAttributes = MyUtil.getSeqHeadText((metadata \\ "horizontalAttributes")).map(x => MyUtil.getNodeText(x)).toList
-						val verticalAttributes = MyUtil.getSeqHeadText((metadata \\ "verticalAttributes")).map(x => MyUtil.getNodeText(x)).toList
-						
-						if(!horizontalCandidates.isEmpty && !verticalCandidates.isEmpty) {
-							
-							val leadingRow = createGridAxis(horizontalAttributes, attributes.apply(horizontalCandidates(0)._1.toInt)) 
-							val leadingColumn = createGridAxis(verticalAttributes, attributes.apply(verticalCandidates(0)._1.toInt))
-							
-							followingRows =
-							followingColumns = 
-								
-							for(rowPivot <- leadingColumn)	
-							
-						}
-					}
-					*/
-				}
-				else blocks += <block type="one">{serialize(attributes, measureColumns, false, null)}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+					val vertical = attributes.map(row => rearrangeRow(row, attrIds, verticalSpan)).distinct
+					val horizontal = transpose(attributes.map(row => rearrangeRow(row, attrIds, horizontalSpan)).distinct)
+					
+					
+					val headerRows = if(vertical.isEmpty) horizontal else horizontal.map(h => List.range(1, vertical(0).size).map(index => "") ::: h)
+					val bodyRows = if(vertical.isEmpty && horizontal.isEmpty) List(List(""))
+						           else if (vertical.isEmpty) List(hRow(measureColumns, attributes, horizontal(0), first(attrIds, horizontalSpan(0), 0)))
+						           else if(horizontal.isEmpty) vertical.map(v => v ::: vRow(measureColumns, attributes, v(0), first(attrIds, verticalSpan(0), 0))).toList
+						           else vertical.map(v => v ::: measureRow(measureColumns, attributes, v(0), horizontal(0), first(attrIds, verticalSpan(0), 0), first(attrIds, horizontalSpan(0), 0))).toList
+						           
+					blocks += <block type="grid">{serializeGrid(headerRows ::: bodyRows)}</block> % new UnprefixedAttribute("id", blockId.toString, Null) 
+			 }
+			 else blocks += <block type="one">{serialize(attributes, measureColumns, null)}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 			} 
 		 } 
 	 }

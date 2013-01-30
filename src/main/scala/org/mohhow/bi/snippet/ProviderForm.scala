@@ -26,6 +26,7 @@ object ProviderForm extends LiftScreen {
  val searchTerm = field(S.?("searchTerm"), nvl(ProviderToEdit.is.searchTerm.toString), valMinLen(1, S.?("textToShort")), valMaxLen(100, S.?("textToLong")))
  val memberAttribute = field(S.?("memberAttribute"), nvl(ProviderToEdit.is.memberAttribute.toString), valMinLen(1, S.?("textToShort")), valMaxLen(100, S.?("textToLong")))
  val displayAttribute = field(S.?("displayAttribute"), nvl(ProviderToEdit.is.displayAttribute.toString), valMinLen(1, S.?("textToShort")), valMaxLen(100, S.?("textToLong")))
+ val bindPattern = field(S.?("bindPattern"), nvl(ProviderToEdit.is.bindPattern.toString), valMinLen(1, S.?("textToShort")), valMaxLen(100, S.?("textToLong")))
  
  override def cancelButton = <button>{S.?("cancel")}</button>
  override def finishButton = <button>{S.?("finish")}</button>
@@ -34,7 +35,7 @@ object ProviderForm extends LiftScreen {
 	 asLong(maxRetries.is) match {
 		 case Full(mr) => {
 			 val provider = ProviderToEdit.is
-			 provider.friendlyName(friendlyName).url(url).base(base).userName(userName).pwd(pwd).authType(authType).initialContextFactory(initialContextFactory).testLookup(testLookup).retryIntervall(retryIntervall).maxRetries(mr).searchTerm(searchTerm).memberAttribute(memberAttribute).displayAttribute(displayAttribute).save
+			 provider.friendlyName(friendlyName).url(url).base(base).userName(userName).pwd(pwd).authType(authType).initialContextFactory(initialContextFactory).testLookup(testLookup).retryIntervall(retryIntervall).maxRetries(mr).searchTerm(searchTerm).memberAttribute(memberAttribute).displayAttribute(displayAttribute).bindPattern(bindPattern).save
 			 SelectedProvider(Some(provider))
 			 S.redirectTo("/user") 
 		 }

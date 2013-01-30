@@ -91,11 +91,6 @@ object TestDataForm extends LiftScreen {
   else (0,0)
  }
   
- def computeSize(tableKind: String, initialSize: Long, growth: Long, end: Long, begin: Long, initialDate: Long, cycle: Long): Long = {
-  if(tableKind == "transactionTable") Math.ceil(MyUtil.duration(end, begin) * 60 * 60 * 24/cycle).toLong * growth
-  else Math.ceil(MyUtil.duration(end, initialDate) * 60 * 60 * 24/cycle).toLong * growth + initialSize
- }
- 
  override def cancelButton = <button>{S.?("cancel")}</button>
  override def finishButton = <button>{S.?("finish")}</button>
  
@@ -110,8 +105,10 @@ object TestDataForm extends LiftScreen {
  def finish() {
   def detail(m: ModelVertex) = if(m == null) "" else m.elementDetail
   def kind(pa: PAttribute, m: ModelVertex) = {
-   if(pa.isPrimaryKey > 0) "pk"
-   else if(pa.reference > 0) "fk"
+   if (pa.isPrimaryKey > 0) "pk"
+   else if (pa.reference > 0) "fk"
+   else if (m != null && m.elementDetail != null && m.elementDetail.split(";").size > 1) "choice"
+   else "pattern"
   }
   
   def date(d: String) = MyUtil.dateAsNumber(MyUtil.asDate(d))
@@ -123,15 +120,15 @@ object TestDataForm extends LiftScreen {
 	 val tablesAndModels =  TestDataModel.is   
 	 val tableSizes = Map.empty[String, Int];
 	 
-	 val store = (TestDataNode.is \\ "store").filter(st => MyUtil.getSeqHeadText(st \ "alias") == SelectedAlias.is)
-	 if(!store.isEmpty) {
-	 
-		 val connectionInformation = createVendor(MyUtil.getSeqHeadText(store \ "storeDriver"), MyUtil.getSeqHeadText(store \ "storeUrl"), MyUtil.getSeqHeadText(store \ "storeUser"), MyUtil.getSeqHeadText(store \ "storePassword"), SelectedAlias.is)
+	 //val store = (TestDataNode.is \\ "store").filter(st => MyUtil.getSeqHeadText(st \ "alias") == SelectedAlias.is)
+	 //if(!store.isEmpty) {
+		 
+		 //val connectionInformation = createVendor(MyUtil.getSeqHeadText(store \ "storeDriver"), MyUtil.getSeqHeadText(store \ "storeUrl"), MyUtil.getSeqHeadText(store \ "storeUser"), MyUtil.getSeqHeadText(store \ "storePassword"), SelectedAlias.is)
 	 
 		 for(tm <- tablesAndModels) {
 			 
 			 val tableName = tm._1.name.toString
-			 
+			 println(tableName) 
 			 if(tm._1.tableType == "dateDimension") {
 				 
 			 }
@@ -140,29 +137,26 @@ object TestDataForm extends LiftScreen {
 			 }
 			 else {
 				 
-				 val initialSize = ModelUtility.initialSizeAsNumber(tm._2)
-				 val growth = ModelUtility.growthAsNumber(tm._2)
-				 val cycle = ModelUtility.loadCycle(tm._2)
-				 val estimatedSize = computeSize(tableName, initialSize, growth, date(periodEndField.toString), date(periodStartField.toString), date(initialLoadDate.toString), cycle)
-				 val reducedSize = Math.floor(estimatedSize/percentOfLoad.toString.toLong).toInt
+				 val reducedSize = ModelUtility.computeReducedSize(tm._2, tableName, date(periodEndField.toString), date(periodStartField.toString), date(initialLoadDate.toString), percentOfLoad.toString.toLong)
 				 tableSizes += (tableName -> reducedSize)
-		 
+		         println("tablesizes is " + tableSizes.toString)
 				 val attrs = getPAttributes(tm._1)
 				 val enrichedAttrs = attrs zip attrs.map(attr => getAttributeModel(attr))
 				 val metadata = enrichedAttrs.map(m => (kind(m._1, m._2).toString , m._1.isPartOfUniqueKey > 0, detail(m._2).toString))
-		 
+				 println(metadata.toString)
 				 val ops = metadata.map(item => TestDataUtility.defineOperator(item, tableSizes))
-				 val content = List.range(1, reducedSize).map(i => ops.map(op => op(i))).toString
+				 println(ops.toString)
+				 val content = MyUtil.csv(List.range(1, reducedSize).map(i => ops.map(op => op(i).toString)))
 				 val fileName = Repository.storeFlatFile(testDataName, tableName, content)
-		 
+				 /*
 				 val truncateCommand = "TRUNCATE TABLE " + tableName + ";"
 				 val loadCommand = "LOAD DATA INFILE '" + fileName + "' INTO TABLE " + tableName + ";"
 		 
 				 DB.use(connectionInformation) { conn => DB.exec(conn, truncateCommand) {rs => "success"}}
-				 DB.use(connectionInformation) { conn => DB.exec(conn, loadCommand) {rs => "success"}}
+				 DB.use(connectionInformation) { conn => DB.exec(conn, loadCommand) {rs => "success"}}  */
 			 }
-		 }
-	 }
+		 } 
+	 //}
   }
   else Alert(S.?(repositoryAnswer._2))
  } 

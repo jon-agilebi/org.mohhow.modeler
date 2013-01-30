@@ -55,7 +55,6 @@ class MockupSnippet {
   val blocks = Block.findAll(By(Block.fkSpecification, sp.id))
   val blockXml = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => blocks.exists(aBlock => aBlock.id.toString == (b \ "@blockId").text))
   
-  val blocksAsJson =  prepareInit(blockXml)
   CmdPair(JsCmds.SetHtml("specifications", createSpec(sp)), JsRaw("initializeBlockInformation(\"" + blockXml.toString.replaceAll("\"", "'").replaceAll("\n", "")  + "\");"))
  } 
 	
@@ -259,7 +258,7 @@ class MockupSnippet {
 	 		<button class='standardButton upButton attributeRelevant' style='float: right'>{S.?("up")}</button>
 	 		<button class='standardButton downButton attributeRelevant' style='float: right'>{S.?("down")}</button>
 	 		<button class='standardButton removeButton attributeRelevant' style='float: right'>{S.?("remove")}</button>
-	 		<ul style="list-style-position:inside">{attrs.map(measureListItem).toSeq}</ul>
+	 		<ul style="list-style-position:inside">{attrs.map(attributeListItem).toSeq}</ul>
 	 	</td>
 	 </tr> % new UnprefixedAttribute("blockId", block.id.toString, Null) 
    }
@@ -391,9 +390,7 @@ class MockupSnippet {
    
    try {
 	   val blocks  = parse(blockString)	
-	   println("ok blocks is " + blocks)
 	   val blockContent = blocks.extract[List[BlockContent]]
-	   println("ok blockContent is " + blockContent)
 	   blockContent.map(toStructure).toList
    }
    catch {
@@ -424,6 +421,8 @@ class MockupSnippet {
 	  	   transformStructure(b).apply(0)
 	   }
    }
+   
+   println("Let us finish " + blockString)
    
    var blocksWithNewStructure:List[(String, Node)] = Nil
 	  
@@ -543,15 +542,6 @@ class MockupSnippet {
    }
    
   	MyUtil.flattenNodeSeq(treeList.toList)
- }
- 
- def prepareInit(blocks: NodeSeq): String = {
-  def pAttr(attr: Node) = MyUtil.getSeqHeadText(attr \ "name") + ":" + MyUtil.getSeqHeadText(attr \ "order")
-  def prAttr(attrs: NodeSeq) = if(attrs.isEmpty) "" else pAttr(attrs(0))
-  def pBlock(bl: Node): String = (bl \ "@blockId").text + ";" + MyUtil.makeSeparatedList((bl \\ "measure").map(m => MyUtil.getNodeText(m)).toList,",") + ";" +
-		                            MyUtil.makeSeparatedList((bl \\ "attribute").map(pAttr).toList, ",") + ";" + MyUtil.getSeqHeadText(bl \\ "filter")
-		 
-  JsonUtility.list2Json(blocks.map(pBlock).toList)	                                     
  }
  
  /**

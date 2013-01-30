@@ -33,7 +33,7 @@ object ModelUtility {
   def conn(l: ModelVertex, r:ModelVertex, edges: List[ModelEdge]) = !edges.filter(e => (e.head == l.id && e.tail == r.id) || (e.head == r.id && e.tail == l.id)).isEmpty 
   def getNeighbour(item: ModelVertex, candidates: List[ModelVertex], edges: List[ModelEdge]): Option[ModelVertex] = candidates match {
 	  case Nil => None
-	  case h :: tail => if(conn(item, h, edges)) Some(h) else getNeighbour(item, tail, edges)
+	  case h :: tail => if(conn(item, h, edges) && item.y < h.y) Some(h) else getNeighbour(item, tail, edges)
   }
   
   def enricheChain(chain: List[(ModelVertex, Int)], set: Set[ModelVertex], edges: List[ModelEdge]): (List[(ModelVertex, Int)], Option[ModelVertex])  = {
@@ -70,6 +70,23 @@ object ModelUtility {
   val ls = Set() ++ vertices.filter(_.elementType == "level").toList
   
   completeChains(hs, ls, edges)
+ }
+ 
+ def above(v: ModelVertex, hierarchy: List[(ModelVertex, Int)]): List[ModelVertex] = hierarchy match {
+	 case Nil => Nil
+	 case head :: tail => if(head._1 == v) tail.map(_._1) else above(v, tail)
+ }
+ 
+ def attributesAbove(v: ModelVertex): List[ModelVertex] = {
+   val allHierarchies = hierarchies(v.referenceId)
+   val matchingHierarchy = List.flatten(allHierarchies.map(chain => chain.filter(h => isConnected(h._1.id, v.id)).map(_._1))).distinct
+   
+   if(matchingHierarchy.size != 1) Nil
+   else {
+	   val hierarchiesAbove = List.flatten(allHierarchies.map(chain => above(matchingHierarchy(0), chain))).distinct 
+	   val attrs = ModelVertex.findAll(By(ModelVertex.fkScenario, v.fkScenario), By(ModelVertex.elementType, "attribute"), By(ModelVertex.referenceId, v.referenceId))
+	   attrs.filter(attr => isConnectedToSomeVertex(attr, hierarchiesAbove)).toList
+   }
  }
  
  def measureLoadCycle(m: Measure, isAboutActuality: Boolean): Long = {
@@ -131,6 +148,19 @@ object ModelUtility {
  def growthAsNumber(v: ModelVertex): Long = {
   val details = v.elementDetail.split(";").toList
   if(details.size == 2) details.apply(1).toLong else 0
+ }
+ 
+ def computeSize(tableKind: String, initialSize: Long, growth: Long, end: Long, begin: Long, initialDate: Long, cycle: Long): Long = {
+  if(tableKind == "transactionTable") Math.ceil(MyUtil.duration(end, begin) * 60 * 60 * 24/cycle).toLong * growth
+  else Math.ceil(MyUtil.duration(end, initialDate) * 60 * 60 * 24/cycle).toLong * growth + initialSize
+ }
+ 
+ def computeReducedSize(v: ModelVertex, tableName: String, end: Long, begin: Long, initialLoadDate: Long, ratio: Long): Int = {
+  val initialSize = initialSizeAsNumber(v)
+  val growth = growthAsNumber(v)
+  val cycle = loadCycle(v)
+  val estimatedSize = computeSize(tableName, initialSize, growth, end, begin, initialLoadDate, cycle)
+  Math.floor(estimatedSize/ratio).toInt
  }
  
  def findJoinPath(factTable: PTable, attr: PAttribute): List[PAttribute] = {

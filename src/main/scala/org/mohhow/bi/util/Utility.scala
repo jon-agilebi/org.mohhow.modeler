@@ -1,6 +1,9 @@
 package org.mohhow.bi.util
 
 import net.liftweb._
+import http._
+import SHtml._
+import S._
 
 import mapper._
 import util._
@@ -55,6 +58,8 @@ object Utility {
  }
  
  def repeat(text: String, n: Int): String = if(n <= 0) "" else text + repeat(text, n-1)
+ 
+ def nvl(s: String) = if (s == null) "" else s
 	 
 /*
  * Methods for date formatting
@@ -182,23 +187,23 @@ def weekInYear(dateAsNumber: Int) = {
  val first = dayInWeek(y * 10000 + 101).toInt 
  if(first > 4) (d - first + 2) / 7 + 1 else  (d + first - 2) /  7 + 1
 } 
-/*
-def replaceTimeParameter(prm: String): String = {
+
+def timeInSql(timePattern: String, toDatePattern:  String): String = {
 	
 	val today = new Date
 	
-	prm match {
-		case "?today?" => "to_date(" + formatDate(today) + ", 'DD.MM.YYYY')"
-		case "?tomorrow?" => "to_date(" + dateFromNumber(succDate(formatDate(dateAsNumber(today)))) + ", 'DD.MM.YYYY')"
-		case "?actual_year?" =>  year(dateAsNumber(today)).toString
-		case "?previous_year?" =>  (year(dateAsNumber(today)) - 1).toString
-		case "?actual_quarter?" =>  quarter(dateAsNumber(today)).toString
-		case "?actual_month?" =>  month(dateAsNumber(today)).toString
+	timePattern match {
+		case "?today?" =>  toDatePattern.replace("?1", formatDate(today, S.?("dateFormat"))).replaceAll("?2", S.?("dateFormat")) 
+		case "?tomorrow?" =>  toDatePattern.replaceAll("?1", formatDate(dateFromNumber(succDate(dateAsNumber(today))), S.?("dateFormat"))).replaceAll("?2", S.?("dateFormat"))
+		case "?actual_year?" =>  year(dateAsNumber(today).toInt).toString
+		case "?previous_year?" =>  (year(dateAsNumber(today).toInt) - 1).toString
+		case "?actual_quarter?" =>  quarter(dateAsNumber(today).toInt).toString
+		case "?actual_month?" =>  month(dateAsNumber(today).toInt).toString
 	}
 	
-	//"yesterday"|"previous_business_day"|"actual_week"|"previous_week"|"previous_month"|"previous_quarter"
+	//"yesterday"|"actual_week"|"previous_week"|"previous_month"|"previous_quarter"
 }
- */
+ 
  /**
   * generic methods for the user management
   * 
@@ -243,6 +248,8 @@ def replaceTimeParameter(prm: String): String = {
 	case Nil => ""
 	case head :: tail => (head /:  tail) (_ + separator + _)
  }
+ 
+ def csv(matrix: List[List[String]]): String =  ("" /: matrix.map(row => makeSeparatedList(row, ";"))) (_ + "\n" + _)
  
  val tableTypes = List("dimension", "dateDimension", "measureDimension", "level", "fact", "snapshotFact", "transactionFact", "accountFact", "accountSnapshotFact", "accountTransactionFact")
 	
@@ -324,8 +331,8 @@ def replaceTimeParameter(prm: String): String = {
    * database configuration
    */
   
-  def driverName(alias: String, dbs: NodeSeq) = {
+  def dbInfo(alias: String, dbs: NodeSeq, kind: String) = {
    val db = dbs.filter(n => getSeqHeadText(n \ "alias") == alias)
-   if(db.isEmpty) "" else getSeqHeadText(db(0) \ "driver")
+   if(db.isEmpty) "" else getSeqHeadText(db(0) \ kind)
   }
 }

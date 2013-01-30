@@ -84,6 +84,7 @@ object Repository {
   case "sql" => ".sql"
   case "blocks" => ".xml"
   case "metadata" => ".xml"
+  case "svg" => ".svg"
   case "documentation" => ".pdf"
   case _ => ".xml"
  }
@@ -152,8 +153,8 @@ object Repository {
   true
  }
  
- def writeDDL(releaseId: Long, tableName: String, text: String) = {
-  val ddlPath = scenarioRoot + "release/" + releaseId.toString + "/" + tableName + ".sql" 
+ def writeDDL(releaseId: Long, tableName: String, text: String, isDelta: Boolean) = {
+  val ddlPath = if(isDelta) scenarioRoot + "release/" + releaseId.toString + "/delta/" + tableName + ".sql"  else scenarioRoot + "release/" + releaseId.toString + "/" + tableName + ".sql"
   val f = new File(ddlPath)
   FileUtils.writeStringToFile(f, text)
  }
@@ -164,9 +165,9 @@ object Repository {
   f
  }
  
- def getArtefactList(releaseId: Long, extensions: List[String]): List[String] = {
+ def getArtefactList(releaseId: Long, extensions: List[String], isDelta: Boolean): List[String] = {
   val content = new ListBuffer[String]
-  val releasePath = scenarioRoot + "release/" + releaseId.toString + "/"
+  val releasePath = if(isDelta) scenarioRoot + "release/" + releaseId.toString + "/delta/" else scenarioRoot + "release/" + releaseId.toString + "/"
   val f = new File(releasePath)
   if(f.exists()) {
 	  val iterator = FileUtils.iterateFiles(f, extensions.toArray, false)
@@ -189,17 +190,16 @@ object Repository {
  def prepareTestData(name: String) = {
   val path = scenarioRoot + "testdata/" 
   val r = new File(path)
+  
+  if(!r.exists()) r.mkdir()
 
-  if(r.exists()) {
-	  val testDataPath = path + name + "/"
-	  val t = new File(testDataPath)
-	  if(t.exists()) (false, "testDataAlreadyExists") 
-	  else {
-		  t.mkdir()
-		  (true, testDataPath)
-	  }
+  val testDataPath = path + name + "/"
+  val t = new File(testDataPath)
+  if(t.exists()) (false, "testDataAlreadyExists") 
+  else {
+	  t.mkdir()
+	  (true, testDataPath)
   }
-  else (false, "notYetReleased")
  }
  
  def storeFlatFile(testDataName: String, tableName: String, text: String) = {

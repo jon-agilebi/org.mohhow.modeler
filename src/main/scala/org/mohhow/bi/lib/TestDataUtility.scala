@@ -25,7 +25,7 @@ object TestDataUtility {
  def rnd(min: BigDecimal, max: BigDecimal, precision: Int, favourites: List[(Double, String)]): String = {
   def choose(reference: Double, l: List[(Double, String)]): (Boolean, String) = l match {
 	  case Nil => (false, "")
-	  case head :: tail => if(head._1 <= reference) (true, head._2) else choose(reference, tail)
+	  case head :: tail => if(head._1 > reference) (true, head._2) else choose(reference, tail)
   }
   
   val firstChoice = choose(Math.random.toDouble, favourites)
@@ -37,7 +37,7 @@ object TestDataUtility {
 	  min.add(max.subtract(min).multiply(random)).round(ctxt).toPlainString
   }
  }
- 
+ /*
  def selection(key:Long, n: Node, identifier: String) = {
   val choice = n \\ identifier
   if(choice.isEmpty) ""
@@ -54,10 +54,9 @@ object TestDataUtility {
   if(choice.isEmpty) "" 
   else MyUtil.getSeqHeadText(choice.apply(Math.ceil(Math.random * (choice.size - 1)).toInt))
  }
- 
-  
+ */
  def defineOperator(attrInformation: (String, Boolean, String), maxPk: Map[String, Int]) = {
-  def r(key: Long) = ref(key, 1, maxPk(attrInformation._3))
+  def r(key: Long) = ref(key, 1, 1000) //maxPk(attrInformation._3))
   def p(key: Long) = parsePattern(attrInformation._3)
   def c(key: Long) = choice(key, (attrInformation._3).split(";").toList)
   

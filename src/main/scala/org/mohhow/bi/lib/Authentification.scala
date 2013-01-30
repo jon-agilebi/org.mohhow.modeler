@@ -5,12 +5,7 @@ import model._
 import net.liftweb._
 import net.liftweb.ldap._
 import http._
-import SHtml._
-import S._
-import mapper._
-import util._
-import Helpers._
-import scala.xml._
+import org.mohhow.bi.util.{Utility => MyUtil}
 
 object Authentification {
  
@@ -30,12 +25,13 @@ object Authentification {
   myLdap
  }
 
- def initialize() = Provider.findAll().map(p => createVendor(createConfiguration(p))).toList
+ def initialize() = Provider.findAll().map(p => (createVendor(createConfiguration(p)), MyUtil.nvl(p.bindPattern))).toList
  
  def authorize(uid: String, pwd: String) = {
-  def tryVendor(uid: String, pwd: String, list: List[LDAPVendor]): Boolean = list match {
+  def rpl(pattern: String, uid: String) = if(pattern.length > 0) pattern.replaceAll("<uid>", uid) else uid
+  def tryVendor(uid: String, pwd: String, list: List[(LDAPVendor, String)]): Boolean = list match {
 		case Nil => false
-		case vendor :: vendors => if(vendor.bindUser(uid, pwd)) true else tryVendor(uid, pwd, vendors)
+		case vendor :: vendors => if(vendor._1.bindUser(rpl(vendor._2, uid), pwd)) true else tryVendor(uid, pwd, vendors)
   }
   
   tryVendor(uid, pwd, allProvider)

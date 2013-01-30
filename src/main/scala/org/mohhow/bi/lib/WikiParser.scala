@@ -46,29 +46,28 @@ object WikiParser {
 		 val endTag = if(isNumbered) "</ol>" else "</ul>" 
 		 
 		 firstMatch match {
-		 	case None => if(level == 1)  (0, startTag + line) else (0, line) 
+		 	case None => if(level > 0)  (0, MyUtil.repeat(endTag, level) + line) else (0, line) 
 		 	case Some(index) => {
-		 		if(level == 0) (index.length, "<li>" + line.substring(index.length) + "</li>" + MyUtil.repeat(endTag, index.length))
+		 		if(level == 0) (index.length, MyUtil.repeat(startTag, index.length) + "<li>" + line.substring(index.length) + "</li>")
 		 		else if(level == index.length) (index.length, "<li>" + line.substring(index.length) + "</li>")
 		 		else if(level < index.length) (index.length, MyUtil.repeat(startTag, index.length - level) + "<li>" + line.substring(index.length) + "</li>")
 		 		else if(level > index.length) (index.length, MyUtil.repeat(endTag, level - index.length) + "<li>" + line.substring(index.length) + "</li>")
 		 		else (0, line)
 		 	}
 		 }
-		 
 	 }
 	 
 	 def transformLines(lines: List[String], level: Int, isNumbered: Boolean, resultLines:List[String]):List[String] = lines  match {
-		 case Nil => resultLines
+		 case Nil => resultLines.reverse
 		 case l :: ls => {
 			 val newLine = transformLine(l, level, isNumbered)
 			 transformLines(ls, newLine._1, isNumbered, newLine._2 :: resultLines)
 		 } 
 	 }
 	 
-	 val lines = text.split("\n").toList
+	 val lines = text.split("\n").toList ::: List("")
 	 val transformedLines = transformLines(transformLines(lines,0,true, Nil),0,false, Nil)
-	 println(transformedLines)
+	 
 	 ("" /: transformedLines) (_ + _)
  }
  
@@ -134,13 +133,13 @@ object WikiParser {
 		 substituteMeasure(substitutedText, tailVals)
 	 }
  }
- 
+ /*
  def findRange(m: Measure, value: BigDecimal): Option[MeasureRange] = {
   None	 
-  /*	 
+   
   val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, m.id), OrderBy(MeasureRange.lowerBound, Ascending))
   val aRange = ranges.map(range => (range, range.lowerBound <= value && range.upperBound.toDouble > value.toDouble)).filter(_._2)
-  if(aRange.isEmpty) None else Some(aRange(0)) */ 	 
+  if(aRange.isEmpty) None else Some(aRange(0)) 	 
  }
  
  def meaning(measureId: String, value: BigDecimal, isMeaning: Boolean) = {
@@ -152,7 +151,7 @@ object WikiParser {
 	 }
   }
  }
- 
+ */
  def plain(measureId: String, value: BigDecimal, isMeaning: Boolean) = {
   val msrs = Measure.findAll(By(Measure.id, measureId.toLong))
   if(msrs.isEmpty) "" else value.toString + " " + msrs(0).unit
@@ -269,14 +268,26 @@ class Term extends JavaTokenParsers {
  
  // meaning, range, plain, random
  
+ def meanIt(value: BigDecimal, reference: String) = {
+  def triple(l:List[String]) = (new BigDecimal(l(0)), new BigDecimal(l(1)), l(2))
+  def compare(d: BigDecimal, l: List[(BigDecimal, BigDecimal, String)]): String = l match {
+	  case Nil => ""
+	  case head :: tail => if(head._1.floatValue() < d.floatValue() && head._2.floatValue() >= d.floatValue()) head._3 else compare(d, tail)
+  }
+  
+  val l = reference.split(";").map(item => triple(item.split("_").toList)).toList 
+  compare(value, l)
+ }
+ 
  def meaning: Parser[Any] = "meaning("~measureDim~")"^^{ case "meaning("~m~")" => "<mi>meaning</mi><mfenced>" + m +  "</mfenced>"}
- //def evalMeaning: Parser[Any] = "meaning("~measureDim~")"^^{ case "meaning("~m~")" => meaning(id(m), evalNumber(m), true)}
+ def valueList: Parser[String] = """[\w,\_]+""".r
+ def evalMeaning: Parser[Any] = "meaning("~evalNumber~","~valueList~")"^^{ case "meaning("~evalNumber~","~list~")" => meanIt(evalNumber, list)}
   
  def range: Parser[Any] = "range("~measureDim~")"^^{ case "range("~m~")" => "<mi>range</mi><mfenced>" + m +  "</mfenced>"}
- //def evalRange: Parser[Any] = "meaning("~measureDim~")"^^{ case "range("~m~")" => meaning(id(m), evalNumber(m), false)}
+ // There is no evalRange since 'range' will be translated to 'evalMeaning' 
  
  def plain: Parser[Any] = "plain("~measureDim~")"^^{ case "plain("~m~")" => "<mi>plain</mi><mfenced>" + m +  "</mfenced>"}
- //def evalPlain: Parser[Any] = "plain("~measureDim~")"^^{ case "plain("~m~")" => plain(id(m), evalNumber(m))}
+ def evalPlain: Parser[Any] = "plain("~measureDim~","~valueList~")"^^{ case "plain("~evalNumber~","~unit~")" => evalNumber.toString + " " + unit.toString}
 
  def rnd: Parser[Any] = "rnd("~number~","~number~";"~repsep(naturalNumber~","~number,",")~")"^^{ case "rnd("~min~","~max~";"~appendix~")" => "<mi>rnd</mi><mfenced>" + min + max + ";" + "..." + "</mfenced>"}
 	
@@ -340,7 +351,7 @@ class Term extends JavaTokenParsers {
  def ce(l: List[Any]) = ("" /: l) (concAndEnriche)
  
  def literal: Parser[Any] = "'"~"""[^']*""".r~"'"^^{case "'"~someText~"'" => "<mi>'" + someText + "'</mi>"}
- def timePattern: Parser[Any] = "?"~("today"|"yesterday"|"previous_business_day"|"tomorrow" |"actual_week"|"actual_month"|"actual_quarter"|"actual_year"
+ def timePattern: Parser[Any] = "?"~("today"|"yesterday"|"tomorrow" |"actual_week"|"actual_month"|"actual_quarter"|"actual_year"
 		                                    |"previous_week"|"previous_month"|"previous_quarter"|"previous_year")~"?"^^{case "?"~pattern~"?" => "?" + pattern + "?"}
  
  def parameter: Parser[Any] = "?"

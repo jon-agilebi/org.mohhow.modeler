@@ -185,7 +185,7 @@ class LogicalModelSnippet {
   if(m != null) CmdPair(draw(m.id), JsRaw("$('.listItem').removeClass('zebraHover');$(\".listItem[referenceId='" + m.id.toString + "']\").addClass('zebraHover');"))	 
   else Noop
  }
- 
+  
  def model (xhtml: NodeSeq): NodeSeq = {
   bind("adapt", xhtml, "cubes" -> getSelectionItems("cube"),
 		               "dimensions" -> getSelectionItems("dimension"),
@@ -196,7 +196,7 @@ class LogicalModelSnippet {
 		               "cancel"  -> ajaxButton(S.?("cancel"), cancel _) % ("class" -> "standardButton"),
 		               "suggestions" -> makeSuggestions(),
 		               "diagram" -> Script(initialDrawing()),
-		               "save"  -> <button class='standardButton'>{S.?("save")}</button> % ("onclick" -> SHtml.ajaxCall(JsRaw("$('#logicalModelContainer').html()"), saveLogicalModel _)._2)) 
+		               "save"  -> <button class='standardButton'>{S.?("save")}</button> % ("onclick" -> SHtml.ajaxCall(JsRaw("$('body').html()"), saveLogicalModel _)._2)) 
  }
  
  def groupSeparator(m: Measure, subjectSeparation: Boolean, simpleLifecycleSeparation: Boolean, complexLifecycleSeparation: Boolean): String = {
@@ -295,7 +295,9 @@ class LogicalModelSnippet {
   RedirectTo("/adapt")
  }
  
- def saveLogicalModel(modelString: String) : JsCmd = {
+ def decorateSVG(svg: Node): Node = <svg width="408" version="1.1" height="342"  viewBox="280,0,816,684" xmlns="http://www.w3.org/2000/svg">{svg.child}</svg>
+
+ def saveLogicalModel(body: String) : JsCmd = {
   val vertexIdTranslation = new HashMap[String, Long]
   var command = "";
   
@@ -312,6 +314,7 @@ class LogicalModelSnippet {
 	  }
 	  else ModelVertex.findAll(By(ModelVertex.id, vertexId.toLong)).apply(0)
   }
+  
   def getEdge(edgeId: String): ModelEdge = {
 	  if(edgeId.startsWith("m")) {
 		  val newEdge = ModelEdge.create
@@ -324,8 +327,15 @@ class LogicalModelSnippet {
   def nvl(text: String) = if(text == null) "" else text
   def txt(n:NodeSeq):String = MyUtil.getSeqHeadText(n)
   
-  val model = XML.loadString(modelString)
-  val vertices = model \\ "v"
+  val xml = XML.loadString("<body>" + body + "</body>")
+  
+  val svgs = xml \\ "svg"
+  if(svgs.size == 2) {
+	  val svg = (xml \\ "svg").apply(1)
+	  Repository.write("scenario", SelectedScenario.is.id, "svg", SelectedModelItem.is.elementName.toString, 0, decorateSVG(svg))
+  }
+  
+  val vertices = xml \\ "modelContainer" \\ "v"
 	
   for(vertex <- vertices) {
 		val status = txt(vertex \\ "status")
@@ -378,7 +388,7 @@ class LogicalModelSnippet {
 		}
   }
   
-  val edges = model \\ "e"
+  val edges = xml \\ "modelContainer" \\ "e"
   
   def findVertexId(text: String): Long = if (text.startsWith("m")) vertexIdTranslation(text) else text.toLong
     

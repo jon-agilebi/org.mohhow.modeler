@@ -70,26 +70,26 @@ class ReleaseSnippet {
    }
  }
  
+ def showArtefact(text: String) = Alert(Repository.getArtefactAsString(SelectedRelease.is.id, text))
+ 
  def artefacts(): NodeSeq = {
   
-  def showArtefact(text: String) = Alert(Repository.getArtefactAsString(SelectedRelease.is.id, text))	 
-
   def ddls(r: Release) = {
-   val ddlsOfRelease = Repository.getArtefactList(r.id, List("sql"))
+   val ddlsOfRelease = Repository.getArtefactList(r.id, List("sql"), false)
    val action = SHtml.ajaxCall(JsRaw("$(this).text()"), showArtefact _)._2
    if(ddlsOfRelease.isEmpty) NodeSeq.Empty 
    else <ul style="list-style-position:inside">{ddlsOfRelease.map(ddl => <li>{ddl}</li> % ("onclick" -> action))}</ul>
   }
 
   def metadata(r: Release, kind: String) = {
-   val artefact = Repository.getArtefactList(r.id, List(kind))
+   val artefact = Repository.getArtefactList(r.id, List(kind), false)
    val action = SHtml.ajaxCall(JsRaw("$(this).text()"), showArtefact _)._2
    val docLink = "/documentation/" + r.id.toString
    if(artefact.isEmpty) NodeSeq.Empty 
    else if(kind == "pdf") <a href={docLink}>documentation.pdf</a>
    else <span>{artefact}</span> % ("onclick" -> action)
   }
-	 
+   
   val release = SelectedRelease.is
 
   if(release == null) <nothing />
@@ -111,6 +111,13 @@ class ReleaseSnippet {
   }
  }
  
+ def deltaDDL(r: Release) = {
+  val deltasOfRelease = Repository.getArtefactList(r.id, List("sql"), true)
+  val action = SHtml.ajaxCall(JsRaw("$(this).text()"), showArtefact _)._2
+  if(deltasOfRelease.isEmpty) NodeSeq.Empty 
+  else <ul style="list-style-position:inside">{deltasOfRelease.map(ddl => <li>{ddl}</li> % ("onclick" -> action))}</ul>
+ }
+ 
  def delta(): NodeSeq = {
    val release = SelectedRelease.is
 
@@ -119,6 +126,9 @@ class ReleaseSnippet {
 	   <div>
 	   	<br />
 	   	<h4>DDL</h4>
+	   		<br />
+	   			{deltaDDL(release)}
+	  		<br />
 	   </div>
    }
  }
@@ -181,52 +191,142 @@ class ReleaseSnippet {
  
  def commaList(l:List[String]): String = MyUtil.makeSeparatedList(l,",\n")
  
- def createDDL(table: PTable) = {
-  def createTypeDetail(length: Long, precision: Long) = {
-	  if(length > 0 && precision > 0) "(" + length.toString + ", " + precision.toString + ")"
-	  else if (length > 0)  "(" + length.toString + ")"
-	  else ""
-  }
+ def createTypeDetail(length: Long, precision: Long) = {
+  if(length > 0 && precision > 0) "(" + length.toString + ", " + precision.toString + ")"
+  else if (length > 0)  "(" + length.toString + ")"
+  else ""
+ }
   
-  def notNullable(flag: Long) = if(flag > 0) " NOT NULL" else ""
+ def notNullable(flag: Long) = if(flag > 0) " NOT NULL" else ""
 	  
-  def ref(refId: Long) = {
+ def ref(refId: Long) = {
    if(refId > 0) {
 	   val attr = PAttribute.findAll(By(PAttribute.id, refId)).apply(0)
 	   val table = PTable.findAll(By(PTable.id, attr.fkPTable)).apply(0)
 	   " REFERENCES(" + table.name + "." + attr.name + ")" 
    }
    else ""
-  }
+ }
+ 
+ def prefix(isPrimaryConstraint: Boolean) = if(isPrimaryConstraint)  "PK_" else " UQ_"
   
-  def keyConstraint(table: PTable, isPrimaryConstraint: Boolean) = { 
-   def attrList(isPrimaryConstraint: Boolean) = {
+ def keyConstraint(table: PTable, isPrimaryConstraint: Boolean) = { 
+  def attrList(isPrimaryConstraint: Boolean) = {
 	   if(isPrimaryConstraint) PAttribute.findAll(By(PAttribute.fkPTable, table.id)).filter(_.isPrimaryKey.toLong == 1).map(a => a.name.toString)
 	   else PAttribute.findAll(By(PAttribute.fkPTable, table.id)).filter(_.isPartOfUniqueKey.toLong == 1).map(a => a.name.toString)
-   }
-   def keyword(isPrimaryConstraint: Boolean) = if(isPrimaryConstraint)  " PRIMARY KEY (" else " UNIQUE ("
-   def prefix(isPrimaryConstraint: Boolean) = if(isPrimaryConstraint)  "PK_" else " UQ_"
-	   
+  }
    
-   val partsOfConstraint = attrList(isPrimaryConstraint)
-   if(partsOfConstraint.isEmpty) "" 
-   else {
+  def keyword(isPrimaryConstraint: Boolean) = if(isPrimaryConstraint)  " PRIMARY KEY (" else " UNIQUE ("
+ 
+  val partsOfConstraint = attrList(isPrimaryConstraint)
+  if(partsOfConstraint.isEmpty) "" 
+  else {
 	  val constraintList = commaList(partsOfConstraint)
 	  
 	  "ALTER TABLE " + table.name + " ADD (CONSTRAINT " + prefix(isPrimaryConstraint) + table.name + keyword(isPrimaryConstraint) + constraintList + "));"
-   }
   }
+ }
   
-  def createLine(attr: PAttribute): String = {
+ def createLine(attr: PAttribute): String = {
    attr.name + " " + attr.dataType + createTypeDetail(attr.length.toLong, attr.scale.toLong) + notNullable(attr.isNotNullable.toLong) + ref(attr.reference)
-  }
-  
-  val rows = commaList(PAttribute.findAll(By(PAttribute.fkPTable, table.id), By(PAttribute.isCurrent, 1)).map(createLine)) 
-  val completeDDL = "CREATE TABLE " + table.name + "(" + rows + ");\n\n" + keyConstraint(table, true) + "\n\n" + keyConstraint(table, false)
-  Repository.writeDDL(SelectedRelease.is.id, table.name, completeDDL)
  }
  
- def createSelects(bl: Node): Node = {
+ def createAlter(table: PTable, actualRelease: Release, previousRelease: Release) = {
+  def valid(attr: PAttribute, r: Release): Boolean = {
+	 MyUtil.dateAsNumber(attr.validFrom) <= MyUtil.dateAsNumber(r.end) && MyUtil.dateAsNumber(attr.validUntil) > MyUtil.dateAsNumber(r.end)
+  }
+	 
+  val allAttributes = PAttribute.findAll(By(PAttribute.fkPTable, table.id))
+  val changedAttributes = allAttributes.filter(attr => attr.isCurrent == 1 && MyUtil.dateAsNumber(attr.validFrom) > MyUtil.dateAsNumber(previousRelease.end))
+  val droppedAttributes = allAttributes.filter(attr => attr.isCurrent == 0 && MyUtil.dateAsNumber(attr.validUntil) > MyUtil.dateAsNumber(previousRelease.end))
+  val newOrChangedAttributes = changedAttributes.partition(attr => !droppedAttributes.map(_.name).exists(_ == attr.name))
+  val attributesToDrop = droppedAttributes.filter(attr => !newOrChangedAttributes._1.map(_.name).exists(_ == attr.name))
+	 
+  val currentUq = allAttributes.filter(attr => attr.isPartOfUniqueKey == 1 && attr.isCurrent == 1).map(_.name.toString).sort(_ < _)
+  val previousUq = allAttributes.filter(attr => attr.isPartOfUniqueKey == 1 && valid(attr, previousRelease)).map(_.name.toString).sort(_ < _)
+
+  val currentPk = allAttributes.filter(attr => attr.isPrimaryKey == 1 && attr.isCurrent == 1).map(_.name.toString).sort(_ < _)
+  val previousPk = allAttributes.filter(attr => attr.isPrimaryKey == 1 && valid(attr, previousRelease)).map(_.name.toString).sort(_ < _)
+	
+  val addColumns = if(newOrChangedAttributes._1.isEmpty) "" else {
+	  "ALTER TABLE " + table.name + " ADD (" + MyUtil.makeSeparatedList(newOrChangedAttributes._1.map(createLine),",\n") + ")";
+  }
+  
+  val dropColumns = if(attributesToDrop.isEmpty) "" else {
+	  MyUtil.makeSeparatedList(attributesToDrop.map(attr => "ALTER TABLE " + table.name + " DROP COLUMN (" +  attr.name + ");"), "\n")
+  }
+  
+  val alterColumns = if(newOrChangedAttributes._2.isEmpty) "" else {
+	  MyUtil.makeSeparatedList(newOrChangedAttributes._2.map(attr => "ALTER TABLE " + table.name + " ALTER COLUMN (" +  createLine(attr) + ");"), "\n")
+  }
+  
+  val alterPk = if(currentPk == previousPk)  "" else {
+	  "ALTER TABLE " + table.name + " DROP CONSTRAINT " + prefix(true) + table.name + ";\n" + keyConstraint(table, true)
+  }
+  
+  val alterUq = if(currentUq == previousUq)  "" else {
+	  "ALTER TABLE " + table.name + " DROP CONSTRAINT " + prefix(false) + table.name + ";\n" + keyConstraint(table, false)
+  }
+  
+  val allCommands = addColumns + dropColumns + alterColumns + alterPk + alterUq
+  if(allCommands.trim.length > 0) Repository.writeDDL(SelectedRelease.is.id, "alter_" + table.name, allCommands.trim, true)
+ }
+ 
+ def createDrops(actualRelease: Release, previousRelease: Option[Release]) = previousRelease match {
+	 case None => { } // nothing to drop
+	 case Some(r) => {
+		val toDrop = PTable.findAll(By(PTable.isCurrent, 0)).filter(t => MyUtil.dateAsNumber(t.validUntil) > MyUtil.dateAsNumber(r.end) && MyUtil.dateAsNumber(t.validFrom) <= MyUtil.dateAsNumber(r.end))
+		if(!toDrop.isEmpty) {
+			val dropCommands = MyUtil.makeSeparatedList(toDrop.map(t => "DROP TABLE " + t.name + ";").toList, "\n")
+			Repository.writeDDL(SelectedRelease.is.id, "drop_tables", dropCommands, true)
+		}
+	 }
+ }
+ 
+ def createDDL(table: PTable, extraViewLayer: Boolean, stableViewLayer: Boolean, previousRelease: Option[Release]) = {
+  
+  val attributeList = PAttribute.findAll(By(PAttribute.fkPTable, table.id), By(PAttribute.isCurrent, 1))
+  val rows = commaList(attributeList.map(createLine))
+  val completeDDL = "CREATE TABLE " + table.name + "(" + rows + ");\n\n" + keyConstraint(table, true) + "\n\n" + keyConstraint(table, false)
+  val commaAttributes = commaList(attributeList.map(_.name.toString))
+  val simpleView = "CREATE OR REPLACE VIEW V_" + table.name + "(" + commaAttributes + ") AS SELECT (" + commaAttributes + " FROM " + table.name + ");" 
+  
+  Repository.writeDDL(SelectedRelease.is.id, table.name, completeDDL, false)
+  
+  previousRelease match {
+	  case None => {
+	 	  Repository.writeDDL(SelectedRelease.is.id, table.name, completeDDL, true)
+	 	  if(extraViewLayer) {
+	 	 	  Repository.writeDDL(SelectedRelease.is.id, "V_" + table.name, simpleView, true)
+	 	 	  Repository.writeDDL(SelectedRelease.is.id, table.name, simpleView, false)
+	 	  }
+	  }
+	  case Some(r) => {
+	 	  if(MyUtil.dateAsNumber(table.validFrom) > MyUtil.dateAsNumber(r.end)) Repository.writeDDL(SelectedRelease.is.id, table.name, completeDDL, true)
+	 	  else createAlter(table, SelectedRelease.is, r) 
+	 	  
+	 	  if(extraViewLayer) {
+	 	 	if(stableViewLayer) {
+	 	 	  Repository.writeDDL(SelectedRelease.is.id, "V_" + table.name, simpleView, true)
+	 	 	  Repository.writeDDL(SelectedRelease.is.id, "V_" + table.name, simpleView, false)
+	 	 	}
+	 	 	else {
+	 	 	  Repository.writeDDL(SelectedRelease.is.id, "V_" + table.name, simpleView, true)
+	 	 	  Repository.writeDDL(SelectedRelease.is.id, "V_" + table.name, simpleView, false) 
+	 	 	}
+	 	  }
+	  }
+  }
+ }
+ 
+ // SELECT Statement generation for each block
+ 
+ def findAttribute(name: String): ModelVertex = {
+  val attrs = ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.elementName, name), By(ModelVertex.fkScenario, SelectedScenario.is.id))	  
+  if(attrs.isEmpty) null else attrs(0)
+ }
+ 
+ def createSelects(bl: Node, isAccountModel: Boolean): Node = {
   def findBlockType(presentationType: String): String = presentationType match {
 	  case "indicator" => "zero"
 	  case "table" => "grid"
@@ -297,11 +397,6 @@ class ReleaseSnippet {
    }
   }
   
-  def findAttribute(name: String): ModelVertex = {
-   val attrs = ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.elementName, name), By(ModelVertex.fkScenario, SelectedScenario.is.id))	  
-   if(attrs.isEmpty) null else attrs(0)
-  }
-  
   def findPhysics(id: Long, isAttribute: Boolean) = {
    def findAttribute(id: Long, isAttribute: Boolean) = {
 	   if(isAttribute) {
@@ -357,14 +452,43 @@ class ReleaseSnippet {
    <select>
 		  {attrXML}
 		  {msrXML}
-		  <sql>{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), filter)}</sql>
+		  <sql></sql>
    </select>
   }
-  
+  //{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), filter)}</sql> 
   def aMeasure(m: Option[Measure]): Measure = m match {
 	   case None => null
 	   case Some(msr) => msr
-   }
+  }
+  
+  def refineFormula(formula: String): String = {
+	  
+	  def m(mr: MeasureRange, isMeaning: Boolean): String = if(isMeaning) mr.meaning else mr.rangeValue.toString
+	  
+	  if(formula.startsWith("meaning") || formula.startsWith("range") || formula.startsWith("plain")) {
+	 	  
+	 	 val pattern = """\d+""".r  
+		 val firstMatch = pattern findFirstIn formula
+		 
+		 firstMatch match {
+		 	case None => formula
+		 	case Some(digits) => {
+		 		
+		 		if(formula.startsWith("meaning") || formula.startsWith("range")) {
+		 				
+		 			val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, digits.toLong), OrderBy(MeasureRange.lowerBound, Ascending))
+		 			val rangeString = ("" /: ranges.map(mr => mr.lowerBound.toString + "_" + mr.upperBound.toString + "_" + m(mr, formula.startsWith("meaning")))) (_ + ";" + _)
+		 			formula.substring(1, formula.length - 1) + ", " + rangeString + ")"
+		 		}
+		 		else {
+		 			val msrs = Measure.findAll(By(Measure.id,digits.toLong))
+		 			if(msrs.isEmpty) formula else formula.substring(1, formula.length - 1) + ", " + msrs(0).unit + ")"
+		 		}
+		 	}
+	 	 }  
+	  }
+	  else formula
+  }
   
   val blockId = (bl \ "@blockId").text
   val blockType = MyUtil.getSeqHeadText(bl \ "presentationType") 
@@ -375,11 +499,17 @@ class ReleaseSnippet {
   val factTables = relevantMeasures.map(msr => findPhysics(msr.id, false)).map(_._2).distinct
   
   val attrXML = attrs.map(attr => <attribute><id>{attr._1.id.toString}</id><order>{attr._2}</order><emphasize></emphasize></attribute>).toSeq
-  val msrXML = relevantMeasures.map(msr => <measure><id>{msr.id.toString}</id><formula>{msr.formula.toString}</formula></measure>).toSeq
+  val msrXML = relevantMeasures.map(msr => <measure><id>{msr.id.toString}</id><formula>{refineFormula(msr.formula.toString.trim)}</formula></measure>).toSeq
   val sqlXML = factTables.map(fact => sql(fact, msrs.map(aMeasure).toList, attrs.toList, filter))
+  val grid = if(blockType == "grid") {
+	  val check = checkGrid(MyUtil.getSeqHeadText(bl \ "horizontalSpan"), MyUtil.getSeqHeadText(bl \ "verticalSpan"), attrs.map(_._1).toList)
+	  <grid><horizontalSpan>{check._2}</horizontalSpan><verticalSpan>{check._2}</verticalSpan></grid>
+  }
+  else NodeSeq.Empty
   
   <block id={blockId}>
 		<blockType>{blockType}</blockType>
+        {grid}
         <structure>
 			{attrXML}
             {msrXML}
@@ -389,8 +519,41 @@ class ReleaseSnippet {
 		</selects>
   </block> 
  }
+ 
+ def checkGrid(horizontalName: String, verticalName: String, attributes: List[ModelVertex]): (Boolean, String, String) = {
+  def findAttribute(name: String) = {
+	  ModelVertex.findAll(By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.elementType, "attribute"), By(ModelVertex.elementName, name)).toList
+  }
+  
+  def eval(l: List[ModelVertex]) = if(l.size == 0) "noAttribute" else if (l.size > 1) "attributeNotUnique" else ""
+  def serialize(l: List[ModelVertex]) = MyUtil.makeSeparatedList(l.map(_.id.toString), ";")
+	 
+  val horizontal =  findAttribute(horizontalName)
+  val vertical = findAttribute(verticalName)
+  
+  if(horizontal.size != 1 || vertical.size != 1) (false, eval(horizontal), eval(vertical))
+  else {
+	  val horizontalAttrs = ModelUtility.attributesAbove(horizontal(0))
+	  val verticalAttrs = ModelUtility.attributesAbove(vertical(0))
+	  val hMatch = attributes.intersect(horizontalAttrs)
+	  val vMatch = attributes.intersect(verticalAttrs)
+	  
+	  if(attributes.diff(hMatch ::: vMatch).size > 0) (false, "attributeNotInHierarchy", "attributeNotInHierarchy")
+	  else (true, serialize(hMatch), serialize(vMatch))
+  }
+ }
+ 
+ def checkAllGrids(): List[String] = {
+  def f(a: Node) = findAttribute(MyUtil.getSeqHeadText(a \ "name"))
+	  
+  val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => MyUtil.getSeqHeadText(b \\ "presentationType") == "grid")
+  val check = blocks.map(bl => checkGrid(MyUtil.getSeqHeadText(bl \ "horizontalSpan"), MyUtil.getSeqHeadText(bl \ "verticalSpan"), (bl \\ "attribute").map(f).filter(_ != null).toList)).toList
+  check.filter(c => !c._1).map(c => c._2 + " " + c._3)
+ }
+ 
+ def displayGrid(errors: List[String]) = <ul style="list-style-position:inside">{errors.map(e => <li>{e}</li>).toSeq}</ul>
 
- def createMetadata() = {
+ def createMetadata(isAccountModel: Boolean) = {
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => MyUtil.getSeqHeadText(b \\ "presentationType") != null && MyUtil.getSeqHeadText(b \\ "presentationType").length > 0)
   val frames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr").filter(fr => (fr \ "*").size > 0)
 
@@ -398,7 +561,7 @@ class ReleaseSnippet {
 	  				<frames>{frames}</frames>
   					<layout>{Setup.is \\ "layout"}</layout>
 	  				<blocks>{blocks}</blocks>
-	  				<backend>{blocks.map(createSelects)}</backend>
+	  				<backend>{blocks.map(bl => createSelects(bl, isAccountModel))}</backend>
 	  		     </metadata>  % new UnprefixedAttribute("scenarioId", SelectedScenario.is.id.toString, Null)
   
   Repository.write("release", 0, null, "metadata", SelectedRelease.is.id, metadata)
@@ -526,6 +689,22 @@ class ReleaseSnippet {
    featureList.map(toXml).toSeq
   }
   
+  def logicToXml(): Node = {
+   def serializeVertex(d: ModelVertex, isDimension: Boolean) = {
+	val svg = Repository.read("scenario", SelectedScenario.is.id, "svg", d.elementName.toString, 0) 
+	if(isDimension) <dimension><name>{d.elementName}</name><description>{d.elementDescription}</description><diagram>{svg}</diagram></dimension>
+	else <cube><name>{d.elementName}</name><description>{d.elementDescription}</description><diagram>{svg}</diagram></cube>
+	
+   }
+   
+   val candidates = ModelVertex.findAll(By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.elementKind, "original"))
+   val dimOrCube = candidates.filter(c => c.elementType == "dimension" || c.elementType == "cube").partition(_.elementType == "dimension")
+   val dimensions = dimOrCube._1.sort(_.elementName.toString < _.elementName.toString)
+   val cubes = dimOrCube._2.sort(_.elementName.toString < _.elementName.toString)
+   
+   <logic><dimensions>{dimensions.map(d => serializeVertex(d, true)).toSeq}</dimensions><cubes>{cubes.map(c => serializeVertex(c, false)).toSeq}</cubes></logic>
+  }
+  
   val creationDate = MyUtil.formatDate(new Date, S.?("dateFormat"))
   val prettyR = S.?("release") + " " + SelectedRelease.is.prettyNumber
   
@@ -558,7 +737,7 @@ class ReleaseSnippet {
     </chapter>
     <chapter>
     	<chapterTitle>{S.?("logicalModel")}</chapterTitle>
-    	<content>bla bla</content>
+    	{logicToXml()}
     </chapter>
     <chapter>
     	<chapterTitle>{S.?("catalogue")}</chapterTitle>
@@ -572,25 +751,40 @@ class ReleaseSnippet {
  }
  
  def createDocumentation() = {
-  Repository.write("configuration", 0, "metadata", "documentation", -1, documentAsXml())
-  val source = Repository.readAsFile("configuration", 0, "metadata", "documentation", -1)
-  val pdf = Repository.emptyDocumentation(SelectedRelease.is.id)
+  val rId = SelectedRelease.is.id
+  Repository.write("configuration", 0, "metadata", "documentation" + rId.toString, -1, documentAsXml())
+  val source = Repository.readAsFile("configuration", 0, "metadata", "documentation" + rId.toString, -1)
+  val pdf = Repository.emptyDocumentation(rId)
   PDFUtility.transform(source, pdf)
  }
  
  def generateRelease(): JsCmd = {
+  def previousRelease(r: Release): Option[Release] = {
+	  val predecessors = Release.findAll(By(Release.fkScenario, r.fkScenario)).filter(otherRelease => otherRelease.id < r.id).sort(_.id < _.id)
+	  if(predecessors.isEmpty) None else Some(predecessors(0))
+  }
+	 
   if(SelectedRelease.is != null) {
 	  
 	val checks = ModelUtility.checkAllGraphs(SelectedScenario.is.id)
+	val checkGrid = checkAllGrids()
 	
-	if(checks.isEmpty) {
+	if(checks.isEmpty && checkGrid.isEmpty) {
+		val setup = Repository.read("scenario", SelectedScenario.is.id, "setup","setup", -1) \\ "setup"
+		
+		val extraViewLayer = MyUtil.getSeqHeadText(setup \\ "extraViewLayer") == "Y"
+		val stableViewLayer = MyUtil.getSeqHeadText(setup \\ "stableViewLayer") == "Y"
+		val accountModel = 	MyUtil.getSeqHeadText(setup \\ "accountModel") == "Y"
+		val previous = previousRelease(SelectedRelease.is) 
+		
 		Repository.emptyRelease(SelectedRelease.is.id.toLong)
-		PTable.findAll(By(PTable.fkScenario, SelectedScenario.is.id), By(PTable.isCurrent, 1)).map(createDDL)
-		createMetadata()
+		PTable.findAll(By(PTable.fkScenario, SelectedScenario.is.id), By(PTable.isCurrent, 1)).map(table => createDDL(table, extraViewLayer, stableViewLayer, previous))
+		createDrops(SelectedRelease.is, previous)
+		createMetadata(accountModel)
 		createDocumentation()
 		Alert(S.?("artefactsCreated"))
 	}
-	else SetHtml("resultsOfScenarioCheck", ModelUtility.presentGraphResult(checks))
+	else SetHtml("resultsOfScenarioCheck", <div>{ModelUtility.presentGraphResult(checks)}{displayGrid(checkGrid)}</div>)
   }
   else Alert(S.?("noReleaseChosen"))
  }
@@ -728,32 +922,18 @@ class ReleaseSnippet {
 	 else  Alert(S.?("noReleaseOrNoSystem"))
  }
  
- def createVendor(driver: String, url: String, user: String, pwd: String, aliasName: String) = {
-  val vendor = new StandardDBVendor(driver, url, Full(user), Full(pwd)) 
-  val connInf = new ConnectionInformation(aliasName)
-  DB.defineConnectionManager(connInf, vendor)
-  LiftRules.unloadHooks.append(() => vendor.closeAllConnections_!())
-  connInf
- }
- /*
  def dropTablesOfRelease(r: Release, n: Node, aliasName: String) = {
-  val tableNames = Repository.getArtefactList(r.id, List("sql")).map(fileName => fileName.substring(0, fileName.indexOf(".")))
+  val tableNames = Repository.getArtefactList(r.id, List("sql"), false).map(fileName => fileName.substring(0, fileName.indexOf(".")))
   val store = (n \\ "store").filter(st => MyUtil.getSeqHeadText(st \ "alias") == aliasName)
-  if(!store.isEmpty) {
-	  val connectionInformation = createVendor(MyUtil.getSeqHeadText(store \ "storeDriver"), MyUtil.getSeqHeadText(store \ "storeUrl"), MyUtil.getSeqHeadText(store \ "storeUser"), MyUtil.getSeqHeadText(store \ "storePassword"), aliasName)
-	  tableNames.map(name => DB.use(connectionInformation) { conn => DB.exec(conn, "DROP TABLE " + name + ";") {rs => "success"}})
-  } 	 
+  if(!store.isEmpty) tableNames.map(name => DB.use(BIService.storeMap(aliasName)._1) { conn => DB.exec(conn, "DROP TABLE " + name + ";") {rs => "success"}})
  }
  
  def createTablesOfRelease(r: Release, n: Node, aliasName: String) = {
-  val fileNames = Repository.getArtefactList(r.id, List("sql"))
+  val fileNames = Repository.getArtefactList(r.id, List("sql"), false)
   val store = (n \\ "store").filter(st => MyUtil.getSeqHeadText(st \ "alias") == aliasName)
-  if(!store.isEmpty) {
-	  val connectionInformation = createVendor(MyUtil.getSeqHeadText(store \ "storeDriver"), MyUtil.getSeqHeadText(store \ "storeUrl"), MyUtil.getSeqHeadText(store \ "storeUser"), MyUtil.getSeqHeadText(store \ "storePassword"), aliasName)
-	  fileNames.map(name => DB.use(connectionInformation) { conn => DB.exec(conn, Repository.getArtefactAsString(r.id, name)) {rs => "success"}})
-  } 
+  if(!store.isEmpty) fileNames.map(name => DB.use(BIService.storeMap(aliasName)._1) { conn => DB.exec(conn, Repository.getArtefactAsString(r.id, name)) {rs => "success"}})
  }
- */
+ 
  def userGroups(specs: List[Specification]): List[(List[Specification], List[(Provider, String)])] = {
   def member(rtg: RoleToGroup): List[(Provider, String)] = {
 	if(rtg.fkProvider != null) {
@@ -780,7 +960,15 @@ class ReleaseSnippet {
   allGroups.map(gr => (gr, guysAndSpecs.filter(_._2 == gr).map(_._1).distinct.toList))
  }
  
- def transfer(url:String, kind: String, name: String, mode: String, node: Node) = "$.post(" + url + "/deployment/transfer/" + kind + "/" +  name + "/" + mode + ", " + node.toString + ", function(resp){});"
+ def ajaxification(l: List[(String, Node)], counter: Int, total: Int, user: User): String = l match {
+	 case Nil => ""
+	 case List(last) => "$('#deploymentProgress').html('<span>" + S.?("deploymentComplete")+ "</span>');"
+	 case first :: second :: tail => {
+		 val message = "<span>" + counter.toString + " " + S.?("of") + " " + total.toString + " " + S.?("filesDeployed") + "</span>"
+		 val success = "function(resp){$('#deploymentProgress').html('" + message + "');" + ajaxification(second :: tail, counter + 1, total, user) + "}"
+		 "$.ajax({url: '" + first._1 + "', data: '" + first._2.toString + "',  username: '" +  user.email + "', password: '" + user.password + "', success:" + success + "});"
+	 }
+ }
  
  def updateDeploymentOnNode(node: Node, oldRelease: Release, newRelease: Release, systemName: String): Node = {
   val releases = (node \\ "deployment" \ "release").map(r => ((r \ "@releaseId").text, MyUtil.getNodeText(r)))
@@ -812,6 +1000,7 @@ class ReleaseSnippet {
   
   val allMetadata = <anything>{MyUtil.flattenNodeSeq(releasesAfterDeployment.map(r => Repository.getMetadataOfRelease(r.id) \\ "metadata").toList)}</anything>
   val scorecardIds = (allMetadata \\ "fr").map(fr => (fr \ "@scorecardId").text.toLong).toList
+  
   val specs = List.flatten(scorecardIds.map(id => Specification.findAll(By(Specification.id, id))))
    	 	  
   // create the metadata
@@ -822,11 +1011,11 @@ class ReleaseSnippet {
   deploymentItems += blockInformation	
   
   val oldRelease = releasesSoFar.filter(r => r.fkScenario == targetRelease.fkScenario)
-  /*  drop tables and create tables in Zielknoten
+  
   if(!oldRelease.isEmpty) dropTablesOfRelease(oldRelease(0), n, SelectedAlias.is)
   
   createTablesOfRelease(targetRelease, n, SelectedAlias.is)
-  */
+  
   val allUserGroups = userGroups(specs)
   val indexedList = allUserGroups.indices zip allUserGroups
   
@@ -848,12 +1037,18 @@ class ReleaseSnippet {
   val userItem = ("user", userNode.hashCode.toString, "individual", userNode)
   deploymentItems += userItem
   
+  // serialize the information in deployment items
+  
   val deploymentInformation = <items>{deploymentItems.map(item => <item><name>{item._1}</name><checksum>{item._2}</checksum></item>)}</items>
+  
+  // prepare the ajax requests 
+  
   val url = "http://" + MyUtil.getSeqHeadText(n \\ "host") + ":" + MyUtil.getSeqHeadText(n \\ "port")
   val user = User.currentUser openOr null
-  val startCommand = "$.ajax({type: 'POST', dataType: 'xml', headers: {accept: 'application/xml'}, url: '" + url + "/deployment/start', username: '" +  user.email + "', password: '" + user.password + "', data: '" + deploymentInformation.toString + "', success: function(resp){}});".replaceAll("\n", "")
- 
-  val transferCommands = deploymentItems.map(item => transfer(url, item._3, item._1, "complete", item._4)).toList
+  val configurationCommand = "$.ajaxSetup({type: 'POST', dataType: 'xml', contentType: 'text/xml', username: '" +  user.email + "', password: '" + user.password + "'});"
+  
+  val requestInformation = (url + "/deployment/start.xml", deploymentInformation) :: deploymentItems.map(item => (url + "/deployment/transfer/" + item._3 + "/" +  item._1 + ".xml", item._4)).toList
+  val cmd = configurationCommand + ajaxification(requestInformation, 0, requestInformation.size, user)
   
   // node transformation
   
@@ -863,9 +1058,8 @@ class ReleaseSnippet {
   
   Repository.write("configuration", -1, "nodes", "nodes", 0, transformedNodes)
   Nodes(transformedNodes)
-  println(startCommand)
-  JsRaw(startCommand);
-  //JsRaw((startCommand /: transferCommands) (_ + _))
+  println(cmd)
+  JsRaw(cmd)
  }
  
  def allSystems(): NodeSeq = {
@@ -962,22 +1156,22 @@ class ReleaseSnippet {
   
  def estimate():NodeSeq = {
   def tableInformation(tableName: String, initialSize: String, growth: String) = {
-	  <label><b>{S.?("tableName")}:</b></label><span>{tableName}</span><br />
+	  <label><b>{S.?("tableName")}: </b></label><span>{tableName}</span><br />
 	  <label><b>{S.?("initialSize")}: </b></label><span>{initialSize}</span><br />
-	  <label><b>{S.?("growth")}: </b></label><span>{growth}</span><br />
+	  <label><b>{S.?("growthPerLoad")}: </b></label><span>{growth}</span><br />
   }
   
   val model = TestDataModel.is.partition(tm => tm._1.tableType == "dimension" || tm._1.tableType == "level" || tm._1.tableType == "timeDimension" || tm._1.tableType == "accountDimension")
-   	 
-	 <div class="message">
-   		<p class="messageTitle">{S.?("sizeEstimation")}</p>
-   		 <div>
-   			<h4>{S.?("dimensions")}</h4><br /><br />
+
+  <div class="message">
+   	<p class="messageTitle">{S.?("sizeEstimation")}</p>
+   	<div>
+   		<h3>{S.?("dimensions")}</h3><br />
    			{model._1.map(tm => tableInformation(tm._1.name, ModelUtility.initialSize(tm._2), ModelUtility.growth(tm._2)))}
-   			<h4>{S.?("facts")}</h4><br /><br />
+   		<h3>{S.?("facts")}</h3><br />
    			{model._2.map(tm => tableInformation(tm._1.name, ModelUtility.initialSize(tm._2), ModelUtility.growth(tm._2)))}
-   		 </div>
-   	 </div>
+   	</div>
+  </div>
  }
  
  def allScenariosWithReleases (xhtml: NodeSeq): NodeSeq = {

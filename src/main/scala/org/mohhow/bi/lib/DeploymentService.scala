@@ -31,14 +31,23 @@ object DeploymentService extends RestHelper {
   else true
  }
  
+ /*
+ def dropTablesOfRelease(r: Release, n: Node, aliasName: String) = {
+  val tableNames = Repository.getArtefactList(r.id, List("sql")).map(fileName => fileName.substring(0, fileName.indexOf(".")))
+  val connectionInformation = BIService.storeMap(aliasName)
+  tableNames.map(name => DB.use(connectionInformation) { conn => DB.exec(conn, "DROP TABLE " + name + ";") {rs => "success"}}) 	 
+ }
+ */
  serve {
 	 
-  case "deployment" :: "start" :: _ XmlPost xml -> _ => {
+  case XmlPost(List("deployment", "start"), request) => {
    println("starte deployment")	  
+   
    deploymentItems.clear
    
-   for(item <- xml \\ "item") {
+   for(item <- request._1 \\ "item") {
 	val itemName = MyUtil.getSeqHeadText(item \\ "name")
+	println(itemName)
 	val itemChecksum = MyUtil.getSeqHeadText(item \\ "checksum").toInt
 	deploymentItems += (itemName -> itemChecksum)
    }
@@ -50,17 +59,18 @@ object DeploymentService extends RestHelper {
 	<deploying />
    }
    else <nothingToDeploy />
-   
   }
   
-  case "deployment" :: "transfer" :: kind :: name :: mode :: _ XmlPost xml -> _  => { 
-   if(state == "deploying" && check(name, xml)) {
-	   Repository.write("deployment", 0, kind, name, 0, xml)
+  case XmlPost(List("deployment", "transfer", kind, name), request) => { 
+   println("kind " + kind + " name " + name)
+   if(state == "deploying" && check(name, request._1)) {
+	   println("check successfull")
+	   MyRep.write("deployment", 0, kind, name, 0, request._1)
 	   deploymentItems -= name
 	   
 	   if(deploymentItems.isEmpty) {
 	  	   state = "waiting"
-	  	   if(mode == "complete") MyRep.deploy(true) else MyRep.deploy(false)
+	  	   MyRep.deploy(true)
 	  	   BIService.isInitialized = false
 	  	   <deployed />
 	   }
