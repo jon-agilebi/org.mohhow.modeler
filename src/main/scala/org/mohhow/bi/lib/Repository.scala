@@ -16,6 +16,16 @@ object Repository {
  private val deploymentRoot = Props.get("deploymentRoot") openOr ""
  private val transferRoot = Props.get("transferRoot") openOr ""
  private val scenarioRoot = Props.get("scenarioRoot") openOr ""
+ 
+ def rootPathsExist(): Boolean = {
+	 
+	 val conf = new File(configurationRoot)
+	 val depl = new File(deploymentRoot)
+	 val trans = new File(transferRoot)
+	 val scen = new File(scenarioRoot)
+	 
+	 conf.exists() && depl.exists() && trans.exists() && scen.exists
+ }
   
  def write(category: String, scenarioId: Long, artefactKind: String, artefactName: String, releaseId: Long, rootNode: Node) {
    val folder = getScenarioSubFolder(category, scenarioId.toString, artefactKind, releaseId, true)
@@ -129,7 +139,7 @@ object Repository {
   for(artefact <- artefacts) {
 	  path = scenarioPath + artefact + "/"
 	  var f = new File(path)
-	   var source = new File(configurationRoot + "/" + artefact + "/")
+	  var source = new File(configurationRoot + "/" + artefact + "/")
 	  f.mkdir()
 	  
 	  FileUtils.copyDirectory(source, f)
@@ -217,5 +227,13 @@ object Repository {
 	  fileName = aFile.getName()				
 	 } yield fileName.substring(0, fileName.length - 4)
  fileNames
+ }
+ 
+ def copy(kind: String, sourceId: Long, targetId: Long) = {
+  val source = getScenarioSubFolder("scenario", sourceId.toString, kind, -1, false)
+  val target = getScenarioSubFolder("scenario", targetId.toString, kind, -1, false)
+  
+  FileUtils.copyDirectory(new File(source), new File(target))
+	 
  }
 }

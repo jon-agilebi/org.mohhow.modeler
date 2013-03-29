@@ -38,8 +38,8 @@ object Units extends SessionVar[List[(Long, String, String, String)]](Nil)
 object SectionHeader extends SessionVar[List[(Long, String, Long, String)]](null)
 object SectionHeaderEdit extends SessionVar[(String, String)](null)
 object SelectedUnitId extends SessionVar[Long](0)
-object Usage extends SessionVar[Map[String, (Boolean, String,Long)]](null)
-object UsageEdit extends SessionVar[Map[String, (Boolean, String,Long)]](null)
+object Usage extends SessionVar[Map[String, (Boolean, String, Long)]](null)
+object UsageEdit extends SessionVar[Map[String, (Boolean, String, Long)]](null)
 
 class ScenarioSnippet {
 
@@ -112,27 +112,32 @@ class ScenarioSnippet {
   */
  
  def removeScenario() : JsCmd = {
-  if(SelectedScenario.is != null){
-	  val theScenario = SelectedScenario.is
-	  val backlogs = ProductBacklog.findAll(By(ProductBacklog.fkScenario, theScenario.id))
-	  
-	  if(Measure.findAll(By(Measure.fkScenario, theScenario.id)).isEmpty &&
-	     Meeting.findAll(By(Meeting.fkScenario, theScenario.id)).isEmpty &&
-	     ModelVertex.findAll(By(ModelVertex.fkScenario, theScenario.id)).isEmpty &&
-	     Release.findAll(By(Release.fkScenario, theScenario.id)).isEmpty &&
-	     Specification.findAll(By(Specification.fkScenario, theScenario.id)).isEmpty &&
-	     Sprint.findAll(By(Sprint.fkScenario, theScenario.id)).isEmpty &&
-	     ScenarioRole.findAll(By(ScenarioRole.fkScenario, theScenario.id)).isEmpty &&
-	     (backlogs.isEmpty || Feature.findAll(By(Feature.fkPb, backlogs(0).id)).isEmpty)) {
-	 	  
-	 	  Scenario.findAll(By(Scenario.id, SelectedScenario.is.id)).map(selection => selection.delete_!)
-	 	  SelectedScenario(null)
-	 	  RedirectTo("/index")
+  if(canEditThisScenario(SelectedScenario.is)) {
+	  if(SelectedScenario.is != null){
+		  val theScenario = SelectedScenario.is
+		  val backlogs = ProductBacklog.findAll(By(ProductBacklog.fkScenario, theScenario.id))
+		  
+		  if(Measure.findAll(By(Measure.fkScenario, theScenario.id)).isEmpty &&
+		     Meeting.findAll(By(Meeting.fkScenario, theScenario.id)).isEmpty &&
+		     ModelVertex.findAll(By(ModelVertex.fkScenario, theScenario.id)).isEmpty &&
+		     Release.findAll(By(Release.fkScenario, theScenario.id)).isEmpty &&
+		     Specification.findAll(By(Specification.fkScenario, theScenario.id)).isEmpty &&
+		     Sprint.findAll(By(Sprint.fkScenario, theScenario.id)).isEmpty &&
+		     (backlogs.isEmpty || Feature.findAll(By(Feature.fkPb, backlogs(0).id)).isEmpty)) {
+		 	  
+		 	  
+		 	  if(!backlogs.isEmpty) backlogs(0).delete_!
+		 	  Scenario.findAll(By(Scenario.id, SelectedScenario.is.id)).map(selection => selection.delete_!)
+		 	
+		 	  SelectedScenario(null)
+		 	  RedirectTo("/index")
+		  }
+		  else Alert(S.?("scenarioCannotBeDeleted"))
+		  
 	  }
-	  else Alert(S.?("scenarioCannotBeDeleted"))
-	  
+	  else Alert(S.?("noScenarioSelection"))
   }
-  else Alert(S.?("noScenarioSelection"))
+  else Alert(S.?("cannotEditScenario"))
  }
  
  /**
@@ -144,26 +149,41 @@ class ScenarioSnippet {
   <tr><td>{SHtml.ajaxCheckbox(scenarioSelection, selected => chooseScenario (scenario.id, selected))}</td><td>{scenario.name}</td><td>{MyUtil.getUserName(scenario.owner)}</td><td>{org.mohhow.bi.util.Utility.formatDate(scenario.dateCreated)}</td></tr>
  }
  
+ def storeUsage(xml: NodeSeq) { 
+  val usage = Map() ++ (xml \\ "part").map(node => MyUtil.getSeqHeadText(node) -> ((node \ "@useIt").text == "Y", (node \ "@relation").text, (node \ "@scenarioId").text.toLong)).toList
+  Usage(usage)
+  UsageEdit(usage)
+ }
+ 
+ def redirect(kind: String, scenarioId: Long): Long = if (Usage.is(kind)._1 && Usage.is(kind)._2 == "link") Usage.is(kind)._3  else scenarioId
+  
+ def otherSetup(kind: String, scenarioId: Long, setup: Node) = {
+  val anotherScenarioId = redirect(kind, scenarioId)
+  if(scenarioId == anotherScenarioId) setup else (Repository.read("scenario", anotherScenarioId, "setup","setup", -1) \\ "setup").map(Utility.trim).apply(0)
+ }
+ 
  def chooseScenario(scenarioId: Long, selected: Boolean): JsCmd = {
   def getUser(userId: Long) = {
    val usrs = User.findAll(By(User.id, userId))
 	  if(usrs.isEmpty) null else usrs(0)
   }
-  
-  def storeUsage(xml: NodeSeq) { 
-   val usage = Map() ++ (xml \\ "part").map(node => MyUtil.getSeqHeadText(node) -> ((node \ "@useIt").text == "Y", (node \ "@relation").text, (node \ "@scenarioId").text.toLong)).toList
-   Usage(usage)
-   UsageEdit(usage)
-  }
-  
+	  
   if(selected){
 	  SelectedScenario(Scenario.findAll(By(Scenario.id, scenarioId.toLong)).apply(0))
 	  val backlogs = ProductBacklog.findAll(By(ProductBacklog.fkScenario, scenarioId));
 	  if (!backlogs.isEmpty) ChosenBacklog(backlogs.apply(0))
 	  try {
+	 	   
+	 	  // read setup and determine usage from setup
+	 	  
 		  Setup((Repository.read("scenario", scenarioId, "setup","setup", -1) \\ "setup").map(Utility.trim).apply(0))
-		  Vision((Repository.read("scenario", scenarioId, "vision", "vision", -1) \\ "vision").apply(0))
-		  Units(addToUnitModel(Nil, Setup.is \\ "unit"))
+		  storeUsage(Setup.is \\ "usage")
+		  
+		  //read scenario, in case of a link to another scenario, read from that scenario
+		  
+		  Vision((Repository.read("scenario", redirect("vision", scenarioId), "vision", "vision", -1) \\ "vision").apply(0))
+		  
+		  Units(addToUnitModel(Nil, otherSetup("unit", scenarioId, Setup.is) \\ "unit"))
 		  Blocks((Repository.read("scenario", scenarioId, "blocks", "blocks", -1) \\ "block"))
 		  
 		  ScenarioOwner(getUser(SelectedScenario.is.owner))
@@ -171,7 +191,10 @@ class ScenarioSnippet {
 		  Designer(MyUtil.findRoles(scenarioId, "designer"))
 		  ReleaseManager(MyUtil.findRoles(scenarioId, "releaseManager"))
 		  
-		  storeUsage(Setup.is \\ "usage")
+		  RelevantFeature(null)
+		  ChosenFeature(null)
+		  
+		  SelectedSpecification(null)
 	  } 
 	  catch {
 	 	  case ex: Exception => println("Exception during scenario choice: " + ex.toString)
@@ -347,10 +370,13 @@ class ScenarioSnippet {
  }
   
  def unitSetup (xhtml: NodeSeq): NodeSeq = {
+  val saveButton = if(MyUtil.isDesigner() || MyUtil.isAnalyst()) ajaxButton(S.?("save"), saveUnits _) % ("class" -> "standardButton")
+                   else ajaxButton(S.?("save"), saveUnits _) % ("class" -> "standardButton") % ("disabled" -> "")
+	 
   bind("unit", xhtml, "rows"  -> Units.is.map(showUnit).toSeq,
 	   "add" -> ajaxButton("+", addUnit _) % ("class" -> "standardButton"),
 	   "remove" -> ajaxButton("-", removeUnit _) % ("class" -> "standardButton"),
-	   "save" -> ajaxButton(S.?("save"), saveUnits _) % ("class" -> "standardButton"))
+	   "save" -> saveButton)
  }
  
  /**
@@ -415,28 +441,28 @@ class ScenarioSnippet {
 	 SectionHeader(reEnumerate(SectionHeader.is.filterNot(_._1 == SelectedSectionNumber.is), 1))
 	 SetHtml("#visionTableRows", showAllSectionHeader())
   }
-  else Alert("There is no section selected") 
+  else Alert(S.?("noSectionSelection")) 
  }
  
- def swapList(l: List[(Long, String, Long, String)], sectionNumber: Long, direction: String): List[(Long, String, Long, String)] = l match  {
+ def swapList(l: List[(Long, String, Long, String)], sectionNumber: Long, direction: String, total: Int): List[(Long, String, Long, String)] = l match  {
   case Nil => Nil
   case (sn, st, snOld, status) :: tail => {
 	if((direction == "down" && sn == sectionNumber && sectionNumber > 1) || (direction == "up" && sn == sectionNumber + 1)) {
-		(sn - 1, st, snOld, status) :: swapList(tail, sectionNumber, direction)
+		(sn - 1, st, snOld, status) :: swapList(tail, sectionNumber, direction, total)
 	}
-	else if ((direction == "down" && sn == sectionNumber - 1) || (direction == "up" && sn == sectionNumber && sectionNumber < l.size)) {
-		(sn + 1, st, snOld, status) :: swapList(tail, sectionNumber, direction)
+	else if ((direction == "down" && sn == sectionNumber - 1) || (direction == "up" && sn == sectionNumber && sectionNumber < total)) {
+		(sn + 1, st, snOld, status) :: swapList(tail, sectionNumber, direction, total)
 	}
-	else (sn, st, snOld, status) :: swapList(tail, sectionNumber, direction)
+	else (sn, st, snOld, status) :: swapList(tail, sectionNumber, direction, total)
   }
  }
  
  def swapSections(direction: String): JsCmd = {
   if(SelectedSectionNumber.is  > 0){
-	 SectionHeader(swapList(SectionHeader.is, SelectedSectionNumber.is, direction).sort(_._1 < _._1))
+	 SectionHeader(swapList(SectionHeader.is, SelectedSectionNumber.is, direction, SectionHeader.is.size).sort(_._1 < _._1))
 	 SetHtml("#visionTableRows", showAllSectionHeader())
   }
-  else Alert("There is no section selected") 
+  else Alert(S.?("noScenarioSelection")) 
  }
  
  def findSection(sectionNumber: Long) = {
@@ -478,13 +504,17 @@ class ScenarioSnippet {
  def visionSetup (xhtml: NodeSeq): NodeSeq = {
   def down() = swapSections("down")
   def up() = swapSections("up")
+  val changeVision = (MyUtil.isAnalyst() || MyUtil.isDesigner()) && Usage.is("vision")._2 != "copy"
+  
+  val saveButton = if(changeVision) ajaxButton(S.?("save"), saveSectionSetup _) % ("class" -> "standardButton") 
+                   else ajaxButton(S.?("save"), saveSectionSetup _) % ("class" -> "standardButton") % ("disabled" -> "")
   
   bind("sections", xhtml, "rows"  -> showAllSectionHeader(),
 	   "add" -> ajaxButton("+", addSection _) % ("class" -> "standardButton"),
 	   "remove" -> ajaxButton("-", removeSection _) % ("class" -> "standardButton"),
 	   "up" -> ajaxButton(S.?("up"), up _) % ("class" -> "standardButton"),
 	   "down" -> ajaxButton(S.?("down"), down _) % ("class" -> "standardButton"),
-	   "save" -> ajaxButton(S.?("save"), saveSectionSetup _) % ("class" -> "standardButton"))
+	   "save" -> saveButton)
  }
  
  /**
@@ -503,7 +533,7 @@ class ScenarioSnippet {
   val sectionTitle = SectionHeaderEdit.is._2
   val numberOfSection = MyUtil.getNodeText((section \\ "sectionNumber").apply(0))
 	 
-  if(numberOfSection == sectionNumber) {
+  if(numberOfSection == sectionNumber && SectionText.is != null) {
 	  
 	  <section>
 	  	<sectionNumber>{sectionNumber.toString}</sectionNumber>
@@ -534,10 +564,14 @@ class ScenarioSnippet {
  }
 
  def createSection(section: Node): NodeSeq = {
-  
+	 
+  val changeVision = (MyUtil.isAnalyst() || MyUtil.isDesigner()) && Usage.is("vision")._2 != "copy"	 
   val sectionNumber = MyUtil.getNodeText((section \\ "sectionNumber").apply(0))
   val sectionTitle = MyUtil.getNodeText((section \\ "title").apply(0))
-  val editIt = ajaxButton(S.?("edit"), () => edit(sectionNumber, sectionTitle)) % ("class" -> "standardButton") % ("style" -> "float:right")
+	  
+  val editIt = if(changeVision) ajaxButton(S.?("edit"), () => edit(sectionNumber, sectionTitle)) % ("class" -> "standardButton") % ("style" -> "float:right")
+               else ajaxButton(S.?("edit"), () => edit(sectionNumber, sectionTitle)) % ("class" -> "standardButton") % ("style" -> "float:right") % ("disabled" -> "")
+  
   val cancelIt = ajaxButton(S.?("cancel"), () => cancelEdit(sectionNumber)) % ("class" -> "standardButton") % ("style" -> "float:right")
   val saveIt = ajaxButton(S.?("save"), saveSection _) % ("class" -> "standardButton") % ("style" -> "float:right")
   val textArea = ajaxTextarea(MyUtil.getNodeText((section \\ "editText").apply(0)), text => finishText(text)) % ("rows" -> "15") % ("cols" -> "130") % ("class" -> "wikiEditor")
@@ -545,11 +579,11 @@ class ScenarioSnippet {
   <div class="message" id ={"displayContainer" + sectionNumber}>
     <p class="messageTitle">{MyUtil.getNodeText((section \\ "title").apply(0))}{editIt}</p>
     {MyUtil.tagIt(MyUtil.getSeqHeadText(section \\ "displayText"))}
-   </div>
-   <div class="message editContainer" id ={"editContainer" + sectionNumber}>
+  </div>
+  <div class="message editContainer" id ={"editContainer" + sectionNumber}>
     <p class="messageTitle">{MyUtil.getNodeText((section \\ "title").apply(0))}{cancelIt}{saveIt}</p><br />
     {textArea}
-   </div>
+  </div>
  }
 
  def showVisionText (xhtml: NodeSeq) = {
@@ -571,7 +605,8 @@ class ScenarioSnippet {
  
  def design (xhtml: NodeSeq): NodeSeq = {
   
-  val setup = Repository.read("scenario", SelectedScenario.is.id, "setup","setup", -1) \\ "setup"
+  val setup = otherSetup("guidelines", SelectedScenario.is.id, Setup.is)
+	  
   def chooseSnowflakeVsStar(option: String) = updateDesignConfiguration("snowflake", option, "snowflake")
   def chooseAccountModel(option: String) = updateDesignConfiguration("accountModel", option, "accountModel")
   val snowflakeChoice = MyUtil.getSeqHeadText(setup \\ "snowflake")
@@ -718,14 +753,31 @@ class ScenarioSnippet {
 	   "additionalAttributes" -> additionalAttributes())
  }
  
- def actionsOnUsage(actions: List[(String, String,Long)]) {
+ def actionsOnUsage(actions: List[(String, String, Long)]): Unit = actions match {
 	 
+	 case Nil => {} // do nothing
+	 case (kind, action, scenarioId) :: tail => {
+		 if(action == "copy" && kind == "vision") Repository.copy(kind, scenarioId, SelectedScenario.is.id)
+		 else if (action == "copy" && (kind == "unit" || kind == "guidelines"  || kind == "scorecardDesign")) {
+			val tagName = if(kind == "unit") "units" else if(kind == "guidelines") "design" else "layout" 
+			val nodes = Repository.read("scenario", scenarioId, "setup","setup", -1) \\ tagName
+			
+			if(nodes.size == 1) {
+				val transform = tagName #> nodes.apply(0)
+				val setup = Setup.is
+				Setup(transform(setup).apply(0))
+				Repository.write("scenario", SelectedScenario.is.id, "setup","setup", -1, Setup.is) 
+			}
+		 }
+		 
+		 actionsOnUsage(tail)
+	 }
  }
  
  def usage(xhtml: NodeSeq): NodeSeq = {
  
   val scenarios = ("0", "") :: Scenario.findAll(By(Scenario.fkClient, SelectedScenario.is.fkClient)).filter(_.id != SelectedScenario.is.id).map(sc => (sc.id.toString, sc.name.toString)).toList	
-  val usageKind = List(("", ""), ("copy", "Kopie"), ("link", "Link"))
+  val usageKind = List(("", ""), ("copy", S.?("asCopy")), ("link", S.?("asLink")))
 	 
   def commitChanges(): JsCmd = {
    def yesNo(b: Boolean) = if(b) "Y" else "N"
@@ -778,6 +830,8 @@ class ScenarioSnippet {
 	  def scn(scenarioId: Long) = if(scenarioId > 0) Full(scenarioId.toString) else Empty
 	  def usg(relation: String) = if(relation != "original") Full(relation) else Empty
 	  
+	  if(Usage.is == null) storeUsage(Setup.is \\ "usage")
+	  
 	  val ue = UsageEdit.is
 	 
 	 <tr>
@@ -785,19 +839,19 @@ class ScenarioSnippet {
      </tr>
 	 <tr>
 		<td>{S.?("unitDefinition")}</td><td>{SHtml.ajaxCheckbox(ue("unit")._1, checkUnit _)}</td>
-        <td>{SHtml.ajaxSelect(scenarios, scn(ue("unit")._3) , v => {selectScenario(v.toLong, "unit")})}</td>
-        <td>{SHtml.ajaxSelect(usageKind, usg(ue("unit")._2) , v => {selectUsage(v, "unit")})}</td>
+        <td>{SHtml.ajaxSelect(scenarios, scn(ue("unit")._3), v => {selectScenario(v.toLong, "unit")})}</td>
+        <td>{SHtml.ajaxSelect(usageKind, usg(ue("unit")._2), v => {selectUsage(v, "unit")})}</td>
      </tr>
 	 <tr>
 		<td>{S.?("designGuidelines")}</td><td>{SHtml.ajaxCheckbox(ue("guidelines")._1, checkGuidelines _)}</td>
-        <td>{SHtml.ajaxSelect(scenarios, scn(ue("guidelines")._3) , v => {selectScenario(v.toLong, "guidelines")})}</td>
-        <td>{SHtml.ajaxSelect(usageKind, Empty , v => {selectUsage(v, "guidelines")})}</td>
+        <td>{SHtml.ajaxSelect(scenarios, scn(ue("guidelines")._3), v => {selectScenario(v.toLong, "guidelines")})}</td>
+        <td>{SHtml.ajaxSelect(usageKind, usg(ue("guidelines")._2), v => {selectUsage(v, "guidelines")})}</td>
      </tr>
      <tr>
 		<td><b>{S.?("vision")}</b></td>
 		<td>{SHtml.ajaxCheckbox(ue("vision")._1, checkVision _)}</td>
-		<td>{SHtml.ajaxSelect(scenarios, scn(ue("vision")._3) , v => {selectScenario(v.toLong, "vision")})}</td>
-        <td>{SHtml.ajaxSelect(usageKind, Empty , v => {selectUsage(v, "vision")})}</td>
+		<td>{SHtml.ajaxSelect(scenarios, scn(ue("vision")._3), v => {selectScenario(v.toLong, "vision")})}</td>
+        <td>{SHtml.ajaxSelect(usageKind, usg(ue("vision")._2), v => {selectUsage(v, "vision")})}</td>
      </tr>
 	 <tr>
 		<td><b>Design</b></td><td></td><td></td><td></td>
@@ -805,32 +859,35 @@ class ScenarioSnippet {
 	 <tr>
 		<td>{S.?("catalogueModel")}</td>
         <td>{SHtml.ajaxCheckbox(ue("catalogueModel")._1, checkCatalogueModel _)}</td>
-        <td>{SHtml.ajaxSelect(scenarios, scn(ue("catalogueModel")._3) , v => {selectScenario(v.toLong, "catalogueModel")})}</td>
-        <td>{SHtml.ajaxSelect(usageKind, Empty , v => {selectUsage(v, "catalogueModel")})}</td>
+        <td>{SHtml.ajaxSelect(scenarios, scn(ue("catalogueModel")._3), v => {selectScenario(v.toLong, "catalogueModel")}) % ("disabled" -> "")}</td>
+        <td>{SHtml.ajaxSelect(usageKind, usg(ue("catalogueModel")._2), v => {selectUsage(v, "catalogueModel")}) % ("disabled" -> "")}</td>
      </tr>
      <tr>
 		<td>{S.?("catalogueModelSpec")}</td>
         <td>{SHtml.ajaxCheckbox(ue("catalogueModelSpec")._1, checkCatalogueModelSpec _)}</td>
-        <td>{SHtml.ajaxSelect(scenarios, scn(ue("catalogueModelSpec")._3) , v => {selectScenario(v.toLong, "catalogueModelSpec")})}</td>
-        <td>{SHtml.ajaxSelect(usageKind, Empty , v => {selectUsage(v, "catalogueModelSpec")})}</td>
+        <td>{SHtml.ajaxSelect(scenarios, scn(ue("catalogueModelSpec")._3), v => {selectScenario(v.toLong, "catalogueModelSpec")}) % ("disabled" -> "")}</td>
+        <td>{SHtml.ajaxSelect(usageKind, usg(ue("catalogueModelSpec")._2), v => {selectUsage(v, "catalogueModelSpec")}) % ("disabled" -> "")}</td>
      </tr>
 	 <tr><td><b>{S.?("implementation")}</b></td><td></td><td></td><td></td></tr>
 	 <tr>
 	 	<td>{S.?("scorecardDesign")}</td>
 	 	<td>{SHtml.ajaxCheckbox(ue("scorecardDesign")._1, checkScorecard _)}</td>
-        <td>{SHtml.ajaxSelect(scenarios, scn(ue("scorecardDesign")._3) , v => {selectScenario(v.toLong, "scorecardDesign")})}</td>
-        <td>{SHtml.ajaxSelect(usageKind, Empty , v => {selectUsage(v, "scorecardDesign")})}</td>
+        <td>{SHtml.ajaxSelect(scenarios, scn(ue("scorecardDesign")._3), v => {selectScenario(v.toLong, "scorecardDesign")})}</td>
+        <td>{SHtml.ajaxSelect(usageKind, usg(ue("scorecardDesign")._2), v => {selectUsage(v, "scorecardDesign")})}</td>
      </tr>
 	 <tr>
         <td>{S.?("physicalModel")}</td>
         <td>{SHtml.ajaxCheckbox(ue("physicalModel")._1, checkPhysics _)}</td>
-        <td>{SHtml.ajaxSelect(scenarios, scn(ue("physicalModel")._3) , v => {selectScenario(v.toLong, "physicalModel")})}</td>
-        <td>{SHtml.ajaxSelect(usageKind, Empty , v => {selectUsage(v, "physicalModel")})}</td>
+        <td>{SHtml.ajaxSelect(scenarios, scn(ue("physicalModel")._3), v => {selectScenario(v.toLong, "physicalModel")}) % ("disabled" -> "")}</td>
+        <td>{SHtml.ajaxSelect(usageKind, usg(ue("physicalModel")._2), v => {selectUsage(v, "physicalModel")}) % ("disabled" -> "")}</td>
      </tr>
   }
+  
+  val changeButton = if(MyUtil.isDesigner() || MyUtil.isAnalyst()) ajaxButton(S.?("change"), commitChanges _) % ("class" -> "standardButton") % ("style" -> "float: right")
+                     else ajaxButton(S.?("change"), commitChanges _) % ("class" -> "standardButton") % ("style" -> "float: right") % ("disabled" -> "")
 	 
-   bind("usage", xhtml, 
-	    "table" -> usageTable(),
-        "change" -> ajaxButton(S.?("change"), commitChanges _) % ("class" -> "standardButton") % ("style" -> "float: right"))
+  bind("usage", xhtml, 
+	   "table"  -> usageTable(),
+       "change" -> changeButton)
  }
 }

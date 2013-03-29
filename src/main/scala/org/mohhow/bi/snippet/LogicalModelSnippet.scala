@@ -187,12 +187,18 @@ class LogicalModelSnippet {
  }
   
  def model (xhtml: NodeSeq): NodeSeq = {
+	 
+  val addDimButton = if(MyUtil.isDesigner()) ajaxButton(S.?("addDimension"), addDimension _) % ("class" -> "standardButton") else ajaxButton(S.?("addDimension"), addDimension _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val editButton = if(MyUtil.isDesigner()) ajaxButton(S.?("edit"), editAdapt _) % ("class" -> "standardButton") else ajaxButton(S.?("edit"), editAdapt _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val addCubeButton = if(MyUtil.isDesigner()) ajaxButton(S.?("addCube"), addCube _) % ("class" -> "standardButton") else ajaxButton(S.?("addCube"), addCube _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val computeCubeButton = if(MyUtil.isDesigner()) ajaxButton(S.?("computeCubes"), computeCube _) % ("class" -> "standardButton") else ajaxButton(S.?("computeCubes"), computeCube _) % ("class" -> "standardButton") % ("disabled" -> "")
+	 
   bind("adapt", xhtml, "cubes" -> getSelectionItems("cube"),
 		               "dimensions" -> getSelectionItems("dimension"),
-		               "addDimension" -> ajaxButton(S.?("addDimension"), addDimension _) % ("class" -> "standardButton"),
-		               "addCube" -> ajaxButton(S.?("addCube"), addCube _) % ("class" -> "standardButton"),
-		               "computeCube" -> ajaxButton(S.?("computeCubes"), computeCube _) % ("class" -> "standardButton"),
-		               "edit"  -> ajaxButton(S.?("edit"), editAdapt _) % ("class" -> "standardButton"),
+		               "addDimension" -> addDimButton,
+		               "addCube" -> addCubeButton,
+		               "computeCube" -> computeCubeButton,
+		               "edit"  -> editButton,
 		               "cancel"  -> ajaxButton(S.?("cancel"), cancel _) % ("class" -> "standardButton"),
 		               "suggestions" -> makeSuggestions(),
 		               "diagram" -> Script(initialDrawing()),
@@ -295,7 +301,7 @@ class LogicalModelSnippet {
   RedirectTo("/adapt")
  }
  
- def decorateSVG(svg: Node): Node = <svg width="408" version="1.1" height="342"  viewBox="280,0,816,684" xmlns="http://www.w3.org/2000/svg">{svg.child}</svg>
+ def decorateSVG(svg: Node): Node = <svg width="410" version="1.1" height="342"  viewBox="278,0,820,684" xmlns="http://www.w3.org/2000/svg">{svg.child}</svg>
 
  def saveLogicalModel(body: String) : JsCmd = {
   val vertexIdTranslation = new HashMap[String, Long]

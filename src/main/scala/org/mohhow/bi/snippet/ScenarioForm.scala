@@ -11,6 +11,7 @@ import Helpers._
 import org.mohhow.model._
 import java.util.Date
 import org.mohhow.bi.lib.Repository
+import org.mohhow.bi.util.{Utility => MyUtil}
 
 object ScenarioForm extends LiftScreen {
 	
@@ -69,24 +70,38 @@ object ScenarioForm extends LiftScreen {
 	  
 	  // create repository
 	  
-	  Repository.createScenario(scenario.id)
-	  
-	  // read the default information
-	  Setup((Repository.read("scenario", scenario.id, "setup","setup", -1) \\ "setup").apply(0))
-	  Vision((Repository.read("scenario", scenario.id, "vision", "vision", -1) \\ "vision").apply(0))
-	  Blocks((Repository.read("scenario", scenario.id, "blocks", "blocks", -1) \\ "block"))
-	  
-	  ScenarioOwner(User.currentUser openOr null)
-	  val ownership = ScenarioRole.create
-	  ownership.fkUser(User.currentUser openOr null).fkScenario(scenario).role("owner").dateCreated(new Date).save
-	  
-	  Analysts(Nil)
-	  Designer(Nil)
-	  ReleaseManager(Nil)
-	  
-	  val backlog = ProductBacklog.create
-	  backlog.fkScenario(scenario).description("Backlog for scenario " + scenario.name).save
-	  ChosenBacklog(backlog)
+	  try {
+		  Repository.createScenario(scenario.id)
+		  
+		  // read the default information
+		  Setup((Repository.read("scenario", scenario.id, "setup","setup", -1) \\ "setup").apply(0))
+		  Vision((Repository.read("scenario", scenario.id, "vision", "vision", -1) \\ "vision").apply(0))
+		  Blocks((Repository.read("scenario", scenario.id, "blocks", "blocks", -1) \\ "block"))
+		  
+		  ScenarioOwner(User.currentUser openOr null)
+		  val ownership = ScenarioRole.create
+		  ownership.fkUser(User.currentUser openOr null).fkScenario(scenario).role("owner").dateCreated(new Date).save
+		  
+		  Analysts(Nil)
+		  Designer(Nil)
+		  ReleaseManager(Nil)
+		  
+		  val backlog = ProductBacklog.create
+		  backlog.fkScenario(scenario).description("Backlog for scenario " + scenario.name).save
+		  ChosenBacklog(backlog)
+		  RelevantFeature(null)
+		  ChosenFeature(null)
+		  
+		  val usage = Map() ++ (Setup.is \\ "usage" \\ "part").map(node => MyUtil.getSeqHeadText(node) -> ((node \ "@useIt").text == "Y", (node \ "@relation").text, (node \ "@scenarioId").text.toLong)).toList
+		  Usage(usage)
+		  UsageEdit(usage)
+	  }
+	  catch {
+	 	 case ex: Exception => {
+	 		 scenario.delete_!
+	 		 S.warning("scenarioCreationFailed", S.?("scenarioCreationFailed"))
+	 	 }
+	  }
   }
 	  SelectedScenario(scenario)  
       S.redirectTo("/index")

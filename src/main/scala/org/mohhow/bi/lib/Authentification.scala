@@ -31,8 +31,21 @@ object Authentification {
   def rpl(pattern: String, uid: String) = if(pattern.length > 0) pattern.replaceAll("<uid>", uid) else uid
   def tryVendor(uid: String, pwd: String, list: List[(LDAPVendor, String)]): Boolean = list match {
 		case Nil => false
-		case vendor :: vendors => if(vendor._1.bindUser(rpl(vendor._2, uid), pwd)) true else tryVendor(uid, pwd, vendors)
+		case vendor :: vendors => {
+			try {
+				if(vendor._1.bindUser(rpl(vendor._2, uid), pwd)) true else tryVendor(uid, pwd, vendors)
+			}
+			catch {
+				
+				case e: Exception =>{
+					println(e.toString)
+					false
+				}
+			}
+		}
   }
+  
+  println("try to authorize " + uid + " with password " + pwd)
   
   tryVendor(uid, pwd, allProvider)
  }

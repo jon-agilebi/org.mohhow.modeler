@@ -29,12 +29,17 @@ var countMeasuresInBlock = 0;
 var scrollPosition = 0;
 var scrollStart = 0;
 var scrollEnd = 0;
+var scrollSpan;
+var blockHeights = [];
 
 var scorecardStandardText;
 var scorecardTitle;
 var scorecardFrame;
 var scorecardHorizontal;
 var scorecardVertical;
+var showcasePie;
+var showcaseBar;
+var ruler = [];
          
 function initializeBlocks(frames, blocks) {
 	portraitFrame = frames;
@@ -397,6 +402,36 @@ function getPadBox() {
 	if(orientation == "portrait") return [356, 91, 384, 502]; else return [297, 150, 502, 384];
 }
 
+function drawRuler(padbox) {
+	var topX = padbox[0] + padbox[2]/2;
+	var topY = padbox[1] + 10;
+	var top = designPaper.path("M" + topX + "," + padbox[1] + "L" + topX + ", " + topY);
+	
+	top.attr("stroke", "#f00");
+	ruler.push(top);
+	
+	var leftX = padbox[0] + 10;
+	var leftY = padbox[1] + padbox[3]/2;
+	var left = designPaper.path("M" + padbox[0] + "," + leftY + "L" + leftX + ", " + leftY);
+	
+	left.attr("stroke", "#f00");
+	ruler.push(left);
+	
+	var bottomY = padbox[1] + padbox[3] - 10;
+	var bottomY2 = padbox[1] + padbox[3];
+	var bottom = designPaper.path("M" + topX + "," + bottomY + "L" + topX + ", " + bottomY2);
+	
+	bottom.attr("stroke", "#f00");
+	ruler.push(bottom);
+	
+	var rightX = padbox[0] + padbox[2] -10;
+	var rightX2 = padbox[0] + padbox[2];
+	var right = designPaper.path("M" + rightX + "," + leftY + "L" + rightX2 + ", " + leftY);
+	
+	right.attr("stroke", "#f00");
+	ruler.push(right);
+}
+
 function showDesignCanvas() {
 	
 	designPaper = Raphael(180, 60, 1096, 684);
@@ -426,15 +461,22 @@ function showDesignCanvas() {
 	designCanvas.attr("fill", "#eee");
 	designCanvas.attr("stroke", "#eee");
 	
+	drawRuler(getPadBox());
+	
 	mainLine = parse($("#designBlockInformation design fr[orientation='portrait'] *:nth-child(1)"));
+	
+	while(modelBlocks.length > 0) modelBlocks.pop();
 	
 	$('#designBlockInformation design block').each(function() {
 		if($(this).is("block")) parseBlock($(this));
 	});
 	
 	for(var i = 0; i < modelBlocks.length; i++) {
-		blocks.push(designPaper.block(modelBlocks[i].presentationType, modelBlocks[i].presentationDetail, 52, 12 + i * 192, 180, 180, modelBlocks[i].attributes, modelBlocks[i].attributes, modelBlocks[i].title, null, true, modelBlocks[i].blockId));
+		if(modelBlocks[i].presentationType) blocks.push(designPaper.block(modelBlocks[i].presentationType, modelBlocks[i].presentationDetail, 52, 12 + i * 192, 180, 180, modelBlocks[i].attributes, modelBlocks[i].attributes, modelBlocks[i].title, null, true, modelBlocks[i].blockId));
 	}
+	
+	blockReference = blocks;
+	scrollSpan = 12 + modelBlocks.length * 192 - 647;
 	
 	drawIt(getPadBox(), mainLine);
 }
@@ -449,10 +491,12 @@ function removeBlock(block) {
 function emptyPad() {
 	while(lines.length > 0) lines.pop().remove();
 	while(scorecardBlocks.length > 0) removeBlock(scorecardBlocks.pop());
+	while(ruler.length > 0) ruler.pop().remove();
 }
 
 function clean() {
 	$("#designBlockInformation fr[orientation='" + orientation + "']").empty();
+	mainLine = parse($("#designBlockInformation fr[orientation='" + orientation + "'] *:nth-child(1)"));
 	emptyPad();
 }
 
@@ -464,6 +508,7 @@ function rotateDesign() {
 	mainLine = parse($("#designBlockInformation fr[orientation='" + orientation + "'] *:nth-child(1)"));
 	
 	drawIt(getPadBox(), mainLine);
+	drawRuler(getPadBox());
 }
 
 /**
@@ -499,7 +544,7 @@ Raphael.fn.block = function(presentationType, presentationDetail, x, y, width, h
 	else if (presentationType == "indicator") {
 		drawing = drawIndicator(designPaper, presentationDetail, x, y + 12, width, height - 12);
 	}
-	else if (presentationType == "plain") {
+	else if (presentationType == "text") {
 		drawing = drawPlain(designPaper, presentationDetail, x, y + 12, width, height - 12);
 	}
 	else {
@@ -521,26 +566,61 @@ Raphael.fn.block = function(presentationType, presentationDetail, x, y, width, h
 }
 
 var scroll = function(dx, dy) {
-	
 	scrollEnd = dy;
 	
+	var help =  Number(scrollPosition) - Number(scrollEnd);
+	
+	if(help > 0 && help < scrollSpan) {
+		scrollPosition = help;
+	
+		for(var i = 0; i < blocks.length; i++) {
+			
+			var newY = Number(blockReference[i].background.attr("y")) + Number(dy);
+			var att = {y: newY};
+			blocks[i].background.attr(att);
+			
+			var newTitleY = Number(blockReference[i].title.attr("y")) + Number(dy);
+			var attTitle = {y: newTitleY};
+			blocks[i].title.attr(attTitle);
+			blocks[i].title.toFront();
+			
+			for(var j = 0; j < blocks[i].drawing.length; j++) {
+				var elem = blockReference[i].drawing[j];
+				var path = elem.attr("path");
+				
+				if(path) {
+					att = {path: movePath(path, 0, Number(dy))}; 
+					blocks[i].drawing[j].attr(att);
+				}
+				
+				if(elem.attr("x")) {
+					var att = {y: Number(elem.attr("y")) + Number(dy)};
+					blocks[i].drawing[j].attr(att);
+				}
+				
+				if(elem.attr("cx")) {
+					var att = {cy: Number(elem.attr("cy")) + Number(dy)};
+					blocks[i].drawing[j].attr(att);
+				}
+				
+				blocks[i].drawing[j].toFront();
+			} 
+		}
+	}
+	/*
+	var help = Number(scrollEnd) + Number(scrollPosition);// - Number(scrollStart);
+	if(help > scrollSpan) scrollPosition = scrollSpan;
+	else if(help < 0) scrollPosition = 0;
+	else scrollPosition = help;
+	*/
 }
 
 var startScrolling = function() {
-	scrollStart = this.attr("y");
-	
+	scrollStart = this.attr("y");	
 }
 
 var stopScrolling = function() {
-	
-	
-	var help = Number(scrollEnd) + Number(scrollPosition);// - Number(scrollStart);
-	
-	if(help > 674) scrollPosition = 674;
-	else if(help < 0) scrollPosition = 0;
-	else scrollPosition = help;
-	alert(scrollPosition);
-	
+	// no action required here
 }
 
 function parseBlock(block) { 
@@ -767,7 +847,7 @@ function blockToModelBlock(block) {
 	return designPaper.modelBlock(block.blockId, block.presentationType, block.presentationDetail, block.title.attr('text'));	
 }
 
-function addToDrillStack(block) {
+function addToDrillStack(block, n) {
 	
 	var successorId = $("#designBlockInformation successor[blockId='" + block.blockId + "']").attr('successorId');
 	
@@ -776,15 +856,18 @@ function addToDrillStack(block) {
 		for(var i = 0; i < modelBlocks.length; i++) {
 			
 			if(modelBlocks[i].blockId == successorId) {
-				drillBlocks.push(designPaper.block(modelBlocks[i].presentationType, modelBlocks[i].presentationDetail, 875, 12 + drillBlocks.length * 192, 180, 180, modelBlocks[i].attributes, modelBlocks[i].attributes, modelBlocks[i].title, null, false, modelBlocks[i].blockId));
+				var succBlock = designPaper.block(modelBlocks[i].presentationType, modelBlocks[i].presentationDetail, 875, 12 + n * 192, 180, 180, modelBlocks[i].attributes, modelBlocks[i].attributes, modelBlocks[i].title, null, false, modelBlocks[i].blockId);
+				drillBlocks.push(succBlock);
+				addToDrillStack(succBlock, n + 1);
 			}
 		}
+		
 	}
 }
 
 function createDrillStack(block) {
 	while(drillBlocks.length > 0) removeBlock(drillBlocks.pop());
-	addToDrillStack(block)
+	addToDrillStack(block, 0)
 }
 
 var chooseBlock = function() {
@@ -792,10 +875,10 @@ var chooseBlock = function() {
 		var sc = scorecardBlocks[i];
 		
 		if(sc.background != this) sc.background.animate({"fill": "#fff", "fill-opacity": 1},500);
+		if(sc.background == this) selectedBlock = sc;
 	}
 	
 	this.animate({"fill": "#66f", "fill-opacity": .2},500);
-	selectedBlock = sc;
 	createDrillStack(selectedBlock);
 }
 
@@ -857,7 +940,7 @@ Raphael.fn.scLine = function(kind, blockId, width, first, second) {
 }
 
 function drawIt(rect, lineElement) {
-
+	
 	var x1, x2, y1, y2;
 	var line;
 	var lineAttrs = {"stroke": "#111", "stroke-dasharray": ".", "stroke-width": 2};
@@ -875,7 +958,7 @@ function drawIt(rect, lineElement) {
 			
 			if(lineElement.first) drawIt([rect[0], rect[1], newWidth, rect[3]], lineElement.first);
 			if(lineElement.second) drawIt([x1, rect[1], rect[2] - newWidth, rect[3]], lineElement.second);
-				
+			
 			lines.push(line);
 		}
 		else if(lineElement.kind == "row") {
@@ -998,6 +1081,10 @@ function drawInitialLine(x1, y1, x2, y2) {
 	else return designPaper.scLine("row", 0,  (y1 - padBox[1])/padBox[3]*1000, null, null);
 }
 
+function tuneRatio(givenValue) {
+	if(givenValue >= 497 && givenValue <= 503) return 500; else return givenValue;
+}
+
 function updateLine(x1, y1, x2, y2, lineElement, cX, cY, cWidth, cHeight) {
 	var newKind;
 	var ratio, newWidth, newHeight, cXFirst, cXSecond, cYFirst, cYSecond, cHeightFirst, cHeightSecond, cWidthFirst, cWidthSecond;
@@ -1013,11 +1100,11 @@ function updateLine(x1, y1, x2, y2, lineElement, cX, cY, cWidth, cHeight) {
 		
 		if(x1 == x2) {
 			newKind = "column";
-			ratio = (x1 - cX)/cWidth * 1000;
+			//ratio = (x1 - cX)/cWidth * 1000;
 		}
 		else {
 			newKind = "row";
-			ratio = (y1 - cY)/cHeight * 1000;
+			//ratio = (y1 - cY)/cHeight * 1000;
 		}
 		
 		if(x1 == cX || x2 == cX || y1 == cY || y2 == cY) isFirstCandidate = true; 
@@ -1029,6 +1116,12 @@ function updateLine(x1, y1, x2, y2, lineElement, cX, cY, cWidth, cHeight) {
 			
 			if (x1 < cX + newWidth || x2 < cX + newWidth) hitsFirst = true;
 			if (x1 > cX + newWidth || x2 > cX + newWidth) hitsSecond = true;
+			
+			if(newKind == "column") {
+				if(hitsFirst) ratio = (x1 - cX)/newWidth * 1000;
+				else ratio = (x1 - cX - newWidth)/(cWidth - newWidth) * 1000;
+			}
+			else ratio = (y1 - cY)/cHeight * 1000;
 		}
 		else if(lineElement.kind == "row") {
 			
@@ -1036,9 +1129,21 @@ function updateLine(x1, y1, x2, y2, lineElement, cX, cY, cWidth, cHeight) {
 			
 			if (y1 < cY + newHeight || y2 < cY + newHeight) hitsFirst = true;
 			if (y1 > cY + newHeight || y2 > cY + newHeight) hitsSecond = true;
+			
+			if(newKind == "row") {
+				if(hitsFirst) ratio = (y1 - cY)/newHeight * 1000;
+				else ratio = (y1 - cY - newHeight)/(cHeight - newHeight) * 1000;
+			}
+			else ratio = (x1 - cX)/cWidth * 1000;
 		}
 		else if(lineElement.kind == "block") {
 			return lineElement;
+		}
+		
+		if(ratio >= 495 && ratio <= 505) {
+			ratio = 500;
+			if(lineElement.kind == "column") newWidth = lineElement.width/2;
+			else newHeight = lineElement.width/2;
 		}
 		
 		if(lineElement.kind == "column") { 
@@ -1165,7 +1270,8 @@ var choosePresentationType = function(typeToChoose) {
 	serializeChoice(blockId, presentationType, presentationDetail, title, blockAttributeNames, blockAttributeValues);
 	
 	for(var j = 0; j < backgrounds.length; j++) {
-		backgrounds[j].attr("fill", "cornsilk");
+		if(backgrounds[j].attr("fill") != "grey") backgrounds[j].attr("fill", "cornsilk");
+		backgrounds[j].attr("fill-opacity", "1");
 	}
 	
 	this.animate({"fill": "#66f", "fill-opacity": .2},500);
@@ -1182,7 +1288,7 @@ var choosePresentationType = function(typeToChoose) {
 	}
 };
 
-function drawBlockChoice(containerId, presentationType, presentationDetail, isDetail) {
+function drawBlockChoice(containerId, presentationType, presentationDetail, isDetail, isSelected, isActive) {
 	
 	var thumbnail = Raphael(containerId, 80, 80);
 	var thBackground = thumbnail.rect(2,2, 76, 76);
@@ -1191,7 +1297,18 @@ function drawBlockChoice(containerId, presentationType, presentationDetail, isDe
 	
 	if(isDetail) thBackground.data("presentationDetail", presentationDetail); else thBackground.data("presentationDetail", "unknown");
 	
-	thBackground.click(choosePresentationType);
+	if(isActive) {
+		thBackground.click(choosePresentationType);
+		thBackground.attr("fill", "cornsilk");
+		
+		if(isSelected) {
+			thBackground.attr("fill", "#66f");
+			thBackground.attr("fill-opacity", ".2");
+		}
+		else thBackground.attr("fill", "cornsilk");
+	}
+	else thBackground.attr("fill", "grey");
+	
 	backgrounds.push(thBackground);
 	
 	if(presentationType == "pie") drawPie(thumbnail, presentationDetail, 2, 2, 76, 76);
@@ -1200,9 +1317,8 @@ function drawBlockChoice(containerId, presentationType, presentationDetail, isDe
 	else if (presentationType == "correlation") drawCorrelation(thumbnail, presentationDetail, 2, 2, 76, 76);
 	else if (presentationType == "column") drawColumn(thumbnail, presentationDetail, 2, 2, 76, 76);
 	else if (presentationType == "table") drawTable(thumbnail, presentationDetail, 2, 2, 76, 76);
-	else if (presentationType == "trendIndicator") drawIndicator(thumbnail, presentationDetail, 2, 2, 76, 76);
-	else if (presentationType == "statusIndicator") drawIndicator(thumbnail, presentationDetail, 2, 2, 76, 76);
-	else if (presentationType == "plain") drawPlain(thumbnail, presentationDetail, 2, 2, 76, 76);
+	else if (presentationType == "indicator") drawIndicator(thumbnail, presentationDetail, 2, 2, 76, 76);
+	else if (presentationType == "text") drawPlain(thumbnail, presentationDetail, 2, 2, 76, 76);
 }  
 
 function serializeChoice(blockId, presentationType, presentationDetail, title, attributeNames, attributeValues) {
@@ -1274,12 +1390,10 @@ function readBlockInformation() {
 }
 
 function saveAdditionalAttributes() {
-	
 	$(".blockAttributeInput").each(function(){
 		if($(this).parent().parent().attr("presentationType") == presentationType && $(this).parent().parent().attr("presentationDetail") == presentationDetail) {
 			var attrName = $(this).attr('inputFor');
 			var attrValue = $(this).val();
-			
 			for(i=0; i< blockAttributeNames.length; i++) if(blockAttributeNames[i] == attrName) blockAttributeValues[i] = attrValue;
 		}
 	});
@@ -1307,17 +1421,27 @@ function showScorecard() {
 	scorecardVertical = paper.path("M274,320L274,593"); 
 	var standardTextBackground = Raphael(810, 380, 60, 60);
 	scorecardStandardText = paper.text(178,456, blindText);  
-	drawPie(paper, "mirror", 275, 320, 200 ,273);
-	drawBar(paper, "plain", 82, 120, 380, 120);
+	showcasePie = drawPie(paper, "mirror", 275, 320, 200 ,273);
+	showcaseBar = drawBar(paper, "plain", 82, 120, 380, 120);
 	
+}
+
+function rgb(red, green, blue) {
+	return "rgb(" + red + ", " + green + ", " + blue + ")"
+}
+
+function dash(style) {
+	if(style == "solid") return "";
+	else if(style == "dotted") return ".";
+	else return "--";
 }
 
 function updateScorecard(id, value) {
 	if(id == "standardText") {
 		var l = value.split(";");
-		scorecardStandardText.attr('font', l[0]);
+		scorecardStandardText.attr('font-family', l[0]);
 		scorecardStandardText.attr('font-size', l[1]);
-		scorecardStandardText.attr('stroke', 'rgb(200,0,0)');
+		scorecardStandardText.attr('stroke', rgb(l[2], l[3], l[4]));
 	}
 	else if(id == "scorecard_style_margin") {
 		scorecardFrame.attr("x", 82 + value);
@@ -1325,21 +1449,14 @@ function updateScorecard(id, value) {
 		scorecardFrame.attr("width", 384 - 2 * value);
 		scorecardFrame.attr("height", 502 - 2 * value);
 	}
-	else if(id == "scorecard_style_padding") {
-		
-	}
 	else if(id == "scorecard_style_border_width") scorecardFrame.attr("stroke-width", value);
 	else if(id == "line_style_dash_style") {
-		var dashStyle;
-		if(value == "solid") dashStyle = "";
-		else if(value == "dotted") dashStyle = "."
-		else dashStyle = "--";
-		
-		scorecardHorizontal.attr("stroke-dasharray", dashStyle);
-		scorecardVertical.attr("stroke-dasharray", dashStyle);
+		scorecardHorizontal.attr("stroke-dasharray", dash(value));
+		scorecardVertical.attr("stroke-dasharray", dash(value));
 	}
 	else if(id == "scorecard_style_border_color") {
-		
+		var colors = value.split(";");
+		scorecardFrame.attr("stroke", rgb(colors[0], colors[1], colors[2]));
 	}
 	else if(id == "scorecard_style_title_position") {
 		var w = scorecardTitle.getBBox().width;
@@ -1347,38 +1464,27 @@ function updateScorecard(id, value) {
 		if(value == "left") scorecardTitle.attr("x", 82 + w/2);
 		else if(value ="right") scorecardTitle.attr("x", 82 + 384 - w);
 		else scorecardTitle.attr("x", 82 + 384/2 - w/2);
-		
 	}
+	else if(id == "scorecard_style_border_dash_style") scorecardFrame.attr("stroke-dasharray", dash(value));
+	else if(id == "scorecard_style_round_the_edge") scorecardFrame.attr("r", value);
+	else if(id == "scorecard_style_background") {
+		var colors = value.split(";");
+		background.attr("fill", rgb(colors[0], colors[1], colors[2]));
+	}
+	else if(id == "line_style_width") {
+		scorecardHorizontal.attr("stroke-width", value);
+		scorecardVertical.attr("stroke-width", value);
+	}
+	else if(id == "line_style_color") {
+		var colors = value.split(";");
+		scorecardHorizontal.attr("stroke", rgb(colors[0], colors[1], colors[2]));
+		scorecardVertical.attr("stroke", rgb(colors[0], colors[1], colors[2]));
+	}
+	
 	/*
-	
-
-	scorecard_style_border_dash_style
-	scorecard_style_round_the_edge
-	scorecard_style_background
-	scorecard_style_title_style'
-	
-	block_style_margin
-	block_style_padding
-	id='block_style_border_width' 
-	id='block_style_border_color' 
-	id='block_style_dash_style' 
-	id='block_style_round_the_edge' 
-	='block_style_background'
-	id='block_style_title_style' 
-	id='title_position'  
-		id='chart_style_axis_width' 
-	='chart_style_axis_color' 
-	chart_style_axis_dash_style'  
-	id='chart_style_grid_width' 
-	id='chart_style_grid_color'
-	id='chart_style_grid_dash_style' 
-	chart_style_chart_border_width' 
-	id='chart_style_chart_border_color'
-		'chart_style_chart_border_dash_style'
-	id ='chart_style_label_padding' 
-		id='chart_style_label_text' 
-			id='chart_style_axis_text' 
-    id='line_style_width' 
-    	id='line_style_color'
-	*/
+	 * The following attributes are not considered in the update function above: chart_style_axis_color, chart_style_axis_dash_style, chart_style_grid_width,
+	 * chart_style_grid_color, chart_style_grid_dash_style, chart_style_chart_border_width, chart_style_chart_border_color, chart_style_chart_border_dash_style,
+	 * chart_style_label_padding, chart_style_label_text, chart_style_axis_text, chart_style_axis_width, block_style_title_style, block_style_background, scorecard_style_padding
+	 * block_style_round_the_edge, scorecard_style_title_style, block_style_margin, block_style_padding
+	 */
 }

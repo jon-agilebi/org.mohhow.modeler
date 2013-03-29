@@ -169,8 +169,16 @@ class MeasureSnippet {
  def measures (xhtml: NodeSeq): NodeSeq = {
   def selectCatalogueStatus(status: String): JsCmd = {
 	SelectedStatus(status)
-	if(status == "all") SetHtml("catalogueTableRows", Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id)).map(createCatalogueItem).toSeq)
-	else SetHtml("catalogueTableRows", Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), By(Measure.status, status)).map(createCatalogueItem).toSeq)
+	if(status == "all") SetHtml("catalogueTableRows", Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), OrderBy(Measure.shortName, Ascending)).map(createCatalogueItem).toSeq)
+	else {
+		val setHtml = SetHtml("catalogueTableRows", Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), By(Measure.status, status), OrderBy(Measure.shortName, Ascending)).map(createCatalogueItem).toSeq)
+		
+		if(SelectedMeasure.is != null && SelectedMeasure.is.status != status) {
+			SelectedMeasure(null)
+			CmdPair(JsRaw("$('.message .protocolTable').empty();"), setHtml)
+		}
+		else  setHtml
+	}
   }
   
   def markSynonym(id: String) = {
@@ -184,15 +192,27 @@ class MeasureSnippet {
    if(SelectedMeasure.is != null) msrs.filter(_.id != SelectedMeasure.is.id).map(m => (m.id.toString, m.shortName.toString)).toList ::: List(("0", ""))
    else msrs.map(m => (m.id.toString, m.shortName.toString)).toList ::: List(("0", ""))
   }
+  
+  def catalogueRows() = {
+	 val msrs = if(SelectedStatus.is != null && SelectedStatus.is != "all") Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), By(Measure.status, SelectedStatus.is), OrderBy(Measure.shortName, Ascending))
+	 		    else Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), OrderBy(Measure.shortName, Ascending))
+	 
+	 msrs.map(createCatalogueItem).toSeq
+  }
 	
   val stati = List(("all", S.?("all")), ("candidate", S.?("candidate")), ("approved", S.?("approved")), ("synonym", S.?("synonym")), ("deprecated", S.?("deprecated")))
+  
+  val addButton = if(MyUtil.isDesigner()) ajaxButton(S.?("add"), addIt _) % ("class" -> "standardButton") else ajaxButton(S.?("add"), addIt _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val editButton = if(MyUtil.isDesigner()) ajaxButton(S.?("edit"), editIt _) % ("class" -> "standardButton") else ajaxButton(S.?("edit"), editIt _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val discardButton = if(MyUtil.isDesigner()) ajaxButton(S.?("discard"), discardIt _) % ("class" -> "standardButton") else ajaxButton(S.?("discard"), discardIt _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val synonymButton = if(MyUtil.isDesigner()) ajaxButton(S.?("markAsSynonym"), markAsSynonym _) % ("class" -> "standardButton") else ajaxButton(S.?("markAsSynonym"), markAsSynonym _) % ("class" -> "standardButton") % ("disabled" -> "")
 	
-  bind("catalogue", xhtml, "rows"    		  -> Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id)).map(createCatalogueItem).toSeq,
-						   "add"     		  -> ajaxButton(S.?("add"), addIt _) % ("class" -> "standardButton"),
-						   "edit"    		  -> ajaxButton(S.?("edit"), editIt _) % ("class" -> "standardButton"),
+  bind("catalogue", xhtml, "rows"    		  -> catalogueRows(),
+						   "add"     		  -> addButton,
+						   "edit"    		  -> editButton,
 						   "choice"  		  -> SHtml.ajaxSelect(stati, Full("all"), s => selectCatalogueStatus(s)),
-						   "discard"    	  -> ajaxButton(S.?("discard"), discardIt _) % ("class" -> "standardButton"),
-						   "markAsSynonym"    -> ajaxButton(S.?("markAsSynonym"), markAsSynonym _) % ("class" -> "standardButton"),
+						   "discard"    	  -> discardButton,
+						   "markAsSynonym"    -> synonymButton,
 						   "synonyms"  		  -> SHtml.ajaxSelect(synonyms(), Full("0"), id => markSynonym(id)) % ("id" -> "synonymList"),
 						   "definition" 	  -> createDetailBlock("definition"),
 						   "context" 		  -> createDetailBlock("context"),
@@ -271,7 +291,6 @@ class MeasureSnippet {
   }
   
   val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, SelectedMeasure.is.id)).map(v)
-  println("The ranges are " + ranges.toString)
   ranges.sort(gtRange)
  }
  
@@ -285,7 +304,6 @@ class MeasureSnippet {
     		case "rangeValue" => (item._1, item._2, Some(text.toDouble), item._4)
     		case "meaning" => (item._1, item._2, item._3, text)
 		}
-		
 	}
     
 	val newRange = (Ranges.is take index) ::: (updateItem(text, Ranges.is.apply(index), kind) :: (Ranges.is drop (index + 1)))
@@ -301,10 +319,10 @@ class MeasureSnippet {
    }
                                                           
   <tr>
-	<td>{lb(item, index, alsoEditLowerBound)}</td>
-    <td>{ajaxText(optD(item._2), text => updateRange(text, index, "upperBound"))}</td>
-    <td>{ajaxText(optD(item._3), text => updateRange(text, index, "rangeValue"))}</td>
-    <td>{ajaxText(item._4, text => updateRange(text, index, "meaning"))}</td>
+	<td width="10em">{lb(item, index, alsoEditLowerBound)}</td>
+    <td width="10em">{ajaxText(optD(item._2), text => updateRange(text, index, "upperBound"))}</td>
+    <td width="10em">{ajaxText(optD(item._3), text => updateRange(text, index, "rangeValue"))}</td>
+    <td width="10em">{ajaxText(item._4, text => updateRange(text, index, "meaning"))}</td>
   </tr>
  }
  
@@ -313,14 +331,19 @@ class MeasureSnippet {
 	  case head :: tail => tr(head, index, false) :: up(tail, index + 1)  
   }
   
+  Ranges(ranges)
+  
   if(ranges.size > 0) MyUtil.flattenNodeSeq(tr(ranges.head, 0, true) :: up(ranges.tail, 1))  else <nothing />	  
  }
  
  def addRange(): JsCmd = {
   def lb(r: List[(Option[Double], Option[Double], Option[Double], String)]) = if(r.isEmpty) None else r.sort(ltRange).apply(0)._2
   
-  Ranges(Ranges.is ::: List((lb(Ranges.is), None, None, "")))
-  SetHtml("measureRangeTableBody", editRange(Ranges.is))
+  if(!Ranges.is.isEmpty &&  Ranges.is.last._2 == None) Alert("no max value defined")
+  else {
+	  Ranges(Ranges.is ::: List((lb(Ranges.is), None, None, "")))
+	  SetHtml("measureRangeTableBody", editRange(Ranges.is)) 	  
+  }
  }
  
  def removeRange(): JsCmd = {

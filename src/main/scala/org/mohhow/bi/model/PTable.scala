@@ -122,7 +122,7 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
  	val addIt = SHtml.ajaxButton("+", add _) % new UnprefixedAttribute("class", "standardButton", Null) 
  	val removeAction =  SHtml.ajaxCall(JsRaw("$('.physicalEditRow.zebraHover').attr('rowID')"), deleteIt _)._2
  	val removeIt = <button>-</button>  % ("onclick" -> removeAction) % new UnprefixedAttribute("class", "standardButton", Null) 
- 	val chooseTableType = SHtml.ajaxSelect(MyUtil.tableTypes.map(t => (t, S.?(t))), Full(tableType) , tt => saveText(id, "tableType", tt))
+ 	val chooseTableType = SHtml.ajaxSelect(("", "") :: MyUtil.tableTypes.map(t => (t, S.?(t))), Full(tableType) , tt => saveText(id, "tableType", tt))
  	
  	<thead>
 		<tr>

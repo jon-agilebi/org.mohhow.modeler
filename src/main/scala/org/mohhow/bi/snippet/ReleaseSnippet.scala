@@ -26,6 +26,7 @@ import org.mohhow.bi.lib.BIService;
 import org.mohhow.bi.lib.ConnectionInformation;
 import org.mohhow.bi.lib.PDFUtility
 import org.mohhow.bi.lib.WikiParser
+import org.mohhow.bi.lib.{HTTPClientUtility => MyPost}
 import java.util.Date
 import org.mohhow.bi.util.{Utility => MyUtil}
 
@@ -36,6 +37,7 @@ import _root_.java.sql.{Connection, DriverManager}
 object SelectedRelease extends SessionVar[Release](null)
 object SelectedSystem extends SessionVar[String](null)
 object SelectedAlias extends SessionVar[String](null)
+object Token extends SessionVar[String](null)
 object ReleaseForDeployment extends SessionVar[Release](null)
 object TestDataNode extends SessionVar[Node](null)
 object TestDataModel extends SessionVar[List[(PTable, ModelVertex)]](Nil)
@@ -203,7 +205,7 @@ class ReleaseSnippet {
    if(refId > 0) {
 	   val attr = PAttribute.findAll(By(PAttribute.id, refId)).apply(0)
 	   val table = PTable.findAll(By(PTable.id, attr.fkPTable)).apply(0)
-	   " REFERENCES(" + table.name + "." + attr.name + ")" 
+	   " REFERENCES " + table.name + " (" + attr.name + ")" 
    }
    else ""
  }
@@ -223,7 +225,7 @@ class ReleaseSnippet {
   else {
 	  val constraintList = commaList(partsOfConstraint)
 	  
-	  "ALTER TABLE " + table.name + " ADD (CONSTRAINT " + prefix(isPrimaryConstraint) + table.name + keyword(isPrimaryConstraint) + constraintList + "));"
+	  "ALTER TABLE " + table.name + " ADD CONSTRAINT " + prefix(isPrimaryConstraint) + table.name + keyword(isPrimaryConstraint) + constraintList + ");"
   }
  }
   
@@ -285,7 +287,7 @@ class ReleaseSnippet {
  
  def createDDL(table: PTable, extraViewLayer: Boolean, stableViewLayer: Boolean, previousRelease: Option[Release]) = {
   
-  val attributeList = PAttribute.findAll(By(PAttribute.fkPTable, table.id), By(PAttribute.isCurrent, 1))
+  val attributeList = PAttribute.findAll(By(PAttribute.fkPTable, table.id), By(PAttribute.isCurrent, 1), OrderBy(PAttribute.id, Ascending))
   val rows = commaList(attributeList.map(createLine))
   val completeDDL = "CREATE TABLE " + table.name + "(" + rows + ");\n\n" + keyConstraint(table, true) + "\n\n" + keyConstraint(table, false)
   val commaAttributes = commaList(attributeList.map(_.name.toString))
@@ -326,29 +328,20 @@ class ReleaseSnippet {
   if(attrs.isEmpty) null else attrs(0)
  }
  
- def createSelects(bl: Node, isAccountModel: Boolean): Node = {
-  def findBlockType(presentationType: String): String = presentationType match {
-	  case "indicator" => "zero"
-	  case "table" => "grid"
-	  case "text" => "text"
-	  case "total" => "text"
-	  case _ => "one"
-  }
-  
-  def findMeasure(name: String): Option[Measure] = {
+ def findMeasure(name: String): Option[Measure] = {
    val msrs = Measure.findAll(By(Measure.shortName, name), By(Measure.fkScenario, SelectedScenario.is.id))
    if(msrs.isEmpty) None else Some(msrs.apply(0))
-  }
-  
-  def findMeasureIfExists(text: Option[String]): Option[Measure] = text match {
+ }
+ 
+ def findMeasureIfExists(text: Option[String]): Option[Measure] = text match {
 	  case None => None
 	  case Some(id) => {
 	 	val msrs = Measure.findAll(By(Measure.id, id.toLong))
 	 	if(msrs.isEmpty) None else Some(msrs(0))
 	  }
-  }
+ }
   
-  def niceMeasures(l : List[Option[Measure]]): List[Measure] = l match {
+ def niceMeasures(l : List[Option[Measure]]): List[Measure] = l match {
 	  case Nil => Nil
 	  case h :: tail => {
 	 	  h match {
@@ -356,44 +349,45 @@ class ReleaseSnippet {
 	 	 	  case _ => niceMeasures(tail)
 	 	  }
 	  }
-  }
+ }
   
-  def getRelevantMeasures(maybeMeasure: Option[Measure]): List[Measure] = maybeMeasure match {
+ def getRelevantMeasures(maybeMeasure: Option[Measure]): List[Measure] = maybeMeasure match {
 	  case None => Nil
 	  case Some(m) => {
 	 	  if(m.formula == null || m.formula.toString.length == 0) List(m)
 	 	  else {
+	 	 
 	 	 	  val pattern = """<m\d+>""".r
 	 	 	  val digits = """\d+""".r
 	 	 	  val candidates = (pattern findAllIn m.formula.toString).map(x => findMeasureIfExists(digits findFirstIn x))
 	 	 	  niceMeasures(candidates.toList)
 	 	  }
 	  }
-  }
+ }
+ 
+ def createSelects(bl: Node, isAccountModel: Boolean): Node = { 
   
-  def translateFilter(filterText: String): String = {
+  def translateFilter(filterText: String, content: List[(PAttribute, PTable)]): (String, List[(PAttribute, PTable)]) = {
    val genericPattern = """<[m|d]\d+>""".r
    val digits = """\d+""".r
    
    genericPattern findFirstIn filterText match {
-	   case None => filterText
-	   case Some(generic) => {
-	  	   
+	   case None => (filterText, content)
+	   case Some(generic) => { 
 	  	  digits findFirstIn generic match {
 	  	  	  	case Some(anId) => {
-	  	  	  		
-	  	  	  		val isAttribute = anId.substring(1,2) == "d"
+	  	  	  		val isAttribute = generic.substring(1,2) == "d"
 	  	  	  	  	findPhysics(anId.toLong, isAttribute) match {
-	  	  	  	  	  	  	   case (Some(field), Some(table)) => translateFilter(genericPattern replaceFirstIn(filterText, table + "." + field))
-	  	  	  	  	  	  	   case _ => filterText
+	  	  	  	  	  	  	   case (Some(field), Some(table)) => translateFilter(genericPattern replaceFirstIn(filterText, table.name + "." + field.name), (field, table) :: content)
+	  	  	  	  	  	  	   case _ => (filterText, content)
 	  	  	  	  	}
 	  	  	  	}
 	  	  	  	  	     
-	  	  	  	case _ => filterText  
+	  	  	  	case _ => (filterText, content)
 	  	  }
 	   }
 	     
-	   case _ => filterText    	   
+	   case _ => (filterText, content)    	   
    }
   }
   
@@ -418,11 +412,11 @@ class ReleaseSnippet {
   
   def setOrder(orderCode: String): String = orderCode match {
 	  case "0" => ""
-	  case "1" => "ASCENDING"
-	  case _ => "DESCENDING"
+	  case "1" => "ASC"
+	  case _ => "DESC"
   }
   
-  def sql(fact: Option[PTable], msrs: List[Measure], attrs: List[(ModelVertex, String)], filter: String): Node = {
+  def sql(fact: Option[PTable], msrs: List[Measure], attrs: List[(ModelVertex, String)], filter: (String, List[(PAttribute, PTable)])): Node = {
    def tName(t: Option[PTable]): String = t match {
 	   case None => ""
 	   case Some(pt) => pt.name.toString
@@ -449,13 +443,9 @@ class ReleaseSnippet {
    val augmentedAttrs = attrs.map(a => (a._1, findPhysics(a._1.id, true), a._2)).map(item => (anAttribute(item._2._1), tName(item._2._2), aName(item._2._1), item._3))
    val augmentedMsrs = msrs.map(m => (m, findPhysics(m.id, false))).map(item => (item._1, tName(item._2._2), aName(item._2._1)))
 	  
-   <select>
-		  {attrXML}
-		  {msrXML}
-		  <sql></sql>
-   </select>
+   <select>{attrXML}{msrXML}<sql>{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), filter)}</sql></select>
   }
-  //{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), filter)}</sql> 
+  
   def aMeasure(m: Option[Measure]): Measure = m match {
 	   case None => null
 	   case Some(msr) => msr
@@ -478,7 +468,7 @@ class ReleaseSnippet {
 		 				
 		 			val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, digits.toLong), OrderBy(MeasureRange.lowerBound, Ascending))
 		 			val rangeString = ("" /: ranges.map(mr => mr.lowerBound.toString + "_" + mr.upperBound.toString + "_" + m(mr, formula.startsWith("meaning")))) (_ + ";" + _)
-		 			formula.substring(1, formula.length - 1) + ", " + rangeString + ")"
+		 			formula.substring(0, formula.length - 1) + ", " + rangeString.substring(1) + ")"
 		 		}
 		 		else {
 		 			val msrs = Measure.findAll(By(Measure.id,digits.toLong))
@@ -491,33 +481,23 @@ class ReleaseSnippet {
   }
   
   val blockId = (bl \ "@blockId").text
-  val blockType = MyUtil.getSeqHeadText(bl \ "presentationType") 
-  val filter = translateFilter("""&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(bl \ "filter"), "<"), ">"))
+  val blockType = findBlockType(MyUtil.getSeqHeadText(bl \ "presentationType"))
+  val filter = translateFilter("""&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(bl \\ "filter"), "<"), ">"), Nil)
   val attrs = (bl \\ "attribute").map(a => (findAttribute(MyUtil.getSeqHeadText(a \ "name")), setOrder(MyUtil.getSeqHeadText(a \ "order")))).filter(_._1 != null)
   val msrs = (bl \\ "measure").map(m => findMeasure(MyUtil.getNodeText(m)))
   val relevantMeasures = List.flatten(msrs.toList.map(getRelevantMeasures)).toList
   val factTables = relevantMeasures.map(msr => findPhysics(msr.id, false)).map(_._2).distinct
   
   val attrXML = attrs.map(attr => <attribute><id>{attr._1.id.toString}</id><order>{attr._2}</order><emphasize></emphasize></attribute>).toSeq
-  val msrXML = relevantMeasures.map(msr => <measure><id>{msr.id.toString}</id><formula>{refineFormula(msr.formula.toString.trim)}</formula></measure>).toSeq
-  val sqlXML = factTables.map(fact => sql(fact, msrs.map(aMeasure).toList, attrs.toList, filter))
+  val msrXML = msrs.map(aMeasure).toList.map(msr => <measure><id>{msr.id.toString}</id><formula>{refineFormula(msr.formula.toString.trim)}</formula></measure>).toSeq
+  val sqlXML = factTables.map(fact => sql(fact, relevantMeasures, attrs.toList, filter))
   val grid = if(blockType == "grid") {
 	  val check = checkGrid(MyUtil.getSeqHeadText(bl \ "horizontalSpan"), MyUtil.getSeqHeadText(bl \ "verticalSpan"), attrs.map(_._1).toList)
 	  <grid><horizontalSpan>{check._2}</horizontalSpan><verticalSpan>{check._2}</verticalSpan></grid>
   }
   else NodeSeq.Empty
   
-  <block id={blockId}>
-		<blockType>{blockType}</blockType>
-        {grid}
-        <structure>
-			{attrXML}
-            {msrXML}
-        </structure>
-		<selects>
-            {sqlXML}
-		</selects>
-  </block> 
+  <block blockId={blockId}><blockType>{blockType}</blockType><structure>{attrXML}{msrXML}</structure><selects>{sqlXML}</selects>{grid}</block> 
  }
  
  def checkGrid(horizontalName: String, verticalName: String, attributes: List[ModelVertex]): (Boolean, String, String) = {
@@ -552,16 +532,52 @@ class ReleaseSnippet {
  }
  
  def displayGrid(errors: List[String]) = <ul style="list-style-position:inside">{errors.map(e => <li>{e}</li>).toSeq}</ul>
+ 
+ def findBlockType(presentationType: String): String = presentationType match {
+ 	case "indicator" => "zero"
+ 	case "table" => "grid"
+ 	case "text" => "text"
+	case _ => "one"
+ }
+ 
+ def adjustBlock(bl: Node) = {
+  
+  val blockTypeNode = (bl \\ "blockType").apply(0)
+  
+  val blockType = blockTypeNode match {
+	  case <blockType>{text}</blockType> => text
+	  case _ => "one"
+	  
+  }
+	  
+  val selects = if(blockType == "text") {
+	  val child = bl \\ "select"
+	  if(child.size > 0) child(0) else <select/>
+  }
+  else {
+	  val child = bl \\ "selects"
+	  if(child.size > 0) child(0) else <selects/>
+  }
+  
+  val structure = if(blockType == "text") <structure />
+  else if (blockType == "zero") <formula>{MyUtil.getSeqHeadText(bl \\ "formula")}</formula>
+  else {
+	  val child = bl \\ "structure"
+	  if(child.size > 0) child(0) else <structure/>
+  }
+  
+  <block><blockType>{blockType}</blockType>{structure}{selects}</block> % ("blockId" -> (bl \ "@blockId").text)
+ }
 
  def createMetadata(isAccountModel: Boolean) = {
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => MyUtil.getSeqHeadText(b \\ "presentationType") != null && MyUtil.getSeqHeadText(b \\ "presentationType").length > 0)
-  val frames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr").filter(fr => (fr \ "*").size > 0)
+  val frames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr")
 
   val metadata = <metadata>
 	  				<frames>{frames}</frames>
-  					<layout>{Setup.is \\ "layout"}</layout>
+  					{Setup.is \\ "layout"}
 	  				<blocks>{blocks}</blocks>
-	  				<backend>{blocks.map(bl => createSelects(bl, isAccountModel))}</backend>
+	  				<backend>{blocks.map(bl => createSelects(bl, isAccountModel)).map(adjustBlock)}</backend>
 	  		     </metadata>  % new UnprefixedAttribute("scenarioId", SelectedScenario.is.id.toString, Null)
   
   Repository.write("release", 0, null, "metadata", SelectedRelease.is.id, metadata)
@@ -570,7 +586,7 @@ class ReleaseSnippet {
  def documentAsXml() = {
   
   def meetingAsXml(m: Meeting) = {
-	def itemXml(item: ProtocolItem) = <item><number>{item.itemNumber.toString}</number><classification>{item.classification}</classification><text>{item.itemText}</text></item>
+	def itemXml(item: ProtocolItem) = <item><number>{item.itemNumber.toString}</number><classification>{S.?(item.classification)}</classification><text>{item.itemText}</text></item>
 	  
 	val minutes = Minutes.findAll(By(Minutes.fkMeeting, m.id), By(Minutes.status, "published"), OrderBy(Minutes.version, Descending))  
 	val minutesXml = if(minutes.isEmpty) <minutes /> 
@@ -790,10 +806,18 @@ class ReleaseSnippet {
  }
 
  def menu (xhtml: NodeSeq): NodeSeq = {
-  bind("menu", xhtml, "create"  -> ajaxButton(S.?("createNewRelease"), createNewRelease _) % ("class" -> "standardButton"),
-		              "announce" -> ajaxButton(S.?("announceReleaseFreeze"), announce _) % ("class" -> "standardButton"),
-		              "freeze" -> ajaxButton(S.?("freeze"), freeze _) % ("class" -> "standardButton"),
-		              "generate" -> ajaxButton(S.?("generate"), generateRelease _) % ("class" -> "standardButton"),
+	 
+  def empty(): JsCmd = Noop
+	 
+  val createButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("createNewRelease"), createNewRelease _) % ("class" -> "standardButton") else ajaxButton(S.?("createNewRelease"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val announceButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("announceReleaseFreeze"), announce _) % ("class" -> "standardButton") else ajaxButton(S.?("announceReleaseFreeze"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val freezeButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("freeze"), freeze _) % ("class" -> "standardButton") else ajaxButton(S.?("freeze"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val generateButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("generate"), generateRelease _) % ("class" -> "standardButton") else ajaxButton(S.?("generate"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+	 
+  bind("menu", xhtml, "create"  -> createButton,
+		              "announce" -> announceButton,
+		              "freeze" -> freezeButton,
+		              "generate" -> generateButton,
 		              "show" -> Release.findAll(By(Release.fkScenario, SelectedScenario.is.id)).map(createListItem),
 		              "showStatus" -> showStatus(),
 		              "artefacts" -> artefacts(),
@@ -819,15 +843,18 @@ class ReleaseSnippet {
   def deployedRelease(release: Node) = {
    val releaseId = (release \ "@releaseId").text.toLong
    val r = Release.findAll(By(Release.id, releaseId))
+   
    if(r.isEmpty) NodeSeq.Empty
    else {
+	   
+	   val sc = Scenario.findAll(By(Scenario.id, r(0).fkScenario))
 	   <li>
-	   	<span>{S.?("release") + " " + r(0).prettyNumber}</span><br />
+	   	<span>{S.?("release") + " " + r(0).prettyNumber + ", " + sc(0).name}</span><br />
 	   	<span>{S.?("dataStore") + " " + MyUtil.getNodeText(release)}</span>
 	   </li>
    }
   }
-  
+   
   def createEnvironmentDescription(ns: NodeSeq, environment: String) = {
    if(ns.isEmpty) NodeSeq.Empty
    else { 
@@ -872,24 +899,25 @@ class ReleaseSnippet {
  
  def createUserMetadata(specs: List[Specification], allMetadata: Node): (Node, String, String) = {
   def makeScorecardNode(spec: Specification, allMetadata: Node) = {
+	def kids(n: Node) = n match {
+		case <layout>{ ns @ _* }</layout> => NodeSeq.fromSeq(ns)
+		case _ => NodeSeq.Empty
+	}
 	  
-	  val layout = (allMetadata \\ "metadata").filter(m => (m \ "@scenarioId").text  == spec.fkScenario.toString).apply(0) \\ "scorecard" \ "*"
-	  val frames = (allMetadata \\ "frame").filter(fr => (fr \ "@scorecardId").text == spec.id.toString)
+	val layout = kids(((allMetadata \\ "metadata").filter(m => (m \ "@scenarioId").text  == spec.fkScenario.toString).apply(0) \ "layout").apply(0))
+	val frames = (allMetadata \\ "fr").filter(fr => (fr \ "@scorecardId").text == spec.id.toString)
 	
-	  <scorecard><title>{spec.name}</title>{layout}{frames}</scorecard> % new UnprefixedAttribute("id", spec.id.toString, Null)
-  }
-  
-  def makeBlockNodes(scenarioId: Long, blockIds: List[Long]) = {
-	  val blocks = Repository.read("scenario", scenarioId, "blocks", "blocks", -1) \\ "block" 
-	  blocks.filter(b => blockIds.exists(_ == (b \\ "@id").text.toLong)).toSeq
+	<scorecard><title>{spec.name}</title>{layout}{frames}</scorecard> % new UnprefixedAttribute("id", spec.id.toString, Null)
   }
   
   val scorecards = specs.map(sp => makeScorecardNode(sp, allMetadata)).toSeq
   val blockIds = specs.map(sp => Block.findAll(By(Block.fkSpecification, sp.id)).map(b => (sp.fkScenario.toLong, b.id.toLong)).toList).flatten.distinct
+ 
   val scenarioIds = blockIds.map(_._1).distinct
-  val blocks = scenarioIds.map(scId => makeBlockNodes(scId, blockIds.filter(_._1 == scId).map(_._2).toList)).toSeq
+  val removeStructure = "structure" #> NodeSeq.Empty
+  val blocks = (allMetadata \\ "blocks" \\ "block").filter(b => blockIds.exists(_._2 == (b \\ "@blockId").text.toLong)).map(removeStructure)
   
-  val root = <scorecards>{scorecards}{blocks}</scorecards>
+  val root = <scorecards>{scorecards}<blocks>{blocks}</blocks></scorecards>
   val checksum = root.hashCode.toString
   
   (root % new UnprefixedAttribute("checksum", checksum, Null), checksum, serializeBlockIds(blockIds.map(_._2).toList))
@@ -902,7 +930,7 @@ class ReleaseSnippet {
  
  def deploy(isInitial: Boolean): JsCmd = {
 	  
-	 if(ReleaseForDeployment.is != null & SelectedSystem.is != null) {
+	 if(ReleaseForDeployment.is != null & SelectedSystem.is != null & Token.is != null) {
 	 	  
 	 	  val nodes = (Repository.read("configuration", -1, "nodes", "nodes",0) \\ "node").filter(n => MyUtil.getSeqHeadText(n \\ "system") == SelectedSystem.is)
 	 	  val nodesWithReleases = nodes.map(n => (n, releasesOfNode(n), envOrder(MyUtil.getSeqHeadText(n \\ "environment")))).toList.sort(_._3 < _._3)
@@ -922,27 +950,24 @@ class ReleaseSnippet {
 	 else  Alert(S.?("noReleaseOrNoSystem"))
  }
  
- def dropTablesOfRelease(r: Release, n: Node, aliasName: String) = {
-  val tableNames = Repository.getArtefactList(r.id, List("sql"), false).map(fileName => fileName.substring(0, fileName.indexOf(".")))
-  val store = (n \\ "store").filter(st => MyUtil.getSeqHeadText(st \ "alias") == aliasName)
-  if(!store.isEmpty) tableNames.map(name => DB.use(BIService.storeMap(aliasName)._1) { conn => DB.exec(conn, "DROP TABLE " + name + ";") {rs => "success"}})
- }
- 
- def createTablesOfRelease(r: Release, n: Node, aliasName: String) = {
-  val fileNames = Repository.getArtefactList(r.id, List("sql"), false)
-  val store = (n \\ "store").filter(st => MyUtil.getSeqHeadText(st \ "alias") == aliasName)
-  if(!store.isEmpty) fileNames.map(name => DB.use(BIService.storeMap(aliasName)._1) { conn => DB.exec(conn, Repository.getArtefactAsString(r.id, name)) {rs => "success"}})
- }
- 
  def userGroups(specs: List[Specification]): List[(List[Specification], List[(Provider, String)])] = {
   def member(rtg: RoleToGroup): List[(Provider, String)] = {
 	if(rtg.fkProvider != null) {
 		val provider = Provider.findAll(By(Provider.id, rtg.fkProvider)).apply(0)
 		val conf = MyUtil.createConfiguration(provider)
-		val myLdap = new LDAPVendor
-		myLdap.configure(conf)
-		val dns = MyUtil.attr2List(myLdap.attributesFromDn(rtg.dn + "," + provider.base), provider.memberAttribute.toString, provider.displayAttribute.toString)
-		dns.map(item => (provider, item)).toList
+		
+		try {
+			val myLdap = new LDAPVendor
+			myLdap.configure(conf)
+			val dns = MyUtil.attr2List(myLdap.attributesFromDn(rtg.dn + "," + provider.base), provider.memberAttribute.toString, provider.displayAttribute.toString)
+			dns.map(item => (provider, item)).toList
+		}
+		catch{
+			case e: Exception => {
+				S.warning("During deployment unable to connect to LDAP directory " + provider.toString)
+				Nil
+			}
+		}
 	}
 	else {
 		val allUser = List.flatten(ScenarioRole.findAll(By(ScenarioRole.fkScenario, rtg.fkScenario)).map(sr => User.findAll(By(User.id, sr.fkUser))))
@@ -951,23 +976,17 @@ class ReleaseSnippet {
   }
   
   val withRoles = specs.map(sp => (sp, SpecificationToRole.findAll(By(SpecificationToRole.fkSpecification, sp.id)).map(_.getUserRole).toList))
+  println("withRoles " + withRoles.toString)
   val withGroups = withRoles.map(item => (item, List.flatten(item._2.map(ur => RoleToGroup.findAll(By(RoleToGroup.fkRole, ur.id))))))
+  println("withGroups " + withGroups)
   val withDns = withGroups.map(item => (item, List.flatten(item._2.map(member))))
+  println(" with dns " + withDns.toString)
   val specsDns = withDns.map(item => (item._1._1._1, item._2)).toList
   val allGuys = List.flatten(specsDns.map(_._2)).distinct
-  val guysAndSpecs = allGuys.map(guy => (guy, specsDns.filter(item => item._2 exists(_ == item)).map(_._1).distinct.sort(_.id < _.id)))
+  println("all Guys are " + allGuys.toString)
+  val guysAndSpecs = allGuys.map(guy => (guy, specsDns.filter(item => item._2 exists(_ == guy)).map(_._1).distinct.sort(_.id < _.id)))
   val allGroups = guysAndSpecs.map(_._2).distinct
   allGroups.map(gr => (gr, guysAndSpecs.filter(_._2 == gr).map(_._1).distinct.toList))
- }
- 
- def ajaxification(l: List[(String, Node)], counter: Int, total: Int, user: User): String = l match {
-	 case Nil => ""
-	 case List(last) => "$('#deploymentProgress').html('<span>" + S.?("deploymentComplete")+ "</span>');"
-	 case first :: second :: tail => {
-		 val message = "<span>" + counter.toString + " " + S.?("of") + " " + total.toString + " " + S.?("filesDeployed") + "</span>"
-		 val success = "function(resp){$('#deploymentProgress').html('" + message + "');" + ajaxification(second :: tail, counter + 1, total, user) + "}"
-		 "$.ajax({url: '" + first._1 + "', data: '" + first._2.toString + "',  username: '" +  user.email + "', password: '" + user.password + "', success:" + success + "});"
-	 }
  }
  
  def updateDeploymentOnNode(node: Node, oldRelease: Release, newRelease: Release, systemName: String): Node = {
@@ -984,6 +1003,9 @@ class ReleaseSnippet {
  
  def deployOnEnvironment(n: Node, targetRelease: Release, releasesSoFar: List[Release]): JsCmd = {
   def txt(node: Node, tag: String) = MyUtil.getSeqHeadText(node \\ tag)
+  def scId(node: Node): Long = (node \ "@scorecardId").text.toString.toLong
+  def metadata(rs: List[Release]): Node = <anything>{MyUtil.flattenNodeSeq(rs.map(r => Repository.getMetadataOfRelease(r.id) \\ "metadata").toList)}</anything>
+  def ddlAsNode(ddl: String): Node = (XML.loadString("<ddl>" + ddl + "</ddl>") \\ "ddl").apply(0)
 	 
   val releasesAfterDeployment = targetRelease :: releasesSoFar.filter(_.fkScenario != targetRelease.fkScenario)	 
   val deploymentItems = new ListBuffer[(String, String, String, Node)] // contains at the end all information for deployment service
@@ -994,72 +1016,104 @@ class ReleaseSnippet {
   
   if(stores.isEmpty) Alert(S.?("malformedStoreConfiguration"))
   else {
-	  val storeInformation = ("stores", stores(0).hashCode.toString, "generic", stores(0))
+	  val store = Utility.trim(stores(0))
+	  val storeInformation = ("stores", store.hashCode.toString, "generic", store)
 	  deploymentItems += storeInformation
-  }
-  
-  val allMetadata = <anything>{MyUtil.flattenNodeSeq(releasesAfterDeployment.map(r => Repository.getMetadataOfRelease(r.id) \\ "metadata").toList)}</anything>
-  val scorecardIds = (allMetadata \\ "fr").map(fr => (fr \ "@scorecardId").text.toLong).toList
-  
-  val specs = List.flatten(scorecardIds.map(id => Specification.findAll(By(Specification.id, id))))
-   	 	  
-  // create the metadata
-	 	 	  
-  val blocks = allMetadata \\ "backend" \ "block"
-  val blockXml = <blocks>{blocks}</blocks>
-  val blockInformation = ("blocks", blockXml.hashCode.toString, "generic", blockXml)
-  deploymentItems += blockInformation	
-  
-  val oldRelease = releasesSoFar.filter(r => r.fkScenario == targetRelease.fkScenario)
-  
-  if(!oldRelease.isEmpty) dropTablesOfRelease(oldRelease(0), n, SelectedAlias.is)
-  
-  createTablesOfRelease(targetRelease, n, SelectedAlias.is)
-  
-  val allUserGroups = userGroups(specs)
-  val indexedList = allUserGroups.indices zip allUserGroups
-  
-  val userItems = new ListBuffer[(String, String, String, String)] 
-  
-  for(index <- indexedList) {
-	  val userMetaData = createUserMetadata(index._2._1, allMetadata) 
-	  val fileName = "m" + index._1.toString
-	  val userGroupInformation = (fileName, userMetaData._2, "individual", userMetaData._1)
-	  deploymentItems += userGroupInformation
+   
+	  val allMetadata = metadata(releasesAfterDeployment)
+	  val scorecardIds = (allMetadata \\ "fr").map(scId).distinct.toList
 	  
-	  for(aUser <- index._2._2) {
-	 	  val aUserItem = (aUser._2, userMetaData._2, fileName, userMetaData._3)
-	 	  userItems += aUserItem
+	  val specs = List.flatten(scorecardIds.map(id => Specification.findAll(By(Specification.id, id))))
+	   	 	  
+	  // create the metadata
+	  
+	  val addSystem = "select *+" #> <system>{SelectedAlias.is}</system>	 	 	  
+	  val blocks = (allMetadata \\ "backend" \ "block").map(addSystem)
+	  val blockXml = Utility.trim(<blocks>{blocks}</blocks>)
+	  val blockInformation = ("blocks", blockXml.hashCode.toString, "generic", blockXml)
+	  deploymentItems += blockInformation	
+	  
+	  val oldRelease = releasesSoFar.filter(r => r.fkScenario == targetRelease.fkScenario)
+	  val allUserGroups = userGroups(specs)
+	  println("specs is " + specs.toString)
+	  println("allUserGroups is " + allUserGroups.toString)
+	  
+	  val indexedList = allUserGroups.indices zip allUserGroups
+	  
+	  val userItems = new ListBuffer[(String, String, String, String)] 
+	  
+	  for(index <- indexedList) {
+		  val userMetaData = createUserMetadata(index._2._1, allMetadata) 
+		  val fileName = "m" + index._1.toString
+		  val node = Utility.trim(userMetaData._1)
+		  val userHash = node.hashCode.toString
+		  val userGroupInformation = (fileName, userHash, "individual", node)
+		 
+		  deploymentItems += userGroupInformation
+		  
+		  for(aUser <- index._2._2) {
+		 	  val aUserItem = (aUser._2, userMetaData._2, fileName, userMetaData._3)
+		 	  userItems += aUserItem
+		  }
 	  }
+	  
+	  val userNode = Utility.trim(<node>{userItems.map(item => userRow(item._1, item._2, item._3, item._4))}</node>)
+	  val userItem = ("user", userNode.hashCode.toString, "generic", userNode)
+	  
+	  deploymentItems += userItem
+	  
+	  // serialize the information in deployment items
+	  
+	  val deploymentInformation = <items><token>{Token.is}</token>{deploymentItems.map(item => <item><name>{item._1}</name><checksum>{item._2}</checksum></item>)}</items>
+	  
+	  // prepare the ajax requests 
+	  
+	  val url = "http://" + MyUtil.getSeqHeadText(n \\ "host") + ":" + MyUtil.getSeqHeadText(n \\ "port")
+	  
+	  val user = User.currentUser openOr null
+	  val configurationCommand = "$.ajaxSetup({type: 'POST', dataType: 'xml', contentType: 'text/xml', username: '" +  user.email + "', password: '" + user.password + "'});"
+	  
+	  // prepare the ddl commands for transformation
+	   
+	  val ddlNames = Repository.getArtefactList(targetRelease.id, List("sql"), false)
+	  val ddls = ddlNames.map(name => (name, ddlAsNode(Repository.getArtefactAsString(targetRelease.id, name))))
+	  
+	  // Post at first the start request
+	  
+	  val startStatus = MyPost.post(url + "/deployment/start", deploymentInformation, user)
+	  
+	  if(startStatus == "deploying"){
+	 	  
+	 	  // when successfull post ddls
+	 	  
+	 	  val ddlStati = ddls.map(ddl => MyPost.post(url + "/deployment/ddl/" + ddl._1.substring(0, ddl._1.length - 4) + "/" + SelectedAlias.is, ddl._2, user)).toList
+	 	  
+	 	  if(ddlStati.filter(_ == "badDDL").isEmpty) {
+	 	 	  
+	 	 	  // when successfull post deployment files
+	 	 	  
+	 	 	  val transferStati = deploymentItems.map(item => MyPost.post(url + "/deployment/transfer/" + item._3 + "/" +  item._1 + ".xml", item._4, user)).toList
+	 	 	  
+	 	 	  if(!transferStati.filter(_ == "deployed").isEmpty) {
+	 	 	 	  
+	 	 	 	  // node transformation
+	  
+				  val allNodes = Repository.read("configuration", -1, "nodes", "nodes",0).map(Utility.trim) \\ "node"
+				  val old = if(!oldRelease.isEmpty) oldRelease(0) else null
+				  val transformedNodes = <nodes>{ allNodes.map(item => replaceNodes(item, n, old, targetRelease, SelectedAlias.is))}</nodes>
+				  
+				  Repository.write("configuration", -1, "nodes", "nodes", 0, transformedNodes)
+				  Nodes(transformedNodes) 
+	 	 	 	  Alert(S.?("deploymentSuccessfull"))
+	 	 	 	  
+	 	 	  }else Alert(S.?("badTransfer"))
+	 	 	  
+	 	  }
+	 	  else Alert(S.?("badDDL"))
+	 	  
+	  }
+	  else Alert(S.?(startStatus))
   }
-  
-  val userNode = <node>{userItems.map(item => userRow(item._1, item._2, item._3, item._4))}</node>
-  val userItem = ("user", userNode.hashCode.toString, "individual", userNode)
-  deploymentItems += userItem
-  
-  // serialize the information in deployment items
-  
-  val deploymentInformation = <items>{deploymentItems.map(item => <item><name>{item._1}</name><checksum>{item._2}</checksum></item>)}</items>
-  
-  // prepare the ajax requests 
-  
-  val url = "http://" + MyUtil.getSeqHeadText(n \\ "host") + ":" + MyUtil.getSeqHeadText(n \\ "port")
-  val user = User.currentUser openOr null
-  val configurationCommand = "$.ajaxSetup({type: 'POST', dataType: 'xml', contentType: 'text/xml', username: '" +  user.email + "', password: '" + user.password + "'});"
-  
-  val requestInformation = (url + "/deployment/start.xml", deploymentInformation) :: deploymentItems.map(item => (url + "/deployment/transfer/" + item._3 + "/" +  item._1 + ".xml", item._4)).toList
-  val cmd = configurationCommand + ajaxification(requestInformation, 0, requestInformation.size, user)
-  
-  // node transformation
-  
-  val allNodes = Repository.read("configuration", -1, "nodes", "nodes",0).map(Utility.trim) \\ "node"
-  val old = if(!oldRelease.isEmpty) oldRelease(0) else null
-  val transformedNodes = <nodes>{ allNodes.map(item => replaceNodes(item, n, old, targetRelease, SelectedAlias.is))}</nodes>
-  
-  Repository.write("configuration", -1, "nodes", "nodes", 0, transformedNodes)
-  Nodes(transformedNodes)
-  println(cmd)
-  JsRaw(cmd)
  }
  
  def allSystems(): NodeSeq = {
@@ -1124,7 +1178,7 @@ class ReleaseSnippet {
   if(refs.isEmpty) 0 else 1 + refs.map(r => hierarchyNumber(getReference(r.id))).max
  }
  
- def sortTable(t: PTable): Int = if(t.tableType == "level") hierarchyNumber(t) else if(t.tableType == "dimension") 1000 else 2000
+ def sortTable(t: PTable): Int = if(t.tableType == "level") hierarchyNumber(t) else if(t.tableType == "dimension" || t.tableType == "dateDimension") 1000 else 2000
  
  def createTestData(): JsCmd = {
   if(SelectedSystem.is != null) {
@@ -1161,7 +1215,7 @@ class ReleaseSnippet {
 	  <label><b>{S.?("growthPerLoad")}: </b></label><span>{growth}</span><br />
   }
   
-  val model = TestDataModel.is.partition(tm => tm._1.tableType == "dimension" || tm._1.tableType == "level" || tm._1.tableType == "timeDimension" || tm._1.tableType == "accountDimension")
+  val model = TestDataModel.is.partition(tm => tm._1.tableType == "dimension" || tm._1.tableType == "level" || tm._1.tableType == "dateDimension" || tm._1.tableType == "accountDimension")
 
   <div class="message">
    	<p class="messageTitle">{S.?("sizeEstimation")}</p>
@@ -1178,12 +1232,20 @@ class ReleaseSnippet {
   
   def makeInitialDeployment() = deploy(true)
   def transport() = deploy(false)
+  
+  // The token is required to authorize the deployment on a node
+  
+  def setToken(text: String): JsCmd = {
+	  Token(text)
+	  Noop
+  }
 
   bind("deployment", xhtml, "releases" -> allReleases(),
 		                    "deploy" -> ajaxButton(S.?("deploy"), makeInitialDeployment _) % ("class" -> "standardButton"),
 		                    "transport" -> ajaxButton(S.?("transport"), transport _) % ("class" -> "standardButton"),
 		                    "createTestData" -> ajaxButton(S.?("createTestData"), createTestData _) % ("class" -> "standardButton"),
 		                    "systems" -> allSystems(),
-		                    "estimation" -> estimate())
+		                    "estimation" -> estimate(),
+		                    "token" -> SHtml.ajaxText("", text => setToken(text)))
   }
 }

@@ -35,7 +35,7 @@ class LayoutSnippet {
   val transformedSetup = transform(Setup.is).apply(0)
   Repository.write("scenario", SelectedScenario.is.id, "setup","setup", -1, transformedSetup)
   Setup(transformedSetup)
-  JsRaw("updateScorecard('" + id + "', '" + text + "')")
+  JsRaw("updateScorecard('" + id + "', '" + text + "');")
  }
  
  def selectPart(id: String, startIndex: Int, stopIndex:Int, value: String, path:List[String]): JsCmd = {
@@ -163,15 +163,23 @@ class LayoutSnippet {
  }
  
  def display(): NodeSeq = {
-  def updateCommand(n: Node): JsCmd = JsRaw("updateScorecard('" + (n \ "@id").text + "', '" + getValue((n \ "@path").text.split(";").toList) + "');")
-  def glueCommands(l: JsCmd, r: JsCmd): JsCmd = CmdPair(l, r)
-  def initialCmd(): JsCmd = JsRaw("showScorecard();")
+  def updateCommand(n: Node): String = {
+   val text = MyUtil.getSeqHeadText(n)
+   if(text != null && text.length > 0) "updateScorecard('" + (n \ "@id").text + "', '" + text + "');" else ""
+  }
+  def initialCmd(): String = "showScorecard();"
+ 
+  def allUpdates(n: Node): String = {
+   val idText = (n \ "@id").text
+   if(idText != null && idText.length > 0) updateCommand(n)
+   else ("" /: n.child.map(updateCommand).toList) (_ + _)  
+  }
   
   prepareLayout()
-  val updateTemplate = Layout.is.child.filter(n => (n \ "@isGroup") == null || (n \ "@isGroup").text != "y")
-  val cmds = updateTemplate.map(updateCommand)
-  val bigCommand = (initialCmd() /: cmds) (glueCommands(_,_))
-  Script(bigCommand)
+  val updateTemplate = (Setup.is \\ "layout").apply(0).child
+  val cmds = updateTemplate.map(allUpdates)
+  val bigCommand = (initialCmd() /: cmds) (_ + _)
+  Script(JsRaw(bigCommand))
  }
  
  def design (xhtml: NodeSeq): NodeSeq = {

@@ -5,7 +5,7 @@
 }
 
 body{
- font-family:"Lucida Grande", "Lucida Sans Unicode", Verdana, Arial, Helvetica, sans-serif;
+ font-family: Verdana, Arial, Helvetica, sans-serif;
  font-size:12px;
 }
 
@@ -284,16 +284,6 @@ body{
  border:1px solid #D9DDDE; 
 }
 
-.insideTopLeftBroadContent {
- position:absolute; 
- top:60px; 
- left:180px; 
- width:812px; 
- height:420px;
- padding: 2px;
- border:1px solid #D9DDDE; 
-}
-
 .insideTopMiddleContent {
  position:absolute; 
  top:60px; 
@@ -312,6 +302,7 @@ body{
  height:420px;
  padding: 2px;
  border:1px solid #D9DDDE; 
+ overflow:auto;
 }
 
 .insideBottomLeftContent {
@@ -345,11 +336,8 @@ body{
  background-color: #bbbbbb;
 }
 
-.standardTable table { 
- position:relative
- background-color:blue;
- border:thin solid red; 
- border-spacing:10px;
+.singleSelection td {
+ padding: 2px;
 }
 
 .protocolTable { 
@@ -391,7 +379,6 @@ body{
  padding:4px;
 } 
 
-
 .zebra { 
  background-color: #dddddd;
  color: #666666;
@@ -431,6 +418,15 @@ input[type="button"], input[type="submit"] {
  background: url('../images/button_bg_1.gif') repeat-x;
  font-size:10px;
  color: #AE0000;
+}
+
+.standardButton:disabled {
+ padding:0;
+ margin:0;
+ border:1px solid #D9DDDE; 
+ background: url('../images/button_bg_1.gif') repeat-x;
+ font-size:10px;
+ color: #AAAAAA;
 }
 
 .standardButton {
@@ -539,7 +535,7 @@ input[type="button"], input[type="submit"] {
 
 .modalMessage div {
  width:400px;
- height: 400px
+ height: 400px;
  padding:5px;
  margin: 5px;
 }
@@ -550,11 +546,11 @@ input[type="button"], input[type="submit"] {
 }
 
 #releasePlanData plan {
-	color: #FFFFFF;
+ color: #FFFFFF;
 }
 
 #burndownData, #logicalModel  {
-	color: #FFFFFF;
+ color: #FFFFFF;
 }
 
 .editProtocolItem textarea {
@@ -562,5 +558,9 @@ input[type="button"], input[type="submit"] {
 }
 
 .message ul {
- liststyle: outside;
+ list-style-position:inside;
+}
+
+.message ol {
+ list-style-position:inside;
 }

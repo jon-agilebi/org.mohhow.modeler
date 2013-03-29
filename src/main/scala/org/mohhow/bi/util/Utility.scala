@@ -12,6 +12,8 @@ import java.util.Date
 import java.text.ParsePosition
 import scala.xml._
 import org.mohhow.model._
+import org.mohhow.snippet._
+import org.mohhow.bi.lib.Repository
 
 object Utility {
 	
@@ -136,6 +138,8 @@ object Utility {
   if(begin > end) 0 else intervall(begin, end, 1)
  }
  
+ def allDays(start: Long, end: Long, soFar: List[Long]): List[Long] = if(start < end) allDays(succDate(start), end, start :: soFar) else soFar.reverse
+ 
  def month(dateAsNumber: Int) = dateAsNumber/100 % 100 
  def year(dateAsNumber: Int) = dateAsNumber/10000
 
@@ -155,7 +159,8 @@ object Utility {
   val y = if(mo < 3) (theYear - 1) % 100 else theYear % 100 
   val c = if(theYear % 400 == 0) (theYear - 100)/100 else theYear / 100 
   
-  (d + Math.floor(2.6 * m - 0.2) + y + Math.floor(y.toLong/4) + Math.floor(c.toLong/4) - 2 * c) % 7 
+  val result = (d + Math.floor(2.6 * m - 0.2) + y + Math.floor(y.toLong/4) + Math.floor(c.toLong/4) - 2 * c) % 7 
+  if(result == 0) 7 else result
 }
 
 def dayInYear(dateAsNumber: Int) = { 
@@ -191,7 +196,7 @@ def weekInYear(dateAsNumber: Int) = {
 def timeInSql(timePattern: String, toDatePattern:  String): String = {
 	
 	val today = new Date
-	
+	println("aglhagldackl")
 	timePattern match {
 		case "?today?" =>  toDatePattern.replace("?1", formatDate(today, S.?("dateFormat"))).replaceAll("?2", S.?("dateFormat")) 
 		case "?tomorrow?" =>  toDatePattern.replaceAll("?1", formatDate(dateFromNumber(succDate(dateAsNumber(today))), S.?("dateFormat"))).replaceAll("?2", S.?("dateFormat"))
@@ -249,7 +254,7 @@ def timeInSql(timePattern: String, toDatePattern:  String): String = {
 	case head :: tail => (head /:  tail) (_ + separator + _)
  }
  
- def csv(matrix: List[List[String]]): String =  ("" /: matrix.map(row => makeSeparatedList(row, ";"))) (_ + "\n" + _)
+ def csv(matrix: List[List[String]]): String =  (("" /: matrix.map(row => makeSeparatedList(row, ";"))) (_ + "\n" + _)).trim
  
  val tableTypes = List("dimension", "dateDimension", "measureDimension", "level", "fact", "snapshotFact", "transactionFact", "accountFact", "accountSnapshotFact", "accountTransactionFact")
 	
@@ -270,6 +275,7 @@ def timeInSql(timePattern: String, toDatePattern:  String): String = {
  }
  
  def attr2List(attrs: javax.naming.directory.Attributes, memberAttribute: String, displayAttribute: String): List[String] = {
+   println(attrs.toString)
    val iterator = attrs.getIDs()
    getDisplayList(attrs.get(memberAttribute).toString, displayAttribute)
   }
@@ -290,6 +296,8 @@ def timeInSql(timePattern: String, toDatePattern:  String): String = {
    val l = attr.split(",").toList.map(_.trim).filter(_.startsWith(displayAttribute)).map(rOfEqual)
    if(l.isEmpty) attr else l(0)
   }
+  
+  // end LDAP utilities
   
   def prettyTerm(text: String, isFilter: Boolean): String = {
    if(text== null || text.length == 0) text
@@ -335,4 +343,17 @@ def timeInSql(timePattern: String, toDatePattern:  String): String = {
    val db = dbs.filter(n => getSeqHeadText(n \ "alias") == alias)
    if(db.isEmpty) "" else getSeqHeadText(db(0) \ kind)
   }
+  
+  def isOwner() = User.loggedIn_? && (User.currentUser == ScenarioOwner.is)
+  def isAnalyst() = isOwner() || (User.loggedIn_? && Analysts.is.contains(User.currentUser openOr null))
+  def isDesigner() = isOwner() || (User.loggedIn_? && Designer.is.contains(User.currentUser openOr null))
+  def isReleaseManager() = isOwner() || (User.loggedIn_? && ReleaseManager.is.contains(User.currentUser openOr null))
+  
+ def createFrame(scorecardId: Long) = {
+  val portrait = <fr orientation="portrait"></fr> % new UnprefixedAttribute("scorecardId", scorecardId.toString, Null)
+  val landscape = <fr orientation="landscape"></fr> % new UnprefixedAttribute("scorecardId", scorecardId.toString, Null)
+  val otherFrames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr").toList
+  Repository.write("scenario", SelectedScenario.is.id, "frames", "frames", -1, <frames>{flattenNodeSeq(portrait :: landscape :: otherFrames)}</frames>)
+ }
+  
 }

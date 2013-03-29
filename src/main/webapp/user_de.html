@@ -21,12 +21,12 @@
 			    		}
 					});
 			    	
-					$('.emphasizable').click(function() {
+					$('.emphasizable').live('click', function() {
 					  	$('.emphasizable').removeClass('emphasized');
 						$(this).addClass('emphasized');	
 					});
 					$('#userSpecTree ul').hide();
-					$('.handle').click(function(){
+					$('.handle').live('click', function(){
 						$(this).toggleClass('closed opened').nextAll('ul').toggle();
 					});
 				}); 

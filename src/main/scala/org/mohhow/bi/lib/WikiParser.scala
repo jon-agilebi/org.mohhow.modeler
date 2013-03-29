@@ -129,29 +129,11 @@ object WikiParser {
  def substituteMeasure(text: String, vals:List[BigDecimal]): String = vals match {
 	 case Nil => text
 	 case someValue :: tailVals => {
-		 val substitutedText = """m\d+""".r replaceFirstIn(text, someValue.toString)
+		 val substitutedText = """<m\d+>""".r replaceFirstIn(text, someValue.toString)
 		 substituteMeasure(substitutedText, tailVals)
 	 }
  }
- /*
- def findRange(m: Measure, value: BigDecimal): Option[MeasureRange] = {
-  None	 
-   
-  val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, m.id), OrderBy(MeasureRange.lowerBound, Ascending))
-  val aRange = ranges.map(range => (range, range.lowerBound <= value && range.upperBound.toDouble > value.toDouble)).filter(_._2)
-  if(aRange.isEmpty) None else Some(aRange(0)) 	 
- }
  
- def meaning(measureId: String, value: BigDecimal, isMeaning: Boolean) = {
-  val msrs = Measure.findAll(By(Measure.id, measureId.toLong))
-  if(msrs.isEmpty) "" else {
-	 findRange(msrs(0), value) match {
-		 case Some(r) => if(isMeaning) r.meaning else r.rangeValue.toString
-		 case _ => ""
-	 }
-  }
- }
- */
  def plain(measureId: String, value: BigDecimal, isMeaning: Boolean) = {
   val msrs = Measure.findAll(By(Measure.id, measureId.toLong))
   if(msrs.isEmpty) "" else value.toString + " " + msrs(0).unit
@@ -160,9 +142,19 @@ object WikiParser {
  def evaluateTerm(text: String, vals: List[BigDecimal]): Option[BigDecimal] = {
   val parser = new Term
   val evaluatedText = substituteMeasure(text, vals)
-  parser.parseAll(parser.evalTerm, evaluatedText) match {
+  parser.parseAll(parser.evalExpr, evaluatedText) match {
 	  case parser.Success(result, _) => Some(result) 
 	  case parser.NoSuccess(msg, next) => None
+  }
+ }
+ 
+ def evaluateIndicator(text: String, vals: List[BigDecimal]): String = {
+  val parser = new Term
+  val evaluatedText = substituteMeasure(text, vals)
+
+  parser.parseAll(parser.evalIndicator, evaluatedText) match {
+	  case parser.Success(result, _) => result 
+	  case parser.NoSuccess(msg, next) => "1"
   }
  }
  
@@ -280,14 +272,14 @@ class Term extends JavaTokenParsers {
  }
  
  def meaning: Parser[Any] = "meaning("~measureDim~")"^^{ case "meaning("~m~")" => "<mi>meaning</mi><mfenced>" + m +  "</mfenced>"}
- def valueList: Parser[String] = """[\w,\_]+""".r
- def evalMeaning: Parser[Any] = "meaning("~evalNumber~","~valueList~")"^^{ case "meaning("~evalNumber~","~list~")" => meanIt(evalNumber, list)}
+ def valueList: Parser[String] = """[\d,\_,;,\.,-]+""".r
+ def evalMeaning: Parser[String] = "meaning("~evalNumber~","~valueList~")"^^{ case "meaning("~evalNumber~","~list~")" => meanIt(evalNumber, list)}
   
  def range: Parser[Any] = "range("~measureDim~")"^^{ case "range("~m~")" => "<mi>range</mi><mfenced>" + m +  "</mfenced>"}
- // There is no evalRange since 'range' will be translated to 'evalMeaning' 
+ def evalRange: Parser[String] = "range("~evalNumber~","~valueList~")"^^{ case "range("~evalNumber~","~list~")" => meanIt(evalNumber, list)}
  
  def plain: Parser[Any] = "plain("~measureDim~")"^^{ case "plain("~m~")" => "<mi>plain</mi><mfenced>" + m +  "</mfenced>"}
- def evalPlain: Parser[Any] = "plain("~measureDim~","~valueList~")"^^{ case "plain("~evalNumber~","~unit~")" => evalNumber.toString + " " + unit.toString}
+ def evalPlain: Parser[String] = "plain("~measureDim~","~valueList~")"^^{ case "plain("~evalNumber~","~unit~")" => evalNumber.toString + " " + unit.toString}
 
  def rnd: Parser[Any] = "rnd("~number~","~number~";"~repsep(naturalNumber~","~number,",")~")"^^{ case "rnd("~min~","~max~";"~appendix~")" => "<mi>rnd</mi><mfenced>" + min + max + ";" + "..." + "</mfenced>"}
 	
@@ -333,11 +325,18 @@ class Term extends JavaTokenParsers {
   case t1 => t1
  }
  
+ def plus(x: BigDecimal, y: BigDecimal) = x.add(y)
+ 
+ def evalExpr: Parser[BigDecimal] = evalTerm~rep("+"~evalTerm | "-"~evalTerm)^^{
+	 case t1~t2 => t1.add((new BigDecimal("0") /: t2.map(evalPart)) (plus))
+ }
+ 
  def aggregate: Parser[Any] = ("sum"|"min"|"max"|"avg")~"("~expr~")"^^{
   case op~"("~expr~")" => "<mo>" + op + "</mo><mo>(</mo>" + expr +  "<mo>)</mo>"
  }
  
  def measureTerm = expr | aggregate | meaning | range | plain | rnd
+ def evalIndicator = evalPlain | evalRange | evalMeaning
  
  val RightTermPattern = """(\()([+,\-,/,*])(~)([^\)]+)(\))""".r
  

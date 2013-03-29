@@ -12,32 +12,34 @@
 		</script>
 	</head>
 	<lift:RoleSnippet.inScenario>
-		<div class="upper_right">
-	        <h1>Physikalisches Datenmodell</h1>
-	        <lift:PhysicalModelSnippet.work>
-	            <div class="menuBar">
-					<physical:add />
-					<physical:derive />
-					<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
-				</div>
-	        </lift:PhysicalModelSnippet.work>
-	    </div>
-		<div class="rightContent">
-			<lift:PhysicalModelSnippet.work>
-				<div class="smallContent">
-					<ul id="physical_table_overview" >
-						<physical:overview />
-					</ul>
-				</div>
-				<div>
-			  		<table class="singleSelection" id="physicalTable" currentSelection="-1" mode="edit">
-						<physical:header />
-						<tbody id="physicalRows">
-							<physical:rows />
-						</tbody>
-					</table>
-				</div> 
-			</lift:PhysicalModelSnippet.work>
-		</div>
+		<lift:RoleSnippet.inPhysics>
+			<div class="upper_right">
+		        <h1>Physikalisches Datenmodell</h1>
+		        <lift:PhysicalModelSnippet.work>
+		            <div class="menuBar">
+						<physical:add />
+						<physical:derive />
+						<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+					</div>
+		        </lift:PhysicalModelSnippet.work>
+		    </div>
+			<div class="rightContent">
+				<lift:PhysicalModelSnippet.work>
+					<div class="smallContent">
+						<ul id="physical_table_overview" >
+							<physical:overview />
+						</ul>
+					</div>
+					<div>
+				  		<table class="singleSelection" id="physicalTable" currentSelection="-1" mode="edit">
+							<physical:header />
+							<tbody id="physicalRows">
+								<physical:rows />
+							</tbody>
+						</table>
+					</div> 
+				</lift:PhysicalModelSnippet.work>
+			</div>
+		</lift:RoleSnippet.inPhysics>
 	</lift:RoleSnippet.inScenario>
 </lift:surround>

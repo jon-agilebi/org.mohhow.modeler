@@ -22,20 +22,22 @@
 	</head>
 	<lift:RoleSnippet.inScenario>
 		<div class="upper_right">
-			<h1>Scenario Setup</h1>
+			<h1>Scenario Configuration</h1>
 			<div class="menuBar">
 				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
 			</div>
 		</div> 
 		<div class="rightContent">
 			<div class="quarterContent">
-				<h3>Setup</h3><br />
+				<h3>Settings</h3><br />
 				<ul>
 					<li class="listItem choiceSetup" group="vision">Vision</li>
 					<li class="listItem choiceSetup" group="roles">Roles</li>
-					<li class="listItem choiceSetup" group="scenarioConfiguration">Scenario Configuration</li>
+					<li class="listItem choiceSetup" group="scenarioConfiguration">Scenario Usage</li>
 					<li class="listItem choiceSetup" group="units">Units</li>
-					<li class="listItem choiceSetup" group="design">Design Guidelines</li>
+					<lift:RoleSnippet.inAsDesigner>
+						<li class="listItem choiceSetup" group="design">Design Guidelines</li>
+					</lift:RoleSnippet.inAsDesigner>
 				</ul>
 			</div>
 			<div class="threeQuarterContent pivot" group="vision">
@@ -58,38 +60,31 @@
 	            </lift:ScenarioSnippet.visionSetup>
 			</div>
 			<div class="threeQuarterContent pivot" group="scenarioConfiguration">
-				<h3>Scenario Configuration</h3>
+				<h3>Scenario Usage</h3>
 				<br />
 				<table class="protocolTable">
 					<col width="40%" text-align="left"/>
 					<col width="10%" text-align="center"/>
 			 		<col width="25%" text-align="left"/>
 			 		<col width="25%" text-align="left"/>
-			 		<thead style="background-color: #dddddd">
-	                    <td><b>Part of Scenario</b></td>
-	                    <td><b>is used</b></td>
-	                    <td><b>like in</b></td>
+			 		<thead  style="background-color: #dddddd">
+	                    <td><b>Is Part of Scenario</b></td>
+	                    <td><b>used</b></td>
+	                    <td><b>as in</b></td>
 	                    <td><b>as</b></td>
-	                	</thead>
+	                </thead>
 			 		<tbody>
-	                  <tr><td><b>Scenario Setup</b></td><td></td><td></td><td></td></tr>
-	                  <tr><td>Unit Definitions</td><td></td><td></td><td></td></tr>
-	                  <tr><td>Design Guidelines</td><td></td><td></td><td></td></tr>
-	                  <tr><td><b>Design</b></td><td></td><td></td><td></td></tr>
-	                  <tr><td>Catalogue and Logical Model</td><td></td><td></td><td></td></tr>
-	                  <tr><td>Catalogue, Logical Model and Specifications</td><td></td><td></td><td></td></tr>
-	                  <tr><td><b>Implementation</b></td><td></td><td></td><td></td></tr>
-	                  <tr><td>Scorecard Design</td><td></td><td></td><td></td></tr>
-	                  <tr><td>Physical Model</td><td></td><td></td><td></td></tr>
+			 			<lift:ScenarioSnippet.usage><usage:table/></lift:ScenarioSnippet.usage>
 	                </tbody>
-				</table>
+				</table><br />
+				<lift:ScenarioSnippet.usage><usage:change/></lift:ScenarioSnippet.usage>
 			</div>
 			<div class="quarterContent pivot" group="roles">
 				<lift:RoleSnippet.scenarioRoles>
 					<role:add /><role:remove />
 					<br /><br />
 	    			
-	    			<h3>Already assigned roles</h3><br />
+	    			<h3>Already assigned Roles</h3><br />
 	    			<div id="userRoleTableContainer">
 	    				<role:userRoles />
 	    			</div>
@@ -112,7 +107,7 @@
 				</lift:RoleSnippet.scenarioRoles>	
 			</div>
 			<div class="threeQuarterContent pivot" group="units">
-				<h3>Units to use</h3><br />
+				<h3>Units</h3><br />
 				<lift:ScenarioSnippet.unitSetup>
 					<div>
 						<unit:add /><unit:remove /><unit:save />
@@ -129,33 +124,39 @@
 	            	</table>
 	            </lift:ScenarioSnippet.unitSetup>
 			</div>
-			<div class="threeQuarterContent pivot" group="design">
-				<lift:ScenarioSnippet.design>
-					<h3>Physical Data Model</h3><br />
-					<h4>Star vs. Snowflake</h4><br />
-					<design:snowflake /><br /><br />
-					<h4>Account Model</h4><br />
-					<design:accountModel /><br /><br />
-					<h3>Views</h3><br />
-					<design:extraViewLayer /> Create an extra layer consisting out of views which decouples the data model from the BI tools<br />
-					<design:stableViewLayer /> Enforce to keep the view structure as stable as possible in new versions<br /><br />
-					<h3>Prefixes and Names</h3><br />
-						<table>
-							<tr><td><span>Prefix for transaction fact table:</span></td><td><design:prefixTFact /></td></tr>
-							<tr><td><span>Prefix for snapshot fact table:</span></td><td><design:prefixSFact /></td></tr>
-							<tr><td><span>Prefix for dimension table:</span></td><td><design:prefixDim /><br /></td></tr>
-							<tr><td><span>Name of measure dimension table:</span></td><td><design:nameDimMeasure /><br /></td></tr>
-							<tr><td><span>Naming Convention for primary keys:</span></td><td><design:namePrimaryKey /><br /></td></tr>
-							<tr><td><span>Naming Convention for references:</span></td><td><design:nameReferences /><br /></td></tr>
-							<tr><td><span>Default Type for Key Attributes:</span></td><td><design:defaultKeyType /><br /></td></tr>
-							<tr><td><span>Default Type for Measure Attributes:</span></td><td><design:defaultMeasureType /><br /></td></tr>
-							<tr><td><span>Default Type for Dimension Attributes:</span></td><td><design:defaultAttributeType /><br /></td></tr>
-						</table><br />
-						
-					<h3>Additional Metadata Attributes</h3><br />
-					<design:additionalAttributes />
-				</lift:ScenarioSnippet.design>
-			</div>
+			<lift:RoleSnippet.inAsDesigner>
+				<div class="threeQuarterContent pivot" group="design">
+					<lift:ScenarioSnippet.design>
+					    <h3>Logical Model</h3><br />
+					    <design:subjectSeparation /> Separate measures of different subjects<br />
+					    <design:simpleLifecycleSeparation /> Separate measures of different actuality<br />
+					    <design:complexLifecycleSeparation /> Separate measures of different actuality and lifecycle<br /><br />
+						<h3>Physical Model</h3><br />
+						<h4>Star or Snowflake</h4><br />
+						<design:snowflake /><br /><br />
+						<h4>Account Model</h4><br />
+						<design:accountModel /><br /><br />
+						<h3>Views</h3><br />
+						<design:extraViewLayer /> Generate an additional tier of views which decouples data model and BI tools<br />
+						<design:stableViewLayer /> Keep the additional layer as stable as possible in new releases<br /><br />
+						<h3>Prefixes and Names</h3><br />
+							<table>
+								<tr><td><span>Prefix for transactional fact tables:</span></td><td><design:prefixTFact /></td></tr>
+								<tr><td><span>Prefix for snapshot fact tables:</span></td><td><design:prefixSFact /></td></tr>
+								<tr><td><span>Prefix for dimension tables::</span></td><td><design:prefixDim /><br /></td></tr>
+								<tr><td><span>Name of Measure Dimension:</span></td><td><design:nameDimMeasure /><br /></td></tr>
+								<tr><td><span>Name Convention for Primary Keys:</span></td><td><design:namePrimaryKey /><br /></td></tr>
+								<tr><td><span>Name Convention for References:</span></td><td><design:nameReferences /><br /></td></tr>
+								<tr><td><span>Default Type for Surrogate Key Fields:</span></td><td><design:defaultKeyType /><br /></td></tr>
+								<tr><td><span>Default Type for Measure Fields:</span></td><td><design:defaultMeasureType /><br /></td></tr>
+								<tr><td><span>Default Type for Dimension Attributes:</span></td><td><design:defaultAttributeType /><br /></td></tr>
+							</table><br />
+							
+						<h3>Additional Metadata Attributes</h3><br />
+						<design:additionalAttributes />
+					</lift:ScenarioSnippet.design>
+				</div>
+			</lift:RoleSnippet.inAsDesigner>
 		 </div>
 	 </lift:RoleSnippet.inScenario>
 </lift:surround>

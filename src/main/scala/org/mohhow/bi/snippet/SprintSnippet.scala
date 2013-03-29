@@ -83,9 +83,9 @@ class SprintSnippet {
   def complete = toggleCompletion(true)
   def unComplete = toggleCompletion(false)
   def edit(): JsCmd = RedirectTo("sprintEdit")
-  bind("sprint", xhtml, "edit" -> ajaxButton("Edit Sprint", edit _) % ("class" -> "standardButton"),
-		  				"complete" -> ajaxButton("Mark Feature as Completed", complete _) % ("class" -> "standardButton"),
-		              	"unComplete" -> ajaxButton("Unmark Completion", unComplete _) % ("class" -> "standardButton"))
+  bind("sprint", xhtml, "edit" -> ajaxButton(S.?("editSprint"), edit _) % ("class" -> "standardButton"),
+		  				"complete" -> ajaxButton(S.?("markAsCompleted"), complete _) % ("class" -> "standardButton"),
+		              	"unComplete" -> ajaxButton(S.?("unmarkCompletion"), unComplete _) % ("class" -> "standardButton"))
  }
  
  def serializeBurndown(sp: Sprint): Node = {
@@ -187,8 +187,14 @@ class SprintSnippet {
  }
  
  def sprintInPlan (xhtml: NodeSeq): NodeSeq = {
-  bind("sprint", xhtml, "addSprint" -> ajaxButton(S.?("addSprint"), addSprint _) % ("class" -> "standardButton"),
-		              	"removeLatestSprint" -> ajaxButton(S.?("removeLatestSprint"), removeSprint _) % ("class" -> "standardButton"),
+	 
+  def empty(): JsCmd = Noop	 
+	 
+  val addButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("addSprint"), addSprint _) % ("class" -> "standardButton") else ajaxButton(S.?("addSprint"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val removeButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("removeLatestSprint"), removeSprint _) % ("class" -> "standardButton") else ajaxButton(S.?("removeLatestSprint"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+	 
+  bind("sprint", xhtml, "addSprint" -> addButton,
+		              	"removeLatestSprint" -> removeButton,
 		              	"sprints" -> Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id), OrderBy(Sprint.sprintNumber, Ascending)).map(createSprintListItem),
 		              	"burndown" -> burnItDown(),
 		              	"releasePlan" -> serializePlan())
@@ -275,7 +281,7 @@ class SprintSnippet {
   if(sprint.numberOfWorkingDays > 0) {
 	  if(sumStories(sprint) == "Gogol") "extremely fast" 
 	  else {
-	 	  val velocity = sumStories(sprint).toLong / sprint.numberOfWorkingDays
+	 	  val velocity = sumStories(sprint).toFloat / sprint.numberOfWorkingDays.toFloat
 	 	  velocity.toString
 	  }
   }
@@ -286,9 +292,9 @@ class SprintSnippet {
   if(sprint.sprintNumber > 1) {
 	  val predecessor = sprint.sprintNumber - 1
 	  val sprints = Sprint.findAll(By(Sprint.fkScenario, SelectedScenario.is.id), By(Sprint.sprintNumber, predecessor))
-	  <span><b>Latest Velocity: </b>{computeVelocity(sprints(0))}</span>
+	  <span><b>{S.?("latestVelocity")}: </b>{computeVelocity(sprints(0))}</span>
   }
-  else <span><b>Latest Velocity: </b>--</span>
+  else <span><b>{S.?("latestVelocity")}: </b>--</span>
  }
  
  def findMedianVelocity() = {
@@ -296,9 +302,9 @@ class SprintSnippet {
 	
 	if(sprints.size > 0) {
 		val median = sprints.size/2
-		<span><b>Median Velocity: </b>{sprints(median)}</span>
+		<span><b>{S.?("medianVelocity")}: </b>{sprints(median)}</span>
 	}
-	else <span><b>Median Velocity: </b>--</span>
+	else <span><b>{S.?("medianVelocity")}: </b>--</span>
  }
  
  def sprint (xhtml: NodeSeq): NodeSeq = {
@@ -307,7 +313,7 @@ class SprintSnippet {
 		              	"toSprint" -> ajaxButton(">>", toSprint _) % ("class" -> "standardButton"),
 		              	"backlogStories" -> backlogStories(),
 		              	"sprintStories" -> sprintStories(),
-		              	"sumStories" -> <span><b>Sum of Story Points: </b>{sumStories(SelectedSprint.is)}</span>,
+		              	"sumStories" -> <span><b>{S.?("sumStories")}: </b>{sumStories(SelectedSprint.is)}</span>,
 		              	"latestVelocity" -> findLatestVelocity(SelectedSprint.is),
 		              	"medianVelocity" -> findMedianVelocity(),
 		              	"scope" -> scope(SelectedSprint.is),

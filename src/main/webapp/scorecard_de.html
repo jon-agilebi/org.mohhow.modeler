@@ -36,19 +36,21 @@
 					}
 				})
 			}); 
-			//showScorecard();
 		});   
 		</script>
 	</head>
 	<lift:RoleSnippet.inScenario>  
-		<div class="upper_right">
-			<h1>Scorecarddarstellung</h1>
-			<div class="menuBar">
-				<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+			<div class="upper_right">
+				<h1>Scorecarddarstellung</h1>
+				<div class="menuBar">
+					<lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+				</div>
 			</div>
-		</div>
-		<div class="rightHalfContent" >
-			<lift:LayoutSnippet.design><scorecard:data /><scorecard:display /></lift:LayoutSnippet.design>
-		</div>
+			<div class="rightHalfContent" >
+				<lift:LayoutSnippet.design>
+					<lift:RoleSnippet.inScorecard><scorecard:data /></lift:RoleSnippet.inScorecard>
+					<scorecard:display />
+				</lift:LayoutSnippet.design>
+			</div>
 	</lift:RoleSnippet.inScenario> 
 </lift:surround>

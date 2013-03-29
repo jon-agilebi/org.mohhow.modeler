@@ -6,30 +6,50 @@
 		<script  src="/script/scorecard.js" type="text/javascript"></script>
 		<script type="text/javascript">
 			$(document).ready(function() {
-				$('.presentationThumbnail').each(function() {
-					var pt = $(this).attr("presentationType");
-					var pd = $(this).attr("presentationDetail");
-					var myId = $(this).attr("id");
-					drawBlockChoice(myId, pt, pd, false);
-				});
-				
 				$('.detailThumbnail').each(function() {
 					var pt = $(this).attr("presentationType");
 					var pd = $(this).attr("presentationDetail");
 					var myId = $(this).attr("id");
-					drawBlockChoice(myId, pt, pd, true);
+					var mySelected = false;
+					var myActive = false;
+					if($(this).attr("selected") == "Y") mySelected = true;
+					if($(this).attr("active") == "Y") myActive = true;
+					drawBlockChoice(myId, pt, pd, true, mySelected, myActive);
+					
+				});
+				
+				$('.detailThumbnailRow').hide();
+				
+				$('.presentationThumbnail').each(function() {
+					var pt = $(this).attr("presentationType");
+					var pd = $(this).attr("presentationDetail");
+					var myId = $(this).attr("id");
+					var mySelected = false;
+					var myActive = false;
+					if($(this).attr("selected") == "Y") {
+						mySelected = true;
+						$(".detailThumbnailRow[presentationType='" + pt + "']").show();
+					}
+					if($(this).attr("active") == "Y") myActive = true;
+					drawBlockChoice(myId, pt, pd, false, mySelected, myActive);
 				});
 				
 				readBlockInformation();
 				
-				$('.detailThumbnailRow').hide();
-				
-				$('.blockAttributeInput').live('click', function() {
+				$('.blockAttributeInput').live('blur', function() {
 					saveAdditionalAttributes();
 				});
 				
 				$('.additionalAttributeForm').hide();
-			}); 
+				
+				var countActive = $(".presentationThumbnail[selected='Y']").length + $(".detailThumbnail[selected='Y']").length;
+				
+				if(countActive >= 2) {
+					var activeType = $(".presentationThumbnail[selected='Y']").attr("presentationType");
+					var activeDetail = $(".detailThumbnail[selected='Y']").attr("presentationDetail");
+					$(".additionalAttributeForm[presentationType='" + activeType + "'][presentationDetail='" + activeDetail + "']").show();
+				}
+			});
 		</script>
 	</head>
 	<div id="serializedBlock"/>

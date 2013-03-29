@@ -122,7 +122,7 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
   Noop
  }
  
- val allDataTypes = List(("VARCHAR2", "VARCHAR2"), ("NUMBER", "NUMBER"), ("DATE", "DATE"), ("TIMESTAMP", "TIMESTAMP"))
+ val allDataTypes = List(("VARCHAR", "VARCHAR"), ("NUMBER", "NUMBER"), ("DATE", "DATE"), ("TIMESTAMP", "TIMESTAMP"))
  
  def saveSelection(attributeId: Long, selection: String) : JsCmd = {
   val attr = PAttribute.findAll(By(PAttribute.id, attributeId)).apply(0)

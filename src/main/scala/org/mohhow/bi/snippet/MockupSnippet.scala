@@ -55,7 +55,7 @@ class MockupSnippet {
   val blocks = Block.findAll(By(Block.fkSpecification, sp.id))
   val blockXml = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => blocks.exists(aBlock => aBlock.id.toString == (b \ "@blockId").text))
   
-  CmdPair(JsCmds.SetHtml("specifications", createSpec(sp)), JsRaw("initializeBlockInformation(\"" + blockXml.toString.replaceAll("\"", "'").replaceAll("\n", "")  + "\");"))
+  CmdPair(JsCmds.SetHtml("specifications", createSpec(sp)), JsRaw("initializeBlockInformation(\"" + blockXml.toString.replaceAll("\"", "'").replaceAll("\n", "")  + "\", \"" + S.?("noOrder") + "\", \"" + S.?("ascending") + "\", \"" + S.?("descending") +"\");"))
  } 
 	
  def createSpecificationItem(sp: Specification) = {
@@ -175,24 +175,31 @@ class MockupSnippet {
   else Alert(S.?("noSpecificationChoice"))
  }
  
+ def isBlockInFrame(): Boolean = {
+  val referredBlocks = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr" \\ "block").map(bl => (bl \ "@ref").text).toList
+  referredBlocks.exists(_ == SelectedBlock.is.id.toString)
+ }
+ 
  def removeBlockOrSpec(isBlock: Boolean): JsCmd = {
-  if(isBlock && SelectedBlock.is != null) {
+  if(isBlock && SelectedBlock.is != null && isBlockInFrame()) Alert(S.?("blockUsedInFrame"))
+  else if(isBlock && SelectedBlock.is != null) {
 	  val allBlocks = Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block"
 	  val allBlocksWithoutSelected = allBlocks.filter(block => (block \ "@blockId").text != SelectedBlock.is.id.toString).toSeq
 	  Repository.write("scenario", SelectedScenario.is.id, "blocks", "blocks", -1, <blocks>{allBlocksWithoutSelected}</blocks>)
 	  Block.findAll(By(Block.id, SelectedBlock.is.id)).map(b => b.delete_!)
 	  SelectedBlock(null)
+	  RedirectTo("/specification")
   }
-  
-  if(!isBlock && SelectedSpecification.is != null) {
+  else if(isBlock) Alert(S.?("noBlockSpecificationChoice"))
+  else if(SelectedSpecification.is != null) {
 	  val allFrames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr").toList
 	  val allFramesWithoutSelected = allFrames.filter(frame => (frame \ "@scorecardId").text != SelectedSpecification.is.id.toString).toSeq
 	  Repository.write("scenario", SelectedScenario.is.id, "frames", "frames", -1, <frames>{allFramesWithoutSelected}</frames>)
 	  Specification.findAll(By(Specification.id, SelectedSpecification.is.id)).map(s => s.delete_!)
 	  SelectedSpecification(null)
+	  RedirectTo("/specification")
   }
-  
-  RedirectTo("/specification")
+  else Alert(S.?("noSpecificationChoice"))
  }
  
  def findSerialization(xml: NodeSeq, b: Block): Node = {
@@ -209,7 +216,7 @@ class MockupSnippet {
   println(" selected block information is " + SelectedBlockInformation.is.toString)
  }
  
- def measureListItem(m: Node): Node = <li>{MyUtil.getSeqHeadText(m)}</li>
+ def measureListItem(m: Node): Node = <li class='emphasizableMeasure'>{MyUtil.getSeqHeadText(m)}</li>
  def saveBlockHeader(b:Block, text : String): JsCmd = {b.name(text).save; Noop }
  
  def measureRow(block: Block, mode: String, msrs: NodeSeq) = mode match {   
@@ -230,7 +237,21 @@ class MockupSnippet {
   }
  }
  
- def attributeListItem(m: Node): Node = <li>{MyUtil.getSeqHeadText(m \\ "name")}</li>
+ def code(n: String) = n match {
+	  case "1" => "ascending"
+	  case "2" => "descending"
+	  case _ => "noOrder"
+ }
+ 
+ def attributeEditListItem(m: Node): Node = {
+  
+  val name = MyUtil.getSeqHeadText(m \\ "name")
+  val ordering = MyUtil.getSeqHeadText(m \\ "order")
+  val orderButton = <button class='standardButton orderAttribute' style='float:right'>{S.?(code(ordering))}</button> % new UnprefixedAttribute("orderFor", name, Null)
+  <li class='emphasizableAttribute'>{name}{orderButton}</li> 
+ }
+ 
+ def attributeListItem(m: Node): Node = <li>{MyUtil.getSeqHeadText(m \\ "name") + ", " + S.?(code(MyUtil.getSeqHeadText(m \\ "order")))}</li>
  
  def readPresentationType(b: Block) = {
     val blocksFromXml = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(bl => (bl \\ "@blockId").text == b.id.toString)
@@ -253,12 +274,12 @@ class MockupSnippet {
    case "edit" => {
 	 	  
 	 <tr>
-	 	<td rowspan="2">{link("/block", () => selectBlock(block), <span>{readPresentationType(block)}</span>)}</td>
+	 	<td rowspan="2"><span>{readPresentationType(block)}</span></td>
 	 	<td class="dropAttribute">{S.?("attributes")}
 	 		<button class='standardButton upButton attributeRelevant' style='float: right'>{S.?("up")}</button>
 	 		<button class='standardButton downButton attributeRelevant' style='float: right'>{S.?("down")}</button>
 	 		<button class='standardButton removeButton attributeRelevant' style='float: right'>{S.?("remove")}</button>
-	 		<ul style="list-style-position:inside">{attrs.map(attributeListItem).toSeq}</ul>
+	 		<ul style="list-style-position:inside">{attrs.map(attributeEditListItem).toSeq}</ul>
 	 	</td>
 	 </tr> % new UnprefixedAttribute("blockId", block.id.toString, Null) 
    }
@@ -295,7 +316,7 @@ class MockupSnippet {
 				JsRaw(cmd)
 		}
 	  }
-  } else Noop
+  } else JsRaw("changeBlockInformation(" + blockId + ", 'editFilter', '', null);")
  }
   
  def filterRow(block: Block, mode: String, filterText: String) = mode match {
@@ -329,18 +350,35 @@ class MockupSnippet {
  
  def createSpecification(): NodeSeq = if(SelectedSpecification.is != null) createSpec(SelectedSpecification.is) else NodeSeq.Empty
  
+ def initializeBlocks(): JsCmd = {
+   if(SelectedSpecification.is != null) {
+	   val blocks = Block.findAll(By(Block.fkSpecification, SelectedSpecification.is.id)).toList
+	   val blockXml = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => blocks.exists(aBlock => aBlock.id.toString == (b \ "@blockId").text))
+	   JsRaw("initializeBlockInformation(\"" + blockXml.toString.replaceAll("\"", "'").replaceAll("\n", "")  + "\", \"" + S.?("noOrder") + "\", \"" + S.?("ascending") + "\", \"" + S.?("descending") +"\");")
+   }
+   else Noop
+ }
+ 
  def specification (xhtml: NodeSeq): NodeSeq = {
   def removeBlock() = removeBlockOrSpec(true)
   def removeSpecification() = removeBlockOrSpec(false)
+  def empty(): JsCmd = Noop
+  
+  val addSpButton = if(MyUtil.isDesigner()) ajaxButton(S.?("addSpecification"), addSpec _) % ("class" -> "standardButton") else ajaxButton(S.?("addSpecification"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val removeSpButton = if(MyUtil.isDesigner()) ajaxButton(S.?("removeSpecification"), removeSpecification _) % ("class" -> "standardButton") else ajaxButton(S.?("removeSpecification"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val addBlButton = if(MyUtil.isDesigner()) ajaxButton(S.?("addBlock"), addBlock _) % ("class" -> "standardButton") else ajaxButton(S.?("addBlock"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val removeBlButton = if(MyUtil.isDesigner()) ajaxButton(S.?("removeBlock"), removeBlock _) % ("class" -> "standardButton") else ajaxButton(S.?("removeBlock"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val copyBlButton = if(MyUtil.isDesigner()) ajaxButton(S.?("copyBlock"), copyBlock _) % ("class" -> "standardButton") else ajaxButton(S.?("copyBlock"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
    
-  bind("spec", xhtml, "addSpecification"    -> ajaxButton(S.?("addSpecification"), addSpec _) % ("class" -> "standardButton"),
-		  			  "removeSpecification"    -> ajaxButton(S.?("removeSpecification"), removeSpecification _) % ("class" -> "standardButton"),
-		  			  "addBlock"    -> ajaxButton(S.?("addBlock"), addBlock _) % ("class" -> "standardButton"),
-		  			  "copyBlock"    -> ajaxButton(S.?("copyBlock"), copyBlock _) % ("class" -> "standardButton"),
-		  			  "removeBlock"    -> ajaxButton(S.?("removeBlock"), removeBlock _) % ("class" -> "standardButton"),
-		  			  "tree" -> createSpecificationTree(),
-		  			  "specification" -> createSpecification(),
-		  			  "statusChoice" -> statusChoice())
+  bind("spec", xhtml, "addSpecification"    	-> addSpButton,
+		  			  "removeSpecification"    	-> removeSpButton,
+		  			  "addBlock"    			-> addBlButton,
+		  			  "copyBlock"    			-> copyBlButton,
+		  			  "removeBlock"    			-> removeBlButton,
+		  			  "tree" 					-> createSpecificationTree(),
+		  			  "specification" 			-> createSpecification(),
+		  			  "statusChoice" 			-> statusChoice(),
+		  			  "initBlocks" 				-> Script(initializeBlocks()))
  }
  
  def createBlock(spId: String, block : Block, serialization: Node, mode: String) : Node = {
@@ -422,16 +460,14 @@ class MockupSnippet {
 	   }
    }
    
-   println("Let us finish " + blockString)
-   
    var blocksWithNewStructure:List[(String, Node)] = Nil
 	  
    if(blockString != null && blockString.length > 0) blocksWithNewStructure  = serializeStructure(blockString)
-   println("I finish " + blocksWithNewStructure.toString)
    val blocks = Block.findAll(By(Block.fkSpecification, SelectedSpecification.is.id)).toList
    val serializedBlocks = Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block"
    val result = serializedBlocks.map(b => changeTitle(b, blocks)).map(b => changeStructure(b, blocksWithNewStructure)).toSeq
    Repository.write("scenario", SelectedScenario.is.id, "blocks", "blocks", -1, <blocks>{result}</blocks>) 
+   
    
    CmdPair(RedirectTo("/specification"), JsCmds.SetHtml("specifications", createSpec(SelectedSpecification.is)))
   }
@@ -481,7 +517,7 @@ class MockupSnippet {
   val dragMeasureCommand = JsRaw("$('.dragMeasure').draggable({helper: 'clone', opacity: 0.8});")
   val dropMeasureCommand = JsRaw("$('.dropMeasure').droppable({drop: function(event, ui) {$(this).children('ul').append(\"<li class='emphasizableMeasure'>\" + ui.draggable.text() + '</li>');changeBlockInformation($(this).parent().attr('blockId'), 'addMeasure', ui.draggable.text(), null)}});")
   val dragAttributeCommand = JsRaw("$('.dragAttribute').draggable({helper: 'clone', opacity: 0.8});")
-  val dropAttributeCommand = JsRaw("$('.dropAttribute').droppable({drop: function(event, ui) {$(this).children('ul').append(\"<li class='emphasizableAttribute'>\" + ui.draggable.text() + \"<button orderFor='\" + ui.draggable.text() + \"' class='standardButton orderAttribute' style='float:right'>no order</button></li>\");changeBlockInformation($(this).parent().attr('blockId'), 'addAttribute', ui.draggable.text(), null)}});")
+  val dropAttributeCommand = JsRaw("$('.dropAttribute').droppable({drop: function(event, ui) {$(this).children('ul').append(\"<li class='emphasizableAttribute'>\" + ui.draggable.text() + \"<button orderFor='\" + ui.draggable.text() + \"' class='standardButton orderAttribute' style='float:right'>" + S.?("noOrder") + "</button></li>\");changeBlockInformation($(this).parent().attr('blockId'), 'addAttribute', ui.draggable.text(), null)}});")
   val dropInFilterCommand = JsRaw("$('.dropInFilter').droppable({drop: function(event, ui) {appendValue($(this), '*' + ui.draggable.text() + '*');}});")
   val hideCommand = JsRaw("$('.tmpClosed').each(function(i) {$(this).removeClass('tmpClosed');$(this).hide();});")
   
@@ -495,7 +531,7 @@ class MockupSnippet {
 	 	  case "name" => spec.name(text)
 	 	  case "description" => spec.description(text)
   }
-	 
+  SelectedSpecification(spec) 
   spec.save	   
   Noop
  }
@@ -566,8 +602,10 @@ class MockupSnippet {
 	  }
   }
   
-  val xml = XML.loadString(designData)
-  val frames = xml \\ "fr"
+  // required since jquery html-method sets an unpleasant namespace
+  
+  val xml = XML.loadString(designData.replaceAll("xmlns=\"http://www.w3.org/1999/xhtml\"", ""))
+  val frames = (xml \\ "fr")
   val successorIds = xml \\ "successor"
   
   if(frames.size == 2) {
@@ -602,9 +640,36 @@ class MockupSnippet {
   * Choice of presentation type
   */
  
+ def lng(n: Node, attr: String): String = {
+  val choices = n \\ attr
+  val withLang = choices.filter(c => (c \ "@lang").text == S.?("lang"))
+  
+  if(!withLang.isEmpty) MyUtil.getSeqHeadText(withLang(0))
+  else if(!choices.isEmpty) MyUtil.getSeqHeadText(choices(0))
+  else ""
+ }
+ 
+ def isActive(presentationType: String, presentationDetail: String, withDetail: Boolean):Boolean = {
+	 val countMeasures = (SelectedBlockInformation.is \\ "structure" \\ "measure").size
+	 val countAttributes = (SelectedBlockInformation.is \\ "structure" \\ "attribute").size
+	 
+	 val types = PresentationTypes.is.filter(pt => MyUtil.getSeqHeadText(pt \ "kind") == presentationType)
+	 val details = if(withDetail) types.filter(pt => MyUtil.getSeqHeadText(pt \ "detail") == presentationDetail) else types
+	 
+	 val minMsr = details.map(pt => MyUtil.getSeqHeadText(pt \ "minCountMeasure").replaceAll("n", "1000").toInt).min
+	 val maxMsr = details.map(pt => MyUtil.getSeqHeadText(pt \ "maxCountMeasure").replaceAll("n", "1000").toInt).max
+	 val minAttr = details.map(pt => MyUtil.getSeqHeadText(pt \ "minCountAttribute").replaceAll("n", "1000").toInt).min
+	 val maxAttr = details.map(pt => MyUtil.getSeqHeadText(pt \ "maxCountAttribute").replaceAll("n", "1000").toInt).max
+	 
+	 countMeasures >= minMsr && countMeasures <= maxMsr && countAttributes >= minAttr && countAttributes <= maxAttr
+ }
+ 
  def ruleBody(rule: Node) = {
+   val isSelectedType = if(MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationType") == lng(rule, "presentationType")) "Y" else "N"
+   val active = if(isActive(lng(rule, "presentationType"), "", false)) "Y" else "N"
+   
    <td>
-   	<div presentationType={MyUtil.getNodeText((rule \\ "presentationType").apply(0))} presentationDetail={MyUtil.getNodeText((rule \\ "presentationDetail").apply(0))} class="presentationThumbnail"  id = {"rule" + MyUtil.getNodeText((rule \\ "ruleId").apply(0))}/>
+   	<div presentationType={lng(rule, "presentationType")} presentationDetail={lng(rule, "presentationDetail")} class="presentationThumbnail"  id = {"rule" + MyUtil.getNodeText((rule \\ "ruleId").apply(0))} selected={isSelectedType} active={active} />
    </td>
  }
   
@@ -612,15 +677,16 @@ class MockupSnippet {
   
  def toTable(comp: Node) = {
    def addMissingCell(cells: NodeSeq) = if(cells.size == 1) MyUtil.flattenNodeSeq(cells.toList ::: List(<td></td>)) else cells
-   val compName = MyUtil.getNodeText((comp \\ "comparisonName").apply(0))
-   val compDesc = MyUtil.getNodeText((comp \\ "description").apply(0))
+   
+   val compName = lng(comp, "comparisonName")
+   val compDesc = lng(comp, "description")
    
    val rules = (comp \\ "rule").map(node => ruleBody(node)).toSeq
    val header = (comp \\ "rule").map(node => ruleHeader(node)).toSeq
    
    <table class="protocolTable">
-   	<col width="80" text-align="left"/>
-	<col width="270" text-align="left"/>
+   	<col width="125" text-align="left"/>
+	<col width="225" text-align="left"/>
     <col width="85" text-align="left"/>
     <col width="85" text-align="left"/>
     <thead>
@@ -638,18 +704,32 @@ class MockupSnippet {
  }
  
  def tableAndIndicator() = {
+   /*	 
+   def sel(pt: String, pd: String) = {
+		 if(MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationType") == pt &&
+	 	   MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationDetail") == pd) "Y" else "N"	 
+   }
+	*/
+   def sel(pt: String, pd: String) = if(MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationType") == pt) "Y" else "N"
+	 
+   def act(pt: String, pd: String) = if(isActive(pt, pd, false)) "Y" else "N"
+	   
+   val tableThumbnail = <td class="presentationThumbnail"  id="tableThumbnail" presentationType="table" presentationDetail="plain"></td> % new UnprefixedAttribute("selected", sel("table", "plain"), Null) % new UnprefixedAttribute("active", act("table", "plain"), Null)
+   val statusThumbnail = <td class="presentationThumbnail" id="statusIndicatorThumbnail" presentationType="indicator" presentationDetail="circle"></td> % new UnprefixedAttribute("selected", sel("indicator", "circle"), Null) % new UnprefixedAttribute("active", act("indicator", "circle"), Null)
+   val trendThumbnail = <td class="presentationThumbnail" id="trendIndicatorThumbmail" presentationType="indicator" presentationDetail="arrow"></td> % new UnprefixedAttribute("selected", sel("indicator", "arrow"), Null) % new UnprefixedAttribute("active", act("indicator", "arrow"), Null)
+   val plainThumbnail = <td class="presentationThumbnail" id="plainThumbmail" presentationType="text" presentationDetail="plain"></td> % new UnprefixedAttribute("selected", sel("text", "plain"), Null) % new UnprefixedAttribute("active", act("text", "plain"), Null)
 
    <table class="protocolTable">
     <col width="85" text-align="left"/>
     <col width="85" text-align="left"/>
     <thead>
-   		<tr><td>Kind</td><td></td></tr>
+   		<tr><td>{S.?("kind")}</td><td></td></tr>
     </thead>
     <tbody>
-    	<tr><td>Table</td><td class="presentationThumbnail"  id="tableThumbnail" presentationType="table" presentationDetail="plain"></td></tr>
-	    <tr><td>Status Indicator</td><td class="presentationThumbnail" id="statusIndicatorThumbnail" presentationType="statusIndicator" presentationDetail="circle"></td></tr>
-	    <tr><td>Trend Indicator</td><td class="presentationThumbnail" id="trendIndicatorThumbmail" presentationType="trendIndicator" presentationDetail="arrow"></td></tr>
-	 	<tr><td>Plain Presentation</td><td class="presentationThumbnail" id="plainThumbmail" presentationType="plain" presentationDetail="plain"></td></tr>
+    	<tr><td>{S.?("table")}</td>{tableThumbnail}</tr>
+	    <tr><td>{S.?("statusIndicator")}</td>{statusThumbnail}</tr> 
+	    <tr><td>{S.?("trendIndicator")}</td>{trendThumbnail}</tr> 
+	 	<tr><td>{S.?("plainPresentation")}</td>{plainThumbnail}</tr> 
     </tbody>
    </table>
  }
@@ -657,11 +737,15 @@ class MockupSnippet {
  def presentationDetails() = {
 	 
   def detailRow(presentationType: String, presentationDetail: String, description: String) = {
-	  val cell = <td class="detailThumbnail" selected="n"></td> % new UnprefixedAttribute("id", "detailThumb" + presentationType + presentationDetail, Null) % new UnprefixedAttribute("presentationType", presentationType, Null) % new UnprefixedAttribute("presentationDetail", presentationDetail, Null)
+	  
+	  val isSelectedDetail = if(MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationType") == presentationType &&
+	 		                    MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationDetail") == presentationDetail) "Y" else "N"
+      val active = if(isActive(presentationType, presentationDetail, true)) "Y" else "N"
+	  
+	  val cell = <td class="detailThumbnail" selected="n"></td> % new UnprefixedAttribute("id", "detailThumb" + presentationType + presentationDetail, Null) % new UnprefixedAttribute("presentationType", presentationType, Null) % new UnprefixedAttribute("presentationDetail", presentationDetail, Null) % new UnprefixedAttribute("selected", isSelectedDetail, Null) % new UnprefixedAttribute("active", active, Null)
+	   
 	  <tr class="detailThumbnailRow"><td>{description}</td>{cell}</tr> % new UnprefixedAttribute("presentationType", presentationType, Null) % new UnprefixedAttribute("presentationDetail", presentationDetail, Null) 
   }
-  
-  def txt(n: Node, tag: String) = MyUtil.getSeqHeadText(n \\ tag)
   
   val details = Comparisons.is \\ "presentationTypes" \\ "presentationType"
 	  
@@ -669,10 +753,10 @@ class MockupSnippet {
     <col width="85" text-align="left"/>
     <col width="85" text-align="left"/>
     <thead>
-   		<tr><td>usage</td><td></td></tr>
+   		<tr><td>{S.?("usage")}</td><td></td></tr>
     </thead>
     <tbody>
-    	{PresentationTypes.is.map(pt => detailRow(txt(pt, "kind"), txt(pt, "detail"), txt(pt, "usage"))).toSeq}
+    	{PresentationTypes.is.map(pt => detailRow(lng(pt, "kind"), lng(pt, "detail"), lng(pt, "usage"))).toSeq}
     </tbody>
    </table>
  }
@@ -689,18 +773,34 @@ class MockupSnippet {
 	  }
 	   else block
   }
-  println(xml)
+  
   val block = XML.loadString(xml)
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").map(b => replaceBlock(b, block)).toSeq
   Repository.write("scenario", SelectedScenario.is.id, "blocks", "blocks", -1, <blocks>{blocks}</blocks>)
   RedirectTo("/specification")
  }
  
+ def selectAttributeChoice(attrValue: String): JsCmd = {
+  JsRaw("saveAdditionalAttributes();")
+ } 
+ 
  def additionalAttributeRow(addAttr: (String, String), presentationType: String, presentationDetail: String) = {
 	 
-	 <tr class='additionalAttributeRow' >
-	   	<td><label>{addAttr._1}</label></td>
-	    <td><input type="text" class="blockAttributeInput" inputFor={addAttr._1} /></td>
+  val givenValue = MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ addAttr._1)	 
+  val selectionValue = if(givenValue.length > 0) Full(givenValue) else Empty
+	 
+	 val input = if(addAttr._2 == null || addAttr._2.length == 0) {
+		 			//<input type="text" class="blockAttributeInput" inputFor={addAttr._1} /> % new UnprefixedAttribute("value", givenValue, Null)
+		 			ajaxText(givenValue, v => {selectAttributeChoice(v)}) % new UnprefixedAttribute("class", "blockAttributeInput", Null) % new UnprefixedAttribute("inputFor", addAttr._1, Null)
+	 			 }
+	 			 else {
+	 				 val choices = addAttr._2.split(";").map(c => (c, S.?(c))).toList
+	 				 SHtml.ajaxSelect(choices, selectionValue , v => {selectAttributeChoice(v)}) % new UnprefixedAttribute("class", "blockAttributeInput", Null) % new UnprefixedAttribute("inputFor", addAttr._1, Null)
+	 			 }
+	 
+	 <tr class='additionalAttributeRow'>
+	   	<td><label>{S.?(addAttr._1)}</label></td>
+	    <td>{input}</td>
 	 </tr> % new UnprefixedAttribute("presentationType", presentationType, Null) % new UnprefixedAttribute("presentationDetail", presentationDetail, Null)
  }
     

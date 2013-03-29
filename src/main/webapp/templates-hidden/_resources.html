@@ -81,8 +81,8 @@
 	<res name="analyst" lang="en">Analyst</res>
 	<res name="designer" lang="de">Designer</res>	
 	<res name="designer" lang="en">Designer</res>
-	<res name="business" lang="de">Business Representative</res>	
-	<res name="business" lang="en">Fachabteilung</res>
+	<res name="business" lang="en">Business Representative</res>	
+	<res name="business" lang="de">Fachabteilung</res>
 	<res name="releaseManager" lang="de">Release Manager</res>	
 	<res name="releaseManager" lang="en">Release Manager</res>
 	<res name="user" lang="de">Anwender</res>	
@@ -109,7 +109,7 @@
 	<res name="finish" lang="en">Finish</res>
 	<res name="discard" lang="de">Ausrangieren</res>	
 	<res name="discard" lang="en">Discard</res>
-	<res name="computeCubes" lang="de">W&uuml;rfel berechnen</res>	
+	<res name="computeCubes" lang="de">W&uuml;rfel Berechnen</res>	
 	<res name="computeCubes" lang="en">Compute Cubes</res>
 	<res name="up" lang="de">Hoch</res>	
 	<res name="up" lang="en">Up</res>
@@ -145,7 +145,7 @@
 	<res name="interpretItem" lang="en">interprets the following items</res>
 	<res name="specifiedIn" lang="de">spezifiziert durch</res>
 	<res name="specifiedIn" lang="en">specified in</res>
-	<res name="subject" lang="de">Themengebiet</res>	
+	<res name="subject" lang="de">Bereich</res>	
 	<res name="subject" lang="en">Subject</res>
 	<res name="name" lang="de">Name</res>	
 	<res name="name" lang="en">Name</res>
@@ -281,6 +281,8 @@
 	<res name="noMeasureSelection" lang="en">Please choose a measure!</res>
 	<res name="noModelSelection" lang="de">Bitte zuerst eine Dimension oder einen W&uuml;rfel ausw&auml;hlen!</res>	
 	<res name="noModelSelection" lang="en">Please choose a dimension or cube!</res>
+	<res name="noSectionSelection" lang="de">Bitte zuerst einen Abschnitt ausw&auml;hlen!</res>	
+	<res name="noSectionSelection" lang="en">Please choose a section!</res>
 	<res name="textDoesNotFit" lang="de">Der Text ist zu kurz oder zu lang.</res>	
 	<res name="textDoesNotFit" lang="en">The text is to short or to long.</res>
 	<res name="textToShort" lang="de">Der Text ist zu kurz.</res>	
@@ -313,8 +315,8 @@
 	<res name="cannotEditScenario" lang="en">You are not allowed to edit this scenario!</res>
 	<res name="dateFormat" lang="de">dd.MM.yyyy</res>	
 	<res name="dateFormat" lang="en">MM/dd/yyyy</res>
-	<res name="noReleaseOrNoSystem" lang="de">Bitte Release und System w&auml;hlen!</res>	
-	<res name="noReleaseOrNoSystem" lang="en">Please choose a release and a system!</res>
+	<res name="noReleaseOrNoSystem" lang="de">Bitte Release und System w&auml;hlen und Token angeben!</res>	
+	<res name="noReleaseOrNoSystem" lang="en">Please choose a release and a system and enter token!</res>
 	<res name="starOption" lang="de">&Uuml;bertrage jede logische Dimension in eine Dimensionstabelle</res>	
 	<res name="starOption" lang="en">Transform each logical dimension into one dimension table</res>
 	<res name="snowflakeOption" lang="de">Erzeuge eine Dimensionstabelle f&uuml;r jede Ebene</res>	
@@ -445,8 +447,8 @@
 	<res name="priority" lang="en">Priority</res>
 	<res name="priorityNotInRange" lang="de">Priorit&auml;t muss eine Zahl bis zu 999 sein</res>
 	<res name="priorityNotInRange" lang="en">Priority must be a number less or equal to 999</res>
-	<res name="threeDigitsNotInRange" lang="de">Dieser Eintrag muss eine Zahl bis zu 999 sein</res>
-	<res name="threeDigitsNotInRange" lang="en">This entry must be a number less or equal to 999</res>
+	<res name="threeDigitsNotInRange" lang="de">Dieser Eintrag muss eine Zahl zwischen 1 und 999 sein.</res>
+	<res name="threeDigitsNotInRange" lang="en">This entry must be a number between 1 and 999.</res>
 	<res name="storyPoints" lang="de">Story Points</res>
 	<res name="storyPoints" lang="en">Story Points</res>
 	<res name="noFeatureSelection" lang="de">Bitte zuerst ein Feature ausw&auml;hlen!</res>
@@ -529,7 +531,7 @@
 	<res name="count" lang="en">Count</res>
 	<res name="countDistinct" lang="de">Unterschiedliche Anzahl</res>
 	<res name="countDistinct" lang="en">Count Distinct</res>
-	<res name="addSprint" lang="de">Sprint hinzuf&uuml;gen</res>
+	<res name="addSprint" lang="de">Sprint Hinzuf&uuml;gen</res>
 	<res name="addSprint" lang="en">Add Sprint</res>
 	<res name="removeLatestSprint" lang="de">Letzten Sprint l&ouml;schen</res>
 	<res name="removeLatestSprint" lang="en">Remove Latest Sprint</res>
@@ -574,16 +576,22 @@
 	<res name="sprintBegin" lang="de">Sprintanfang</res>
 	<res name="sprintBegin" lang="en">Sprint Begin</res>
 	<res name="sprintEnd" lang="de">Sprintende</res>
+	<res name="editSprint" lang="en">Edit Sprint</res>
+	<res name="editSprint" lang="de">Sprint Bearbeiten</res>
+	<res name="markAsCompleted" lang="de">Feature als Abgeschlossen Kennzeichen</res>
+	<res name="markAsCompleted" lang="en">Mark Feature As Completed</res>
+	<res name="unmarkCompletion" lang="de">Feature als Nicht Abgeschlossen Kennzeichnen</res>
+	<res name="unmarkCompletion" lang="en">Unmark Completion</res>
 	<res name="sprintEnd" lang="en">Sprint End</res>
 	<res name="numberOfWorkingDays" lang="de">Anzahl Arbeitstage</res>
 	<res name="numberOfWorkingDays" lang="en">Number of Working Days</res>
-	<res name="addSpecification" lang="de">Spezifikation hinzuf&uuml;gen</res>
+	<res name="addSpecification" lang="de">Spezifikation Hinzuf&uuml;gen</res>
 	<res name="addSpecification" lang="en">Add Specification</res>
-	<res name="removeSpecification" lang="de">Spezifikation l&ouml;schen</res>
+	<res name="removeSpecification" lang="de">Spezifikation L&ouml;schen</res>
 	<res name="removeSpecification" lang="en">Remove Specification</res>
-	<res name="copyBlock" lang="de">Block kopieren</res>
+	<res name="copyBlock" lang="de">Block Kopieren</res>
 	<res name="copyBlock" lang="en">Copy Block</res>
-	<res name="removeBlock" lang="de">Block l&ouml;schen</res>
+	<res name="removeBlock" lang="de">Block L&ouml;schen</res>
 	<res name="removeBlock" lang="en">Remove Block</res>
 	<res name="noBlockSpecificationChoice" lang="de">Bitte w&auml;hlen Sie den Block, der kopiert werden soll und die Spezifikation, die den Block enthalten soll!</res>
 	<res name="noSpecificationChoice" lang="en">Please choose the specification which shall contain the block!</res>
@@ -675,6 +683,8 @@
 	<res name="comment" lang="en">Comment</res>
 	<res name="fact" lang="de">Faktentabelle</res>
 	<res name="fact" lang="en">Fact Table</res>
+	<res name="table" lang="de">Tabelle</res>
+	<res name="table" lang="en">Table</res>
 	<res name="measureDimension" lang="de">Kennzahlendimension</res>
 	<res name="measureDimension" lang="en">Measure Dimension</res>
 	<res name="dateDimension" lang="de">Zeitdimension</res>
@@ -697,7 +707,7 @@
 	<res name="announcementRestriction" lang="en">You can only make announcements on active projects!</res>
 	<res name="freezeRestriction" lang="de">Sie k&ouml;nnen erst nach einer Ank&uuml;ndigung ein Projekt einfrieren!</res>
 	<res name="freezeRestriction" lang="en">You can only freeze announced projects!</res>
-	<res name="announceReleaseFreeze" lang="de">Release Freeze ank&uuml;ndigen</res>
+	<res name="announceReleaseFreeze" lang="de">Release Freeze Ank&uuml;ndigen</res>
 	<res name="announceReleaseFreeze" lang="en">Announce Release Freeze</res>
 	<res name="freeze" lang="de">Einfrieren</res>
 	<res name="freeze" lang="en">Freeze</res>
@@ -725,17 +735,17 @@
 	<res name="markAsSynonym" lang="en">Synonym</res>
 	<res name="rule" lang="de">Regel</res>
 	<res name="rule" lang="en">Rule</res>
-	<res name="generic" lang="de">Generischer Block</res>
-	<res name="generic" lang="en">Generic Block</res>
+	<res name="generic" lang="de">Generisch</res>
+	<res name="generic" lang="en">Generic</res>
 	<res name="scorecard" lang="de">Agile Scorecard</res>
 	<res name="scorecard" lang="en">Agile Scorecard</res>
 	<res name="rest" lang="de">Rest Service</res>
 	<res name="rest" lang="en">Rest Service</res>
-	<res name="addBlock" lang="de">Block hinzuf&uuml;gen</res>
+	<res name="addBlock" lang="de">Block Hinzuf&uuml;gen</res>
 	<res name="addBlock" lang="en">Add Block</res>
 	<res name="linkRole" lang="de">Rolle Verkn&uuml;pfen</res>
 	<res name="linkRole" lang="en">Link Role</res>
-	<res name="linkGroup" lang="de">Gruppe verkn&uuml;pfen</res>
+	<res name="linkGroup" lang="de">Gruppe Verkn&uuml;pfen</res>
 	<res name="linkGroup" lang="en">Link Group</res>
 	<res name="searchTerm" lang="de">Suchbegriff</res>
 	<res name="searchTerm" lang="en">Search Term</res>
@@ -757,14 +767,38 @@
 	<res name="rotate" lang="en">Rotate</res>
 	<res name="clean" lang="de">Aufr&auml;umen</res>
 	<res name="clean" lang="en">Clean</res>
+	<res name="kind" lang="de">Art</res>
+	<res name="kind" lang="en">Kind</res>
 	<res name="pie" lang="de">Tortendiagramm</res>
 	<res name="pie" lang="en">Pie Diagram</res>
-	<res name="bar" lang="de">Zeilendiagramm</res>
+	<res name="bar" lang="de">Balkendiagramm</res>
 	<res name="bar" lang="en">Bar Diagram</res>
+	<res name="column" lang="de">S&auml;ulendiagramm</res>
+	<res name="column" lang="en">Column Diagram</res>
+	<res name="statusIndicator" lang="de">Status Indikator</res>
+	<res name="statusIndicator" lang="en">Status Indicator</res>
+	<res name="trendIndicator" lang="de">Trend Indikator</res>
+	<res name="trendIndicator" lang="en">Trend Indicator</res>
+	<res name="indicator" lang="de">Indikator</res>
+	<res name="indicator" lang="en">Indicator</res>
 	<res name="plain" lang="de">Standard</res>
 	<res name="plain" lang="en">Plain</res>
+	<res name="text" lang="de">Textelement</res>
+	<res name="text" lang="en">Text Element</res>
+	<res name="arrow" lang="de">Pfeil</res>
+	<res name="arrow" lang="en">Arrow</res>
+	<res name="circle" lang="de">Kreis</res>
+	<res name="circle" lang="en">Circle</res>
+	<res name="circleAndArrow" lang="de">Pfeil (umrandet)</res>
+	<res name="circleAndArrow" lang="en">Arrow (with circle)</res>
+	<res name="plainPresentation" lang="de">Einfache Darstellung</res>
+	<res name="plainPresentation" lang="en">Plain Presentation</res>
 	<res name="mirror" lang="de">Spiegel</res>
 	<res name="mirror" lang="en">Mirror</res>
+	<res name="deviation" lang="de">Abweichung</res>
+	<res name="deviation" lang="en">Deviation</res>
+	<res name="grouped" lang="de">Gruppierung</res>
+	<res name="grouped" lang="en">Grouped</res>
 	<res name="pattern" lang="de">Muster</res>
 	<res name="pattern" lang="en">Pattern</res>
 	<res name="realises" lang="de">Realisiert</res>
@@ -784,7 +818,7 @@
 	<res name="documentationIntroduction" lang="de">
 		Dieses Dokument beschreibt das Szenario xxscenarioxx, so wie es zum Erstellungszeitpunkt am xxcreationDatexx
 		in dem Modellierungswerkzeug Agile BI Modeler dargestellt ist. Das Dokument wurde im Rahmen des xxreleasexx automatisch erzeugt.
-		Es enth&auml;lt die Szenariovision, alle zum Erstellungszeipunkt g&uuml;ltigen Feature im Product Backlog, den Kennzahlenkatalog mit allen abgenommenen Kenzahlen
+		Es enth&auml;lt die Szenariovision, alle zum Erstellungszeipunkt g&uuml;ltigen Feature im Product Backlog, den Kennzahlenkatalog mit allen abgenommenen Kennzahlen
 		sowie das logische Datenmodell, welches alle Dimensionen und das Zusammenspiel zwischen Dimensionen und W&uuml;rfel darstellt.
 		Im Anhang sind alle ver&ouml;ffentlichten Protokolle und eine Erl&auml;uterung zur verwendeten Notation des logischen Modells zu finden.  
 	</res>
@@ -829,8 +863,90 @@
 	<res name="unitDefinition" lang="en">Unit Definition</res>
 	<res name="catalogueModel" lang="de">Katalog und logisches Modell</res>
 	<res name="catalogueModel" lang="en">Catalogue and Logical Model</res>
+	<res name="catalogueModelSpec" lang="de">Katalog, logisches Modell und Spezifikation</res>
+	<res name="catalogueModelSpec" lang="en">Catalogue, Logical Model and Specification</res>
 	<res name="implementation" lang="de">Implementierung</res>
 	<res name="implementation" lang="en">Implementation</res>
 	<res name="physicalModel" lang="de">Physikalisches Datenmodell</res>
 	<res name="physicalModel" lang="en">Physical Data Model</res>
+	<res name="change" lang="de">&Auml;ndern</res>
+	<res name="change" lang="en">Change</res>
+	<res name="asCopy" lang="de">Kopie</res>
+	<res name="asCopy" lang="en">Copy</res>
+	<res name="asLink" lang="de">Link</res>
+	<res name="asLink" lang="en">Link</res>
+	<res name="notPartOfScenario" lang="de">Kein Teil des Szenarios</res>
+	<res name="notPartOfScenario" lang="en">Not Part of the Scenario</res>
+	<res name="notPartOfScenarioExplanation" lang="de">In der Szenariokonfiguration wurde hinterlegt, dass die Artefakte, die auf dieser Seite verwaltet werden, nicht zum Szenario geh&ouml;ren</res>
+	<res name="notPartOfScenarioExplanation" lang="en">The scenario was configured in such a way that the artefacts, which are managed on this page, do not belong to the scenario.</res>
+	<res name="scenarioCreationFailed" lang="de">Das Szenario konnte nicht estellt werden.</res>
+	<res name="scenarioCreationFailed" lang="en">The scenario could not be created.</res>
+	<res name="newVersionWhenPublished" lang="de">Um eine neue Version anlegen zu k&ouml;nnen, muss die aktuelle Version zun&auml;chst ver&ouml;ffentlicht sein!</res>
+	<res name="newVersionWhenPublished" lang="en">You can only create a new vrsion when the old version was published!</res>
+	<res name="cannotDeleteFirstVersion" lang="de">Version 1 kann nicht gel&ouml;scht werden!</res>
+	<res name="cannotDeleteFirstVersion" lang="en">Version 1 cannot be deleted!</res>
+	<res name="cannotEditPublishedVersion" lang="de">Eine ver&ouml;ffentlichte Version kann nicht bearbeitet werden!</res>
+	<res name="cannotEditPublishedVersion" lang="en">A published version cannot be published!</res>
+	<res name="latestVelocity" lang="de">Aktuelle Geschwindigkeit</res>
+	<res name="latestVelocity" lang="en">Latest Velocity</res>
+	<res name="medianVelocity" lang="de">Mediangeschwindigkeit</res>
+	<res name="medianVelocity" lang="en">Median Velocity</res>
+	<res name="sumStories" lang="de">Summe Story Points</res>
+	<res name="sumStories" lang="en">Sum of Story Points</res>
+	<res name="reallyWannaDestroy" lang="de">Wollen Sie wirklich dieses Objekt l&ouml;schen?</res>
+	<res name="reallyWannaDestroy" lang="en">Do you really want to destroy this object?</res>
+	<res name="erroneousLDAPSearch" lang="de">Suchabfrage gegen LDAP Server war nicht erfolgreich.</res>
+	<res name="erroneousLDAPSearch" lang="en">Search Request against LDAP server was not successfull.</res>
+	<res name="nothingChosen" lang="de">Es ist nichts ausgew&auml;hlt!</res>
+	<res name="nothingChosen" lang="en">There is nothing chosen!</res>
+	<res name="documentation" lang="de">Dokumentation</res>
+	<res name="documentation" lang="en">Documentation</res>
+	<res name="dataStore" lang="de">Datenbackend</res>
+	<res name="dataStore" lang="en">Data Store</res>
+	<res name="measureAlreadyExists" lang="de">Der Kennzahlenname wurde bereits verwendet.</res>
+	<res name="measureAlreadyExists" lang="en">The measure name has already been used.</res>
+	<res name="lang" lang="de">de</res>
+	<res name="lang" lang="en">en</res>
+	<res name="colorScheme" lang="de">Farbschema</res>
+	<res name="colorScheme" lang="en">Color Scheme</res>
+	<res name="horizontalAxis" lang="de">Horizontale Achse</res>
+	<res name="horizontalAxis" lang="en">Horizontal Axis</res>
+	<res name="verticalAxis" lang="de">Vertikale Achse</res>
+	<res name="verticalAxis" lang="en">Vertical Axis</res>
+	<res name="red" lang="de">rot</res>
+	<res name="red" lang="en">red</res>
+	<res name="green" lang="de">gr&uuml;n</res>
+	<res name="green" lang="en">green</res>
+	<res name="blue" lang="de">blau</res>
+	<res name="blue" lang="en">blue</res>
+	<res name="grey" lang="de">grau</res>
+	<res name="grey" lang="en">grey</res>
+	<res name="ascending" lang="de">Aufsteigend</res>
+	<res name="ascending" lang="en">Ascending</res>
+	<res name="descending" lang="de">Absteigend</res>
+	<res name="descending" lang="en">Descending</res>
+	<res name="noOrder" lang="de">keine Sortierung</res>
+	<res name="noOrder" lang="en">no Ordering</res>
+	<res name="wrongRootConfiguration" lang="de">Achtung, mindestens eins der konfigurierten Rootverzeichnisse existiert nicht!</res>
+	<res name="wrongRootConfiguration" lang="en">Attention, at least one of the configured root directories does not exist!</res>
+	<res name="deploymentSuccessfull" lang="de">Deployment war erfolgreich.</res>
+	<res name="deploymentSuccessful" lang="en">Deployment was successfull.</res>
+	<res name="alreadyDeployed" lang="de">Das ausgew&auml;hlte Release ist bereits auf dem ausgew&auml;hlten Knoten deployed.</res>
+	<res name="alreadyDeployed" lang="en">The chosen release has already been deployed on the chosen node.</res>
+	<res name="blockUsedInFrame" lang="de">Der Block wird in einer Scorecard verwendet!</res>
+	<res name="blockUsedInFrame" lang="en">The block is used in a scorecard!</res>
+	<res name="verticalSpan" lang="de">vertikales aufspannendes Attribut</res>
+	<res name="verticalSpan" lang="en">vertical spanning attribute</res>
+	<res name="horizontalSpan" lang="de">horizontales aufspannendes Attribut</res>
+	<res name="horizontalSpan" lang="en">horizontal spanning attribute</res>
+	<res name="columnAlignments" lang="de">Spaltenausrichtung</res>
+	<res name="columnAlignments" lang="en">Column Alignments</res>
+	<res name="columnWidths" lang="de">Spaltenbreiten (in Prozent)</res>
+	<res name="columnWidths" lang="en">Column widths (in per cent)</res>
+	<res name="hasLineBreaks" lang="de">Mit Zeilenumbruch</res>
+	<res name="hasLineBreaks" lang="en">Has Linebreaks</res>
+	<res name="useFrame" lang="de">Mit Rahmen</res>
+	<res name="useFrame" lang="en">With Frame</res>
+	<res name="logicalModel" lang="de">Logisches Modell</res>
+	<res name="logicalModel" lang="en">Logical Model</res>
 </resources>

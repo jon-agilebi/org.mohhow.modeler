@@ -89,14 +89,6 @@ class Measure extends LongKeyedMapper[Measure] with IdPK {
    override def dbColumnName = "REQUIRED_STORAGE_VALUE"
  }
  
- object minimalValue extends MappedDouble(this) {
-   override def dbColumnName = "MINIMAL_VALUE"
- }
- 
- object maximalValue extends MappedDouble(this) {
-   override def dbColumnName = "MAXIMAL_VALUE"
- }
- 
  object dateCreated extends MappedDateTime(this) {
    override def dbColumnName = "DATE_CREATED"
  }

@@ -19,6 +19,7 @@ var keywords;
 var dimensionMode = true;
 var dimensions;
 var allLevel;
+var maxTextLength = 14;
 
 function setKeywords(kwds, dms, lvls) {
 	keywords = kwds;
@@ -294,18 +295,22 @@ function moveSymbol(symbol) {
  updateElements(Number(x), Number(y), symbol.kind, symbol.elements);
 }
 
+function shortenText(text) {
+	if(text.length > maxTextLength) return text.substring(0,maxTextLength - 3) + "..."; else return text;
+}
+
 Raphael.fn.elementTitle = function(text, frame, elementType, detail, vertexId, usage, description) {
 	var x = Number(frame.getBBox().x);
 	var y = Number(frame.getBBox().y);
 	
-	var elm = this.text(x + 60, y + 20, text);
+	var elm = this.text(x + 60, y + 20, shortenText(text));
 	elm.dblclick(showDialog);
 	
 	return {
 		element: elm,
 		frame: frame,
 		status: "prototype",
-		text: text,
+		text: shortenText(text),
 		elementType: elementType,
 		detail: detail,
 		vertexId: vertexId,
@@ -491,6 +496,9 @@ function saveText() {
  }
  
  var text = $('#modalModelTextInput').val();
+ 
+ if(text == null || text == "") text = "--";
+ 
  var additionalDetailText = $('#modalModelAttributeAdditionalPatternInput').val();
  
  if(additionalDetailText && additionalDetailText.length > 0) detailText = detailText + ";" + additionalDetailText;
@@ -692,6 +700,26 @@ var stopMove = function() {
 	
 	if (x < 280) {
 		this.hide();
+		
+		
+		for(var j = 0; j < elementTitles.length; j++) {
+			
+			if(elementTitles[j].frame == this) {
+				elementTitles[j].element.hide();
+				break;
+			}
+		}
+
+		for(var i = 0; i < symbols.length; i++) {
+			if(symbols[i].frame == this) {
+				
+				for(var j = 0; j < symbols[i].elements.length; j++) {
+					symbols[i].elements[j].hide();
+				}
+				
+				break;
+			}	
+		}
 	} 
 	else {
 		
@@ -754,6 +782,15 @@ var drawLine = function(dx, dy) {
 	lineToDraw.attr("path", "M" + lx + "," + ly + "L" + lx2 + "," + ly2);
 };
 
+function connAlreadyExists(first, second) {
+	
+	for(var i = 0; i < connections.length; i++) {
+		if((connections[i].from == first && connections[i].to == second) || (connections[i].to == first && connections[i].from == second)) return true;
+	}
+	
+	return false;
+}
+
 var finishLineDrawing = function() {
 	
 	lineToDraw.remove();
@@ -765,7 +802,7 @@ var finishLineDrawing = function() {
 		
 		for(var i = 0; i < frames.length; i++) {
 			
-			if(frames[i].isInBox(x, y)) {
+			if(frames[i].isInBox(x, y) && frames[i] != source && !connAlreadyExists(frames[i], source)) {
                 var conn = editPaper.connection(source, frames[i]);
 				connections.push(conn);
 				$('#logicalModelEdges').append("<e modelId='" + conn.line.id + "' edgeId='m" + conn.line.id + "'><h>" + source.getVertexId() + "</h><t>" + frames[i].getVertexId() + "</t><status>new</status></e>");
@@ -798,6 +835,19 @@ var initConnection = function() {
 	}
 }
 
+function deletable(frame) {
+	
+	for(var i = 0; i < elementTitles.length; i++) {
+		
+		if(elementTitles[i].frame == frame) {
+			if((elementTitles[i].elementType == "dimension" && dimensionMode) || elementTitles[i].elementType == "cube") return false; 
+			else return true;
+		} 
+	}
+	
+	return false;
+}
+
 function createConnectionMarker(frame) {
 	var x = frame.getBBox().x;
 	var y = frame.getBBox().y;
@@ -817,7 +867,7 @@ function createConnectionMarker(frame) {
 		fourMarker[i].marker.drag(drawLine, initConnection, finishLineDrawing);
 	}
 	
-	createRemoveIcon(x + width - 8, y + 8, frame);
+	if(deletable(frame)) createRemoveIcon(x + width - 8, y + 8, frame);
 }
 
 function removeConnectionMarker() {
@@ -895,6 +945,28 @@ function removeFinally() {
 			} 
 		}
 	}
+	else { 
+		
+		var fromId = 0;
+		var toId = 0;
+		
+		for(var i = 0; i < connections.length; i++) {
+			if(connections[i].line == elementToRemove) {
+				 fromId = connections[i].from.getVertexId();
+				 toId = connections[i].to.getVertexId();
+				 break;
+			}
+		}
+			
+		$("#logicalModelEdges e").each(function(){
+			
+			if($(this).find("h").text() == fromId && $(this).find("t").text() == toId) {
+				var status = $(this).find("status");
+				status.empty();
+				status.append("removed");
+			}			
+		});			
+	}  
 	
 	elementToRemove.remove();
 	

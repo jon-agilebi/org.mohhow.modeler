@@ -47,7 +47,7 @@ class RoleSnippet {
   * Helper methods for page rendering; real content is only delivered when the user is logged in and/or a scenario is chosen
   */
 
- def in(html: NodeSeq) = if (User.loggedIn_?) html else NodeSeq.Empty
+ def in(html: NodeSeq) = if(!Repository.rootPathsExist()) <div class='rightContent'>{S.?("wrongRootConfiguration")}</div> else if (User.loggedIn_?) html else NodeSeq.Empty
  
  def inAsClientAdmin(html: NodeSeq) = {
 	 
@@ -60,9 +60,11 @@ class RoleSnippet {
   }
   else otherwiseNode
  }
+ 
+ def inAsDesigner(html: NodeSeq) = if(MyUtil.isDesigner()) html else NodeSeq.Empty
 		
  def out(html: NodeSeq) = if (!User.loggedIn_?) <div>{Script(RedirectTo("/user_mgt/login"))}</div> else NodeSeq.Empty
-	 
+ 
  def inScenario(html: NodeSeq) = {
   if (SelectedScenario.is != null) html 
   else {
@@ -76,6 +78,23 @@ class RoleSnippet {
   }
  }
  
+ def inKind(kind: String, html: NodeSeq) = {
+  if (Usage.is(kind)._1) html 
+  else {
+	 <div>
+	  <div class="upper_right"></div>
+	  <div class="rightContent">
+	 	<h3>{S.?("notPartOfScenario")}</h3><br /><br />
+	 	{<span>{S.?("notPartOfScenarioExplanation")}</span>}
+	 </div>
+	</div>
+  }
+ }
+ 
+ def inVision(html: NodeSeq) = inKind("vision", html)
+ def inScorecard(html: NodeSeq) = inAsDesigner(inKind("scorecardDesign", html))
+ def inPhysics(html: NodeSeq) = inKind("physicalModel", html)
+ 
  /**
   * Helper methods to determine the role of the current user with respect to a scenario
   * 
@@ -83,11 +102,6 @@ class RoleSnippet {
  
  val allRoles = List("owner", "analyst", "designer", "business", "releaseManager")
 
- def isOwner() = User.loggedIn_? && (User.currentUser == ScenarioOwner.is)
- def isAnalyst() = isOwner() || (User.loggedIn_? && Analysts.is.contains(User.currentUser))
- def isDesigner() = isOwner() || (User.loggedIn_? && Designer.is.contains(User.currentUser))
- def isReleaseManager() = isOwner() || (User.loggedIn_? && ReleaseManager.is.contains(User.currentUser))
- 
  def userTasks() : NodeSeq = {
   def findMeeting(mr: MeetingRecipient, scenarioId: Long) = {
    val now = new Date  
@@ -277,11 +291,19 @@ class RoleSnippet {
  }
  
  def scenarioRoles(xhtml: NodeSeq): NodeSeq = {
-   	bind("role", xhtml, "add"		-> ajaxButton(S.?("add"), addRole _) % ("class" -> "standardButton"),
-   						"remove" 	-> ajaxButton(S.?("remove"), removeRole _) % ("class" -> "standardButton"),
-                        "userRoles"   	-> userRoles(),
+	 
+	val canChange = MyUtil.isAnalyst() || MyUtil.isDesigner() 
+	val addButton = if(canChange) ajaxButton(S.?("add"), addRole _) % ("class" -> "standardButton")
+	                else ajaxButton(S.?("add"), addRole _) % ("class" -> "standardButton") % ("disabled" -> "")
+	                
+	val removeButton = if(canChange) ajaxButton(S.?("remove"), removeRole _) % ("class" -> "standardButton")
+	                   else ajaxButton(S.?("remove"), removeRole _) % ("class" -> "standardButton") % ("disabled" -> "")
+	 
+   	bind("role", xhtml, "add"		-> addButton,
+   						"remove" 	-> removeButton,
+                        "userRoles" -> userRoles(),
                         "user" 		-> userTable(),
-                        "roles"	-> roles())  	
+                        "roles"		-> roles())  	
  }
  
  /**
@@ -315,6 +337,10 @@ class RoleSnippet {
   if(SelectedProvider.is != null) {
 	  SelectedProvider.is match {
 	 	  case Some(p) => {
+	 	 	  
+	 	 	  // remove all links of roles to groups of this provider and then delete the provider
+	 	 	  
+	 	 	  RoleToGroup.findAll(By(RoleToGroup.fkProvider, p.id)).map(_.delete_!)
 	 	 	  p.delete_!
 	 	 	  SelectedProvider(None)
 	 	 	  RedirectTo("user")
@@ -323,6 +349,8 @@ class RoleSnippet {
 	  }  
   } else Alert(S.?("noProvider")) 
  }
+ 
+ def rp(): JsCmd = Confirm(S.?("reallyWannaDestroy"), SHtml.ajaxInvoke(() => removeProvider())._2.cmd)
  
  /*
   * Selecting a provides initiates a search on the groups and members of the provider
@@ -336,6 +364,7 @@ class RoleSnippet {
   }
   
   def groupToTree(groupName: String, member: List[String], displayName: String) = {
+	 println("The member of " + groupName + " are " + member.toString)
 	val action = SHtml.ajaxCall(JsRaw("$(this).attr('groupName')"), selectDn _)._2
 	<li class="emphasizableGroup">{MyUtil.getDisplayItem(groupName, displayName)}
 		<ul style="list-style-position:inside">{member.map(m => <li>{m}</li>).toSeq}
@@ -352,12 +381,18 @@ class RoleSnippet {
   
 	val p = Provider.findAll(By(Provider.id, id.toLong)).apply(0)
   	SelectedProvider(Some(p))
-  	val conf = MyUtil.createConfiguration(p)
-  	val myLdap = new LDAPVendor
-  	myLdap.configure(conf)
-  	val allGroups = myLdap.search(p.searchTerm)
-  	val tree = allGroups.map(g => groupToTree(g, MyUtil.attr2List(myLdap.attributesFromDn(g + "," + p.base), p.memberAttribute.toString, p.displayAttribute.toString), p.displayAttribute.toString)).toSeq
-  	SetHtml("providerSearchResult", tree)
+  	
+  	try {
+  	 val conf = MyUtil.createConfiguration(p)
+  	 val myLdap = new LDAPVendor
+  	 myLdap.configure(conf)
+  	 val allGroups = myLdap.search(p.searchTerm)
+  	 val tree = allGroups.map(g => groupToTree(g, MyUtil.attr2List(myLdap.attributesFromDn(g + "," + p.base), p.memberAttribute.toString, p.displayAttribute.toString), p.displayAttribute.toString)).toSeq
+  	 SetHtml("providerSearchResult", tree)
+  	}
+	catch {
+		case e: Exception => S.error(e.toString); Alert(S.?("erroneousLDAPSearch"))
+	}
   }
   else {
 	SelectedProvider(None)
@@ -399,7 +434,7 @@ class RoleSnippet {
  
  def allProvider (xhtml: NodeSeq): NodeSeq = {
   bind("provider", xhtml, "add" 	-> ajaxButton(S.?("add"), addProvider _) % ("class" -> "standardButton"),
-		                  "remove" 	-> ajaxButton(S.?("remove"), removeProvider _) % ("class" -> "standardButton"),
+		                  "remove" 	-> ajaxButton(S.?("remove"), rp _) % ("class" -> "standardButton"),
 		                  "edit"    -> ajaxButton(S.?("edit"), editProvider _) % ("class" -> "standardButton"),
 		                  "nodes"   -> addStandardProvider(Provider.findAll().map(showProvider)))
  }
@@ -477,7 +512,8 @@ class RoleSnippet {
 	val rElm = <span class="emphasizableRDN">{role.roleName}</span> % ("onclick" -> selectRdn) % new UnprefixedAttribute("urId", role.id.toString, Null)
 	
 	def gElm(rtg: RoleToGroup) = {
-		 <li class="treeItem"><span class="leaf">__</span><span class="emphasizableRTG">{rtg.dn}</span></li> % ("onclick" -> selectDn) % new UnprefixedAttribute("rtgId", rtg.id.toString, Null)
+	 val rtgSpan = <span class="emphasizableRTG">{rtg.dn}</span> % ("onclick" -> selectDn) % new UnprefixedAttribute("rtgId", rtg.id.toString, Null)
+	 <li class="treeItem"><span class="leaf">__</span>{rtgSpan}</li> 
 	}
 	
 	if(dns.isEmpty) <li class="treeItem"><span class="leaf">__</span>{rElm}</li>
@@ -519,10 +555,8 @@ class RoleSnippet {
 	 			  r2g.fkRole(SelectedRoleForDn.is).dn(SelectedDn.is).fkScenario(scenario).save
 	 			  SetHtml("roleList", showRoles())
 	 		  }
-	 		  else Noop
-	 	 	  
+	 		  else Noop  
 	 	  }
-	 	   
 	 }
   }
   else Alert(S.?("noChoice"))
@@ -661,7 +695,7 @@ class RoleSnippet {
 	 SetHtml("userListOfClient", userOfClient(cl).map(userClientItem).toSeq)
 	 
 	}
-	else Alert("geht doch nicht")
+	else Alert(S.?("nothingChosen"))
 	  
   }
   
@@ -679,12 +713,12 @@ class RoleSnippet {
    if(cl != null && u != null) {
 	 	  if(ClientToUser.findAll(By(ClientToUser.fkUser, u.id ), By(ClientToUser.fkClient, cl.id)).isEmpty) {
 	 	 	  val newLink = ClientToUser.create
-	 	 	  newLink.fkUser(u).fkClient(cl).canBeOwner(owner(canBeOwner)).save
+	 	 	  newLink.fkUser(u).fkClient(cl).canBeOwner(owner(canBeOwner)).dateCreated(new Date).save
 	 	 	  SetHtml("userListOfClient",userOfClient(cl).map(userClientItem).toSeq)
 	 	  }
 	 	  else Alert(S.?("linkAlreadyExists"))
 	}
-	else Alert("geht doch nicht")
+	else Alert(S.?("nothingChosen"))
   }
   
   def linkOwner = link(true)

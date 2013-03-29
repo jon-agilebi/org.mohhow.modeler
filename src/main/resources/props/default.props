@@ -7,5 +7,6 @@ deploymentRoot = /Users/Jon/MOHHOW/test/deployment/
 scenarioRoot = /Users/Jon/MOHHOW/test/scenario/
 transferRoot = /Users/Jon/MOHHOW/test/transfer/
 usage=both
+token=quark
 db.driver=org.postgresql.Driver
 db.url=jdbc:postgresql://localhost:5432/postgres?user=postgres&password=postgres

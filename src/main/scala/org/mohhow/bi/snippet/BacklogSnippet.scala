@@ -50,17 +50,21 @@ class BacklogSnippet {
   val subFeatures = Feature.findAll(By(Feature.parentFeature, f.id))
   val action = SHtml.ajaxCall(JsRaw("$(this).attr('featureId')"), selectItem _)._2
   val item = <a>{f.name}</a> % ("onclick" -> action) % new UnprefixedAttribute("featureId", f.id.toString, Null)
+  val emph = if(f == ChosenFeature.is) "emphasizable emphasized" else "emphasizable"
+  val span = <span>{item}</span> % new UnprefixedAttribute("class", emph, Null)
+  
+	  
   if(subFeatures.length > 0) {
 	  <li class="treeItem">
 	  	<span class="handle closed">__</span>
-	  	<span class="emphasizable">{item}</span>
+	  	{span}
 	  	<ul>{subFeatures.map(createBacklogTreeItem).toSeq}</ul>
 	  </li>
   }
   else 
   	  <li class="treeItem">
   		<span class="leaf">__</span>
-  		<span class="emphasizable">{item}</span>
+  		{span}
   	  </li>
  }
  
@@ -135,17 +139,30 @@ class BacklogSnippet {
  def deleteFeature() : JsCmd = {
   if(ChosenFeature.is != null){
   		ChosenFeature.is.delete_!
-  		//JsCmds.SetHtml("feature_tree", createBacklogTree())
   		RedirectTo("/backlog")
   }
   else Alert(S.?("noFeatureSelection")) 
  }
   
  def backlogMenu (xhtml: NodeSeq): NodeSeq = {
-  bind("backlog", xhtml, "edit"  -> ajaxButton(S.?("edit"), editFeature _) % ("class" -> "standardButton"),
-   		                 "add" 	-> ajaxButton(S.?("add"), () => addFeature(false)) % ("class" -> "standardButton"),
-   		                 "delete"  -> ajaxButton(S.?("remove"), deleteFeature _) % ("class" -> "standardButton"),
-   		                 "addBelow" -> ajaxButton(S.?("addBelow"), () => addFeature(true)) % ("class" -> "standardButton")) 
+	 
+  val editButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("edit"), editFeature _) % ("class" -> "standardButton") 
+                   else ajaxButton(S.?("edit"), editFeature _) % ("class" -> "standardButton") % ("disabled" -> "")
+                	   
+  val addButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("add"), () => addFeature(false)) % ("class" -> "standardButton") 
+                  else ajaxButton(S.?("add"), () => addFeature(false)) % ("class" -> "standardButton") % ("disabled" -> "")
+                  
+  val deleteButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("remove"), deleteFeature _) % ("class" -> "standardButton") 
+  					 else ajaxButton(S.?("remove"), deleteFeature _) % ("class" -> "standardButton") % ("disabled" -> "")
+  					 
+  val addBelowButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("addBelow"), () => addFeature(true)) % ("class" -> "standardButton") 
+  					   else ajaxButton(S.?("addBelow"), () => addFeature(true)) % ("class" -> "standardButton") % ("disabled" -> "")
+	 
+	 
+  bind("backlog", xhtml, "edit"  -> editButton,
+   		                 "add" 	-> addButton,
+   		                 "delete"  -> deleteButton,
+   		                 "addBelow" -> addBelowButton) 
  }
  
  def featureDetails(): NodeSeq = {
@@ -315,6 +332,7 @@ class BacklogSnippet {
   val newMinutes = Minutes.create
   newMinutes.version(1).status("initial").dateCreated(new Date)
   RelevantMinutes(newMinutes)
+  Participants(mutable.Map.empty[Long, (Boolean, Boolean)])
   RedirectTo("/meetingEdit")
  }
  
@@ -326,9 +344,13 @@ class BacklogSnippet {
  }
  
  def meetings(xhtml: NodeSeq): NodeSeq = {
+	 
+  val addButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("add"), addMeeting _) % ("class" -> "standardButton") else ajaxButton(S.?("add"), addMeeting _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val editButton = if(MyUtil.isAnalyst()) ajaxButton(S.?("edit"), editMeeting _) % ("class" -> "standardButton") else ajaxButton(S.?("edit"), editMeeting _) % ("class" -> "standardButton") % ("disabled" -> "")
+  
   bind("meeting", xhtml, "meetings" ->  getMeetings(),
-		                 "add"      ->  ajaxButton(S.?("add"), addMeeting _) % ("class" -> "standardButton"),
-		                 "edit"		->  ajaxButton(S.?("edit"), editMeeting _) % ("class" -> "standardButton"))
+		                 "add"      ->  addButton,
+		                 "edit"		->  editButton)
  }
  
  def chooseParticipant(isParticipant: Boolean, userId: Long, choice: Boolean) : JsCmd = {
@@ -363,7 +385,7 @@ class BacklogSnippet {
   val participantSelection = SHtml.ajaxCheckbox(isParticipant, selected => chooseParticipant (true, sr.fkUser, selected))
   val informedSelection = SHtml.ajaxCheckbox(isInformed, selected => chooseParticipant (false, sr.fkUser, selected))
   val user = User.findAll(By(User.id, sr.fkUser)).apply(0)
-  <tr><td>{participantSelection}</td><td>{informedSelection}</td><td>{user.firstName + " " + user.lastName}</td><td>{sr.role}</td></tr>
+  <tr><td>{participantSelection}</td><td>{informedSelection}</td><td>{user.firstName + " " + user.lastName}</td><td>{S.?(sr.role.toString)}</td></tr>
  }
  
  def participants(xhtml: NodeSeq): NodeSeq = {
@@ -371,10 +393,9 @@ class BacklogSnippet {
  }
  
  def editProtocol() : JsCmd = {
-  if(RelevantMeeting.is != null){
-	JsRaw("$('#protocolDisplay').fadeOut();$('#protocolEdit').fadeIn();")
-  }
-  else Noop
+  if(RelevantMinutes.is != null && RelevantMinutes.is.status != "published") JsRaw("$('#protocolDisplay').fadeOut();$('#protocolEdit').fadeIn();")
+  else if(RelevantMinutes.is != null) Alert(S.?("cannotEditPublishedVersion"))
+  else  Alert(S.?("noMinutesSelection"))
  }
  
  def saveProtocol(): JsCmd = JsRaw("$('#protocolEdit').fadeIn();$('#protocolDisplay').fadeOut();")
@@ -395,14 +416,15 @@ class BacklogSnippet {
  }
 
  def newProtocolVersion() : JsCmd = {
-  if(RelevantMeeting.is != null){
+  if(RelevantMinutes.is != null && Minutes.findAll(By(Minutes.fkMeeting, RelevantMinutes.is.fkMeeting)).filter(_.status == "new").isEmpty) {
     val newMinutes = Minutes.create
     newMinutes.fkMeeting(RelevantMeeting.is).version(getNextProtocolVersionId(RelevantMeeting.is.id)).status("new").save
     var copyIt = (item: ProtocolItem) => copyItem(newMinutes.id, item)
     ProtocolItem.findAll(By(ProtocolItem.fkMinutes, RelevantMinutes.is.id)).map(copyIt)    
     RelevantMinutes(newMinutes)
+    RedirectTo("protocol")
   }
-  RedirectTo("protocol")
+  else Alert(S.?("newVersionWhenPublished"))
  }
 
  def changeStatus(newStatus : String) : JsCmd = {
@@ -410,9 +432,13 @@ class BacklogSnippet {
     
   if(pv != null){
     if(newStatus == "published") pv.datePublished(new Date)
-	pv.status(newStatus).save
-	if(newStatus == "published") RelevantMinutes(pv) else RelevantMinutes(null)
-	RedirectTo("protocol")
+    
+	if(newStatus == "deprecated" && pv.version == 1) Alert(S.?("cannotDeleteFirstVersion"))
+	else {
+		pv.status(newStatus).save
+		if(newStatus == "published") RelevantMinutes(pv) else RelevantMinutes(null)
+		RedirectTo("protocol")
+  	}
   }
   else Alert(S.?("noMinutesSelection"))
  }
@@ -421,11 +447,17 @@ class BacklogSnippet {
  def deleteProtocol = changeStatus("deprecated")
 
  def protocolMenu(xhtml: NodeSeq): NodeSeq = {
+
+  val newVersionButton = if(MyUtil.isDesigner()) ajaxButton(S.?("newVersion"), newProtocolVersion _) % ("class" -> "standardButton") else ajaxButton(S.?("newVersion"), newProtocolVersion _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val editButton = if(MyUtil.isDesigner()) ajaxButton(S.?("edit"), editProtocol _) % ("class" -> "standardButton") else ajaxButton(S.?("edit"), editProtocol _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val deleteButton = if(MyUtil.isDesigner()) ajaxButton(S.?("deleteVersion"), deleteProtocol _) % ("class" -> "standardButton") else ajaxButton(S.?("deleteVersion"), deleteProtocol _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val publishButton = if(MyUtil.isDesigner()) ajaxButton(S.?("publish"), publishProtocol _) % ("class" -> "standardButton") else ajaxButton(S.?("publish"), publishProtocol _) % ("class" -> "standardButton") % ("disabled" -> "")
+	 
   bind("protocol", xhtml, 
-	   "newVersion" -> ajaxButton(S.?("newVersion"), newProtocolVersion _) % ("class" -> "standardButton"),
-	   "edit" 		-> ajaxButton(S.?("edit"), editProtocol _) % ("class" -> "standardButton"),
-	   "delete" 	-> ajaxButton(S.?("deleteVersion"), deleteProtocol _) % ("class" -> "standardButton"),
-	   "publish" 	-> ajaxButton(S.?("publish"), publishProtocol _) % ("class" -> "standardButton"))
+	   "newVersion" -> newVersionButton,
+	   "edit" 		-> editButton,
+	   "delete" 	-> deleteButton,
+	   "publish" 	-> publishButton)
  }
 
  def createProtocolListItem(m : Meeting) = {
@@ -445,8 +477,11 @@ class BacklogSnippet {
  }  
 
  def selectVersion(id : Long) = {
-  RelevantMinutes(Minutes.findAll(By(Minutes.id, id)).apply(0))
-  RedirectTo("/protocol")
+  if(id >= 0) {
+	  RelevantMinutes(Minutes.findAll(By(Minutes.id, id)).apply(0))
+	  RedirectTo("/protocol")
+  }
+  else Noop
  }  
 
  def protocolVersionHeader (): NodeSeq = { 
@@ -454,7 +489,7 @@ class BacklogSnippet {
 	<br />
 	<h3>{RelevantMeeting.is.header}</h3><br />
 	<h3>{RelevantMinutes.is.header}</h3>
-	<h3 style="float:right">{S.?("otherVersions")}: {SHtml.ajaxSelect(versionsOfProtocol, Empty , v => {selectVersion(v.toLong)})}</h3><br />
+	<h3 style="float:right">{S.?("otherVersions")}: {SHtml.ajaxSelect(versionsOfProtocol, Full("-1") , v => {selectVersion(v.toLong)})}</h3><br />
 	<br /><hr /><br />
   } 
   else <span />
@@ -465,18 +500,18 @@ class BacklogSnippet {
   if(RelevantMeeting.is != null){
     val minutes = Minutes.findAll(By(Minutes.fkMeeting, RelevantMeeting.is.id.is), NotBy(Minutes.status, "deprecated"))
         	
-    if(RelevantMinutes.is != null) minutes.filterNot(_.version == RelevantMinutes.is.version).map(v => (v.id.toString, v.version.toString)).toSeq
-    else minutes.map(v => (v.id.toString, v.version.toString)).toSeq
-        	
+    if(RelevantMinutes.is != null) ("-1", "") :: minutes.filterNot(_.version == RelevantMinutes.is.version).map(v => (v.id.toString, v.version.toString)).toList
+    else ("-1", "") :: minutes.map(v => (v.id.toString, v.version.toString)).toList
   }  
   else Nil
  }
 
  def showParticipants(): NodeSeq = {
   def getParticipant(participant: MeetingRecipient) = {
+   def display(feedback: String) = if(feedback == "accepted") " (+)" else if(feedback == "rejected") " (-)" else ""
 	  val users = User.findAll(By(User.id, participant.fkUser))
 	  
-	  if(!users.isEmpty) users(0).firstName + " " + users(0).lastName
+	  if(!users.isEmpty) users(0).firstName + " " + users(0).lastName + display(participant.feedbackStatus.toString)
 	  else ""
   }
   

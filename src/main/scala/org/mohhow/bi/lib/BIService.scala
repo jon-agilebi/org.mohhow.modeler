@@ -21,7 +21,7 @@ object BIService extends RestHelper{
 	
  var isInitialized: Boolean = false
  var userMap = Map.empty[String, (String, String, List[Long])];
- var storeMap = Map.empty[String, (CI, String)];
+ var storeMap = Map.empty[String, (CI, String, String, String)];
  var blockMap = Map.empty[Long, Node];
  var sessionMemory = Map.empty[String, List[Node]]
  
@@ -41,7 +41,7 @@ object BIService extends RestHelper{
   blockMap = Map.empty[Long, Node];
   
   for(aBlock <- allBlocks) {
-	  blockMap += ((aBlock \\ "@id").text.toLong -> aBlock)
+	  blockMap += ((aBlock \\ "@blockId").text.toLong -> aBlock)
   }
   
   isInitialized = true
@@ -60,7 +60,10 @@ object BIService extends RestHelper{
  
  // wrapper method for DB.runQuery
  
- def query(sql: String, system: String):(List[String],List[List[String]]) = DB.runQuery(sql, Nil, storeMap(system)._1)
+ def query(sql: String, system: String):(List[String],List[List[String]]) = {
+  val purgedSql = """&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(sql,"<"), ">")
+  DB.runQuery(purgedSql, Nil, storeMap(system)._1)
+ }
  
  // check whether the given checksum matches the user's checksum
  
@@ -83,9 +86,9 @@ object BIService extends RestHelper{
   }
   
   def replaceTimeParameter(select: String, toDatePattern: String): String = {
-   val timePattern = """\?[a-z\_]\?""".r 
+   val timePattern = """\?[\w\_]+\?""".r 
    val firstMatch = timePattern findFirstIn select
-   
+   println("replacing time parameter: " + select + " and the toDatePattern is " + toDatePattern)
    firstMatch match {
 		case None => select
 	 	case Some(m) => replaceTimeParameter(timePattern replaceFirstIn(select, MyUtil.timeInSql(m, toDatePattern)) , toDatePattern)  	   
@@ -123,9 +126,9 @@ object BIService extends RestHelper{
   def computeColumn(measureId: Long, answers: List[List[List[String]]], attributes: List[List[String]], metadata: Node) = {
    def row(list: List[String], index: Int) = if(index >= 0) list(index) else ""
    val indices = (metadata \\ "select").map(s => first((s \\ "measureId").map(MyUtil.getNodeText(_).toLong).toList, measureId, 0)).toList
-   val firstRow = attributes.head
    
-   if(firstRow != null) {
+   if(attributes.size > 0 && attributes.head != null) {
+	   val firstRow = attributes.head
 	   val pairs = (answers zip indices).filter(_._2 > 0).map(x => (extractColumn(x._1, firstRow.size), extractSelectedColumn(x._1, firstRow.size + x._2 - 1)))
 	   val rows = (List.flatten(pairs.map(_._1)), List.flatten(pairs.map(_._2)))
 	   attributes.map(attr => row(rows._2, first(rows._1, attr,0))).toList
@@ -174,7 +177,7 @@ object BIService extends RestHelper{
   def computeMeasure(measure: Node, columns: List[(Long, List[String])], isPie: Boolean): List[String] = {
    def norm(x: BigDecimal, n: BigDecimal) = x.divide(n.divide(new BigDecimal(2 * PI), 10, BigDecimal.ROUND_HALF_UP), 10, BigDecimal.ROUND_HALF_UP)
    
-   val formula = MyUtil.getSeqHeadText(measure \\ "formula")
+   val formula = """&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(measure \\ "formula"), "<"), ">")
    if(formula == null || formula == "") {
 	   
 	   val results = columns.filter(c => c._1 == MyUtil.getSeqHeadText(measure \\ "id").toLong).head._2
@@ -188,10 +191,14 @@ object BIService extends RestHelper{
 	   else results
    }
    else {
+	  
 	   val iDs = measuresInFormula(formula)
 	   val arrangedColumns = arrangeColumns(iDs, List(), columns)
+	   println(arrangedColumns.head.indices.toList.toString)
+	   println("XXXXX")
+	   println(arrangedColumns.head.indices.toList.map(i => toRow(arrangedColumns,i)).toString)
 	   val results = arrangedColumns.head.indices.toList.map(i => WikiParser.evaluateTerm(formula,toRow(arrangedColumns,i).map(digits => new BigDecimal(digits))))
-	   
+	   println(results.toString)
 	   if(isPie) {
 	  	   val sumResults = ((new BigDecimal("0")) /: results.map(asDecimal)) (_.add(_))
 	  	   if(sumResults.doubleValue() != 0) results.map(r => norm(asDecimal(r), sumResults)).map(_.toString) 
@@ -296,7 +303,7 @@ object BIService extends RestHelper{
 		  blocks +=  <block type="text">{text}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 	  } 
 	  else {
-			
+			println("kuemmere mich um " + blockType)
 		  val allAnswers = for(select <- metadata \\ "select";
 			                     val system = MyUtil.getSeqHeadText(select \\ "system");
 			                     val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter, system)
@@ -306,7 +313,7 @@ object BIService extends RestHelper{
 			
 		  if(blockType == "zero") {
 			  val allNumbers = List.flatten(allAnswers.map(answer => answer._2.head).toList)
-			  val formula = MyUtil.getSeqHeadText(metadata \\ "formula")
+			  val formula = """&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(metadata \\ "formula"), "<"), ">")
 			  
 			  if(formula == null || formula == "") blocks += <block type="zero">{allNumbers.head}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 			  else {
@@ -314,17 +321,20 @@ object BIService extends RestHelper{
 				  val measureIds = measuresInFormula(formula)
 				  val parameter = measureIds.map(measureId => findValue(measureId, indices, allNumbers))
 				
-				  blocks += <block type="zero">{asString(WikiParser.evaluateTerm(formula, parameter.map(new BigDecimal(_))))}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+				  blocks += <block type="zero">{WikiParser.evaluateIndicator(formula, parameter.map(new BigDecimal(_)))}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 			 }
 		  } 
 		  else {
 				
 			  val attributeCount = (metadata \\ "structure" \\ "attribute").size
 			  val attributes = mergeColumns(allAnswers.map(x => extractColumn(x._2,attributeCount)).toList)
+			  println("bin ich auch noch hier I? ")
 			  val cols = measureIds zip measureIds.map(measureId => computeColumn(measureId, allAnswers.map(_._2).toList, attributes, metadata))
+			  println("bin ich auch noch hier II? ")
 			  val measureMetadata = (metadata \\ "structure" \\ "measure")	
+			   println("bin ich auch noch hier III? ")
 			  val measureColumns = measureMetadata.map(m => computeMeasure(m, cols.toList, blockType == "pie")).toList
-				
+				println("bin ich auch noch hier? ")
 			  if(blockType == "grid") {
 					
 					val horizontalSpan = MyUtil.getSeqHeadText((metadata \\ "horizontalSpan")).split(";").toList.map(_.toLong)
@@ -391,33 +401,45 @@ object BIService extends RestHelper{
   case "blocks" :: mode :: checksum :: blocks :: Nil XmlGet _ => {
    // GET command starting with 'blocks' is the standard case	  
    if(!isInitialized) initializeBIService()
-   	 
-   if(isActual(checksum)) {
-	val blockIds = blocks.substring(1).split("b").map(_.toLong).toList
-	
-	if(isPartOf(blocks.substring(1).split("b").toList, userMap(BIServiceUser.is)._3.map(_.toString))) {
-		val answers = ask(blockIds, NodeSeq.Empty)
-		createResponse(answers, mode)
-	}
-	else <msg>Access to some blocks forbidden</msg>
+   
+   try {
+	   if(isActual(checksum)) {
+		val blockIds = blocks.substring(1).split("b").map(_.toLong).toList
+		
+		if(isPartOf(blocks.substring(1).split("b").toList, userMap(BIServiceUser.is)._3.map(_.toString))) {
+			val answers = ask(blockIds, NodeSeq.Empty)
+			createResponse(answers, mode)
+		}
+		else <msg>Access to some blocks forbidden</msg>
+	   }
+	   else sendMetaData(userMap(BIServiceUser.is)._2)
    }
-   else sendMetaData(userMap(BIServiceUser.is)._2)
+   catch {
+	   case e: Exception => println(e.toString)
+	   <msg>Access to some blocks forbidden</msg>
+   }
   }
   
   case "blocks" :: mode :: checksum :: blocks :: Nil XmlPost xml -> _ => {
    // POST command is used when filter attributes are required
    if(!isInitialized) initializeBIService()
    	 
-   if(isActual(checksum)) {
-	val blockIds = blocks.substring(1).split("b").map(_.toLong).toList
-	
-	if(isPartOf(blocks.substring(1).split("b").toList, userMap(BIServiceUser.is)._3.map(_.toString))) {
-		val answers = ask(blockIds, xml \\ "filter")
-		createResponse(answers, mode)
-	}
-	else <msg>Access to some blocks forbidden</msg>
+   try {
+	   if(isActual(checksum)) {
+		val blockIds = blocks.substring(1).split("b").map(_.toLong).toList
+		
+		if(isPartOf(blocks.substring(1).split("b").toList, userMap(BIServiceUser.is)._3.map(_.toString))) {
+			val answers = ask(blockIds, xml \\ "filter")
+			createResponse(answers, mode)
+		}
+		else <msg>Access to some blocks forbidden</msg>
+	   }
+	   else sendMetaData(userMap(BIServiceUser.is)._2)
    }
-   else sendMetaData(userMap(BIServiceUser.is)._2)
+   catch {
+	   case e: Exception => println(e.toString)
+	   <msg>Access to some blocks forbidden</msg>
+   }
    
   }
   

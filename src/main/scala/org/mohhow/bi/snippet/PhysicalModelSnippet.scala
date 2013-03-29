@@ -179,8 +179,8 @@ class PhysicalModelSnippet {
   }
   
   def findCorrespondingAttributes(vertex: ModelVertex) = {
-   if(vertex.elementType == "dimension") ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.referenceId, vertex.id))
-   else ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.fkScenario, SelectedScenario.is.id)).filter(v => MyUtil.isConnected(v.id, vertex.id))
+   if(vertex.elementType == "dimension") ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.referenceId, vertex.id), By(ModelVertex.isCurrent, 1))
+   else ModelVertex.findAll(By(ModelVertex.elementType, "attribute"), By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.isCurrent, 1)).filter(v => MyUtil.isConnected(v.id, vertex.id))
   }
   
   def degenerated(vertex: ModelVertex) = {
@@ -209,9 +209,9 @@ class PhysicalModelSnippet {
 	  
 	 val newTable = PTable.create
 	 newTable.name(vertex.elementName.replaceAll(" ", "_")).fkScenario(SelectedScenario.is).validFrom(new Date).isCurrent(1).isDerivedFromModel(1)
-	 if(vertex.elementType == "dimension") newTable.fkDimension(vertex.id)
-	 else if (vertex.elementType == "level") newTable.fkLevel(vertex.id)
-	 else newTable.fkCube(vertex.id)
+	 if(vertex.elementType == "dimension") newTable.fkDimension(vertex.id).tableType("dimension")
+	 else if (vertex.elementType == "level") newTable.fkLevel(vertex.id).tableType("level")
+	 else newTable.fkCube(vertex.id).tableType("cube")
 	 
 	 newTable.save
 	 
@@ -342,8 +342,7 @@ class PhysicalModelSnippet {
 	 
 		 // add additional attributes
 		 addAdditionalAttributes("dimension", dim)	 
-	 }
-	 
+	 } 
  }
  
  def deriveFromLogic() : JsCmd = {
@@ -408,9 +407,14 @@ class PhysicalModelSnippet {
 	 	  else <span/>
 	  }
   }
+  
+  def empty(): JsCmd = Noop
+  
+  val addButton = if(MyUtil.isDesigner()) ajaxButton(S.?("addTable"), addTable _) % ("class" -> "standardButton") else ajaxButton(S.?("addTable"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val deriveButton = if(MyUtil.isDesigner()) ajaxButton(S.?("deriveFromLogic"), deriveFromLogic _) % ("class" -> "standardButton") else ajaxButton(S.?("deriveFromLogic"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
 		
-  bind("physical", xhtml, "add" -> ajaxButton(S.?("addTable"), addTable _) % ("class" -> "standardButton"),
-		  				  "derive" -> ajaxButton(S.?("deriveFromLogic"), deriveFromLogic _) % ("class" -> "standardButton"),
+  bind("physical", xhtml, "add" -> addButton,
+		  				  "derive" -> deriveButton,
 		                  "header" -> showHeader(),
 		                  "overview" -> PTable.findAll(By(PTable.fkScenario,SelectedScenario.is.id)).map(createListItem).toSeq,
 		                  "rows" -> showRows())

@@ -7,11 +7,11 @@
   		<script  src="/script/specification.js" type="text/javascript"></script>
   		<script type="text/javascript">
 			$(document).ready(function() { 
-			    $('.emphasizableBlock').click(function() {
+			    $('.emphasizableBlock').live('click', function() {
 			  	 $('.emphasizableBlock').removeClass('emphasized');
 					$(this).addClass('emphasized');
 				});
-			    $('.emphasizableSpec').click(function() {
+			    $('.emphasizableSpec').live('click', function() {
 				  	 $('.emphasizableSpec').removeClass('emphasized');
 						$(this).addClass('emphasized');
 					});
@@ -32,6 +32,7 @@
 	</head>
 	<dropResults id="dropResults" />
 	<lift:RoleSnippet.inScenario>
+	    <lift:MockupSnippet.specification><spec:initBlocks /></lift:MockupSnippet.specification>
 		<div class="upper_right">
 			<h1>Spezifikationen</h1>
 			<div class="menuBar">

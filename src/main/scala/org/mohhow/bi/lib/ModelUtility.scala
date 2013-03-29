@@ -120,8 +120,8 @@ object ModelUtility {
 	  case "dimension" => {
 	 	  val clones = ModelVertex.findAll(By(ModelVertex.elementName, v.elementName), By(ModelVertex.elementType, "dimension"), By(ModelVertex.fkScenario, v.fkScenario))
 	 	  val cubes = ModelVertex.findAll(By(ModelVertex.elementType, "cube"), By(ModelVertex.fkScenario, v.fkScenario))
-	 	  //cubes.filter(connectedToSome(clones)).map(cubeLoadCycle).min
-	 	  cubes.map(cubeLoadCycle).min
+	 	  
+	 	  if(cubes.isEmpty) 60 * 60 * 24 else cubes.map(cubeLoadCycle).min
 	  }
 	  case "level" => {
 	 	  10
@@ -152,7 +152,7 @@ object ModelUtility {
  
  def computeSize(tableKind: String, initialSize: Long, growth: Long, end: Long, begin: Long, initialDate: Long, cycle: Long): Long = {
   if(tableKind == "transactionTable") Math.ceil(MyUtil.duration(end, begin) * 60 * 60 * 24/cycle).toLong * growth
-  else Math.ceil(MyUtil.duration(end, initialDate) * 60 * 60 * 24/cycle).toLong * growth + initialSize
+  else Math.ceil(MyUtil.duration(initialDate, end) * 60 * 60 * 24/cycle).toLong * growth + initialSize
  }
  
  def computeReducedSize(v: ModelVertex, tableName: String, end: Long, begin: Long, initialLoadDate: Long, ratio: Long): Int = {
@@ -160,7 +160,7 @@ object ModelUtility {
   val growth = growthAsNumber(v)
   val cycle = loadCycle(v)
   val estimatedSize = computeSize(tableName, initialSize, growth, end, begin, initialLoadDate, cycle)
-  Math.floor(estimatedSize/ratio).toInt
+  Math.floor(estimatedSize * ratio/100).toInt
  }
  
  def findJoinPath(factTable: PTable, attr: PAttribute): List[PAttribute] = {
@@ -206,9 +206,19 @@ object ModelUtility {
 	  case _ => List("")
   }
   
-  val sortedPaths = paths.sort(_.size < _.size) 
-  val reducedPaths = reduce(sortedPaths)
-  ("" /: List.flatten(reducedPaths.map(a => onePath(a))).filter(_.length > 0)) (_ + " AND " + _)
+  def conPath(paths: List[String]): String = paths match{
+	  case Nil => ""
+	  case List(aPath) => aPath
+	  case head :: tail => head + " AND " + conPath(tail) 
+	  
+  }
+  
+  val reducedPaths = reduce(paths.sort(_.size < _.size))
+  val statements = List.flatten(reducedPaths.map(a => onePath(a))).filter(_.length > 0)
+  
+  if(statements.isEmpty) ""
+  else if (statements.size == 1) statements(0)
+  else conPath(statements)
  }
  
  def organizeLevel(organizedLevel: List[(ModelVertex, Int)], remainingLevel: Set[ModelVertex], n: Int): List[(ModelVertex, Int)] = {
@@ -253,7 +263,7 @@ object ModelUtility {
   if(levelsBelow.isEmpty) "sum" else levelsBelow.map(lb => aggr(lb, m)).apply(0)
  }
  
- def createSelect(attrs: List[(PAttribute, String, String, String)], msrs: List[(Measure, String, String)], fact: PTable, filter: String): String = {
+ def createSelect(attrs: List[(PAttribute, String, String, String)], msrs: List[(Measure, String, String)], fact: PTable, filter: (String, List[(PAttribute, PTable)])): String = {
   def makeLevel(attrs: List[(PAttribute, String, String, String)]) = {
    if(attrs.isEmpty) Nil else {
 	   val representative = ModelVertex.findAll(By(ModelVertex.id, attrs(0)._1.fkModelAttribute)).apply(0)
@@ -261,23 +271,22 @@ object ModelUtility {
    }
   }
   
+  def maybeTwoThings(whatIsBefore: String, whatFollows: String, something: String) = if(whatIsBefore.length > 0 && whatFollows.length > 0) something else ""
   def maybeSomething(whatFollows: String, something: String) = if(whatFollows.length > 0) something else ""
   
-  //val representative = ModelVertex.findAll(By(ModelVertex.id, attrs(0)._1.fkModelAttribute)).apply(0)
   val organizedLevel = makeLevel(attrs)
 	 
   val select = "SELECT "
   val attrList = MyUtil.makeSeparatedList(attrs.map(a => a._2 + "." + a._3),",")
   val msrList = MyUtil.makeSeparatedList(msrs.map(m => determineAggregation(m._1, attrs.map(_._1), organizedLevel) + "(" + m._2 + "." + m._3 + ")"),",")
-  val from = MyUtil.makeSeparatedList(List(fact.name.toString) ::: attrs.map(_._2).distinct, ",")
-  val joins = createJoinStatement(attrs.map(a => findJoinPath(fact, a._1)))
+  val from = MyUtil.makeSeparatedList((List(fact.name.toString) ::: attrs.map(_._2) ::: filter._2.map(t => t._2.name.toString)).distinct, ",")
+  val joins = createJoinStatement(attrs.map(a => findJoinPath(fact, a._1)) ::: filter._2.map(f => findJoinPath(fact, f._1)))
   val groupBy = if(attrList.size > 0) "\nGROUP BY " + attrList else ""
   val orderedAttributes = attrs.filter(_._4.length > 0).map(a => a._2 + "." + a._3 + " " + a._4)
   val orderBy = if(orderedAttributes.size > 0) "\nORDER BY " + MyUtil.makeSeparatedList(orderedAttributes, ",") else ""
-  val conjunction = if(joins == null || joins.length == 0) "" else " AND " 
-	  
-	  
-  select + attrList  + maybeSomething(msrList, ", ") + msrList + "\nFROM "  + from + maybeSomething(joins + filter, "\nWHERE ") + joins + conjunction + filter  + groupBy + orderBy 
+  val conjunction = if(joins != null && joins.length > 0 && filter._1 != null && filter._1.length > 0) " AND " else "" 
+	 // ::: filter._2.map(t => t._2.name)
+  select + attrList  + maybeTwoThings(attrList, msrList, ", ") + msrList + "\nFROM "  + from + maybeSomething(joins + filter._1, "\nWHERE ") + joins + conjunction + filter._1  + groupBy + orderBy 
  }
  
  def findOriginal(v: ModelVertex): ModelVertex = {

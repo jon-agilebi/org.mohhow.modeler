@@ -33,9 +33,11 @@
 				<ul>
 					<li class="listItem choiceSetup" group="vision">Vision</li>
 					<li class="listItem choiceSetup" group="roles">Rollen</li>
-					<li class="listItem choiceSetup" group="scenarioConfiguration">Szenariokonfiguration</li>
+					<li class="listItem choiceSetup" group="scenarioConfiguration">Szenarioeinstellungen</li>
 					<li class="listItem choiceSetup" group="units">Einheiten</li>
-					<li class="listItem choiceSetup" group="design">Designrichtlinien</li>
+					<lift:RoleSnippet.inAsDesigner>
+						<li class="listItem choiceSetup" group="design">Designrichtlinien</li>
+					</lift:RoleSnippet.inAsDesigner>
 				</ul>
 			</div>
 			<div class="threeQuarterContent pivot" group="vision">
@@ -74,7 +76,7 @@
 			 		<tbody>
 			 			<lift:ScenarioSnippet.usage><usage:table/></lift:ScenarioSnippet.usage>
 	                </tbody>
-				</table>
+				</table><br />
 				<lift:ScenarioSnippet.usage><usage:change/></lift:ScenarioSnippet.usage>
 			</div>
 			<div class="quarterContent pivot" group="roles">
@@ -122,37 +124,39 @@
 	            	</table>
 	            </lift:ScenarioSnippet.unitSetup>
 			</div>
-			<div class="threeQuarterContent pivot" group="design">
-				<lift:ScenarioSnippet.design>
-				    <h3>Logisches Datenmodell</h3><br />
-				    <design:subjectSeparation /> Trenne Kennzahlen, die zu verschiedenen Themen geh&ouml;ren<br />
-				    <design:simpleLifecycleSeparation /> Trenne Kennzahlen mit unterschiedlicher Aktualit&auml;t<br />
-				    <design:complexLifecycleSeparation /> Trenne Kennzahlen mit unterschiedlicher Aktualit&auml;t bzw. Lebensdauer<br /><br />
-					<h3>Physikalisches Datenmodell</h3><br />
-					<h4>Stern oder Schneeflocke</h4><br />
-					<design:snowflake /><br /><br />
-					<h4>Kontenmodell</h4><br />
-					<design:accountModel /><br /><br />
-					<h3>Sichten</h3><br />
-					<design:extraViewLayer /> Erzeuge eine zus&auml;tzliche Schicht aus Sichten, die Datenmodell und BI Werkzeuge entkoppelt<br />
-					<design:stableViewLayer /> Halte die zus&auml;tzliche Schicht m&ouml;glichst stabil in neuen Releasen<br /><br />
-					<h3>Pr&auml;fixe und Namen</h3><br />
-						<table>
-							<tr><td><span>Pr&auml;fix f&uuml;r transaktionale Faktentabellen:</span></td><td><design:prefixTFact /></td></tr>
-							<tr><td><span>Pr&auml;fix f&uuml;r Faktentabellen mit Zeitpunktbetrachtungen:</span></td><td><design:prefixSFact /></td></tr>
-							<tr><td><span>Pr&auml;fix f&uuml;r Dimensionstabellen:</span></td><td><design:prefixDim /><br /></td></tr>
-							<tr><td><span>Name der Kennzahlendimension</span></td><td><design:nameDimMeasure /><br /></td></tr>
-							<tr><td><span>Namenskonvention f&uuml;r Prim&auml;rschl&uuml;ssel:</span></td><td><design:namePrimaryKey /><br /></td></tr>
-							<tr><td><span>Namenskonvention f&uuml;r Referenzen:</span></td><td><design:nameReferences /><br /></td></tr>
-							<tr><td><span>Defaulttyp f&uuml;r Schl&uuml;sselfelder:</span></td><td><design:defaultKeyType /><br /></td></tr>
-							<tr><td><span>Defaulttyp f&uuml;r Kennzahlenfelder:</span></td><td><design:defaultMeasureType /><br /></td></tr>
-							<tr><td><span>Defaulttyp f&uuml;r Attributfelder:</span></td><td><design:defaultAttributeType /><br /></td></tr>
-						</table><br />
-						
-					<h3>Zus&auml;tzliche Metadatenattribute</h3><br />
-					<design:additionalAttributes />
-				</lift:ScenarioSnippet.design>
-			</div>
+			<lift:RoleSnippet.inAsDesigner>
+				<div class="threeQuarterContent pivot" group="design">
+					<lift:ScenarioSnippet.design>
+					    <h3>Logisches Datenmodell</h3><br />
+					    <design:subjectSeparation /> Trenne Kennzahlen, die zu verschiedenen Themen geh&ouml;ren<br />
+					    <design:simpleLifecycleSeparation /> Trenne Kennzahlen mit unterschiedlicher Aktualit&auml;t<br />
+					    <design:complexLifecycleSeparation /> Trenne Kennzahlen mit unterschiedlicher Aktualit&auml;t bzw. Lebensdauer<br /><br />
+						<h3>Physikalisches Datenmodell</h3><br />
+						<h4>Stern oder Schneeflocke</h4><br />
+						<design:snowflake /><br /><br />
+						<h4>Kontenmodell</h4><br />
+						<design:accountModel /><br /><br />
+						<h3>Sichten</h3><br />
+						<design:extraViewLayer /> Erzeuge eine zus&auml;tzliche Schicht aus Sichten, die Datenmodell und BI Werkzeuge entkoppelt<br />
+						<design:stableViewLayer /> Halte die zus&auml;tzliche Schicht m&ouml;glichst stabil in neuen Releasen<br /><br />
+						<h3>Pr&auml;fixe und Namen</h3><br />
+							<table>
+								<tr><td><span>Pr&auml;fix f&uuml;r transaktionale Faktentabellen:</span></td><td><design:prefixTFact /></td></tr>
+								<tr><td><span>Pr&auml;fix f&uuml;r Faktentabellen mit Zeitpunktbetrachtungen:</span></td><td><design:prefixSFact /></td></tr>
+								<tr><td><span>Pr&auml;fix f&uuml;r Dimensionstabellen:</span></td><td><design:prefixDim /><br /></td></tr>
+								<tr><td><span>Name der Kennzahlendimension</span></td><td><design:nameDimMeasure /><br /></td></tr>
+								<tr><td><span>Namenskonvention f&uuml;r Prim&auml;rschl&uuml;ssel:</span></td><td><design:namePrimaryKey /><br /></td></tr>
+								<tr><td><span>Namenskonvention f&uuml;r Referenzen:</span></td><td><design:nameReferences /><br /></td></tr>
+								<tr><td><span>Defaulttyp f&uuml;r Schl&uuml;sselfelder:</span></td><td><design:defaultKeyType /><br /></td></tr>
+								<tr><td><span>Defaulttyp f&uuml;r Kennzahlenfelder:</span></td><td><design:defaultMeasureType /><br /></td></tr>
+								<tr><td><span>Defaulttyp f&uuml;r Attributfelder:</span></td><td><design:defaultAttributeType /><br /></td></tr>
+							</table><br />
+							
+						<h3>Zus&auml;tzliche Metadatenattribute</h3><br />
+						<design:additionalAttributes />
+					</lift:ScenarioSnippet.design>
+				</div>
+			</lift:RoleSnippet.inAsDesigner>
 		 </div>
 	 </lift:RoleSnippet.inScenario>
 </lift:surround>

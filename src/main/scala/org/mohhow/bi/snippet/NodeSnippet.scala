@@ -17,6 +17,7 @@ import Helpers._
 
 import scala.xml._
 import org.mohhow.bi.lib.Repository
+import org.mohhow.bi.lib.HTTPClientUtility
 import org.mohhow.bi.util.{Utility => MyUtil}
 
 object Nodes extends SessionVar[NodeSeq](Repository.read("configuration", -1, "nodes", "nodes",0).map(Utility.trim) \\ "node")
@@ -62,8 +63,10 @@ class NodeSnippet {
   if(SelectedNode.is != null) {
    val host = MyUtil.getSeqHeadText(SelectedNode.is \\ "host")
    val port = MyUtil.getSeqHeadText(SelectedNode.is \\ "port")
-   val cmd = "$.get('http://" + host + ":" + port + "/bi/ping', function(resp){alert('" + S.?("pingSuccess") + " " + host + "')});"
-   JsRaw(cmd) 
+   val url = "http://" + host + ":" + port + "/bi/ping"
+   Alert(HTTPClientUtility.get(url))
+   //val cmd = "$.get('http://" + host + ":" + port + "/bi/ping', function(resp){alert('" + S.?("pingSuccess") + " " + host + "')},'json').fail(function() { alert('error'); });"
+   //JsRaw(cmd) 
   }
   else Alert(S.?("noNodeChoice"))
  }
@@ -176,7 +179,7 @@ class NodeSnippet {
 	 <table class="nodeInput">
 	  <tr><td><label>{S.?("friendlyName")}</label></td><td><input type="text" value={MyUtil.getSeqHeadText(node \\ "friendlyName")} size="40" maxlength="100" /></td></tr>
 	  <tr><td><label>{S.?("host")}</label></td><td><input type="text" value={MyUtil.getSeqHeadText(node \\ "host")} size="40" maxlength="100" /></td></tr>
-	  <tr><td><label>{S.?("port")}</label></td><td><input type="text" value={MyUtil.getSeqHeadText(node \\ "port")} size="10" maxlength="10" /></td></tr>
+	  <tr><td><label>{S.?("port")}</label></td><td><input type="text" value={MyUtil.getSeqHeadText(node \\ "port")} size="10" maxlength="100" /></td></tr>
 	  <tr><td><label>{S.?("system")}</label></td><td><input type="text" value={MyUtil.getSeqHeadText(node \\ "system")} size="40" maxlength="100" /></td></tr>
 	  <tr><td><label>{S.?("environment")}</label></td><td>{getEnvironmentSelection(MyUtil.getSeqHeadText(node \\ "environment"))}</td></tr>
 	 </table>
@@ -225,13 +228,21 @@ class NodeSnippet {
 	(n, tn == "newNode")
   }
   
+  
   def transformNode(node: Node, transformedNode: Node) = if ((node \\ "@technicalName").text == (transformedNode \\ "@technicalName").text) transformedNode else node
   def newNodes(trN: (Node, Boolean)) = if(trN._2) MyUtil.flattenNodeSeq(Nodes.is.toList ::: List(trN._1)) else Nodes.is.map(n => transformNode(n, trN._1)).toSeq
   
+  val oldTechnicalName = (SelectedNode.is \\ "@technicalName").text
   val table = XML.loadString("<table>" + rows + "</table>")
-  val nodes = <nodes>{newNodes(crNode((table \\ "tr")))}</nodes>	 
+  val nodes = <nodes>{newNodes(crNode((table \\ "tr")))}</nodes>
   Repository.write("configuration", -1, "nodes", "nodes", 0, nodes)
   Nodes(Repository.read("configuration", -1, "nodes", "nodes",0).map(Utility.trim) \\ "node")
+  
+  if(oldTechnicalName == "newNode" && Nodes.is.size > 0) SelectedNode(Nodes.is.apply(Nodes.is.size - 1))
+  else {
+	  val ns = Nodes.is.filter(n => (n \\ "@technicalName").text == oldTechnicalName)
+	  if(ns.size == 1) SelectedNode(ns(0)) else if (Nodes.is.size > 0) SelectedNode(Nodes.is.apply(0))
+  }
   
   RedirectTo("node") 
  }

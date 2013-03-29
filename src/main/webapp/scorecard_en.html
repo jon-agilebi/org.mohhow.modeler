@@ -36,7 +36,6 @@
 					}
 				})
 			}); 
-			//showScorecard();
 		});   
 		</script>
 	</head>
@@ -48,7 +47,10 @@
 			</div>
 		</div>
 		<div class="rightHalfContent" >
-			<lift:LayoutSnippet.design><scorecard:data /><scorecard:display /></lift:LayoutSnippet.design>
+			<lift:LayoutSnippet.design>
+					<lift:RoleSnippet.inScorecard><scorecard:data /></lift:RoleSnippet.inScorecard>
+					<scorecard:display />
+			</lift:LayoutSnippet.design>
 		</div>
 	</lift:RoleSnippet.inScenario> 
 </lift:surround>

@@ -10,6 +10,7 @@ import org.mohhow.model._
 import java.util.Date
 import java.util.regex.Pattern
 import org.mohhow.bi.lib.WikiParser
+import org.mohhow.bi.util.{Utility => MyUtil}
 
 object FeatureForm extends LiftScreen {
 	
@@ -94,12 +95,13 @@ object FeatureForm extends LiftScreen {
   
   val content = WikiParser.contentOfQuestion(feature.description.toString)
   val role = processRole(content._1)
-  println("ok the content " + content.toString)
+  
   if(IsNewFeature.is) {
 	  val newSpec = Specification.create
 	  newSpec.fkScenario(SelectedScenario.is).fkFeature(feature).name(feature.name).description(feature.description).status("candidate").dateCreated(new Date).save
 	  val newLink = SpecificationToRole.create
 	  newLink.fkSpecification(newSpec).fkRole(role).dateCreated(new Date).save
+	  MyUtil.createFrame(newSpec.id)
   }
   
   val questions = content._2 

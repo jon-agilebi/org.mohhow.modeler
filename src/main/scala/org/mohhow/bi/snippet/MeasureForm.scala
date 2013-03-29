@@ -19,7 +19,7 @@ object MeasureForm extends LiftScreen {
  def nvl(s: String) = if (s == null) "" else s
  def checkTerm(term: String): List[FieldError] = if(term != null && term != "" && WikiParser.checkTerm(term)._1)  WikiParser.checkTerm(term)._2 else Nil
  
- val upToThreeDigits = Pattern.compile("\\d{1,3}+")	
+ val upToThreeDigits = Pattern.compile("[123456789]\\d{0,2}+")	
  
  val timeUnits = List("seconds", "tMinutes", "hours", "workingDays", "calendarDays", "weeks", "months", "nthDayOfNextMonth", "nthWorkingDayOfNextMonth", "years")
  val timeUnitPresentation = List(S.?("seconds"), S.?("tMinutes"), S.?("hours"), S.?("workingDays"), S.?("calendarDays"), S.?("weeks"), S.?("months"), S.?("nthDayOfNextMonth"), S.?("nthWorkingDayOfNextMonth"), S.?("years"))
@@ -34,8 +34,8 @@ object MeasureForm extends LiftScreen {
  }
  
  val subject = select(S.?("subject"), nvl(SelectedMeasure.is.subject), subjectList())
- val shortName = field(S.?("shortName"), nvl(SelectedMeasure.is.shortName), valMinLen(1, S.?("textToShort")), valMaxLen(50, S.?("textToLong")))
- val longName = field(S.?("longName"), nvl(SelectedMeasure.is.longName), valMinLen(1, S.?("textToShort")), valMaxLen(200, S.?("textToLong")))
+ val shortName = field(S.?("shortName"), nvl(SelectedMeasure.is.shortName), valMinLen(1, S.?("textToShort")), valMaxLen(50, S.?("textToLong")), uniqueMeasureShortName _)
+ val longName = field(S.?("longName"), nvl(SelectedMeasure.is.longName), valMinLen(1, S.?("textToShort")), valMaxLen(200, S.?("textToLong")), uniqueMeasureLongName _)
  val unit = select(S.?("unit"), nvl(SelectedMeasure.is.unit), getUnits())
  val definition = textarea(S.?("definition"), nvl(SelectedMeasure.is.definition), valMaxLen(1000, S.?("textToLong")))
  val formula = textarea(S.?("formula"), MyUtil.prettyTerm(nvl(SelectedMeasure.is.formula.toString), false), checkTerm _, "class" -> "termEditor")
@@ -45,10 +45,20 @@ object MeasureForm extends LiftScreen {
  val interest = field(S.?("timespanOfInterest"), nvl(SelectedMeasure.is.timespanOfInterestValue.toString),valRegex(upToThreeDigits, S.?("threeDigitsNotInRange")))
  val interestUnit = select(S.?("unit"), nvl(S.?(SelectedMeasure.is.timespanOfInterestUnit)), timeUnitPresentation)
  val storage = field(S.?("requiredStorageTime"), nvl(SelectedMeasure.is.requiredStorageValue.toString),valRegex(upToThreeDigits, S.?("threeDigitsNotInRange")))
- val storageUnit = select("unit", nvl(S.?(SelectedMeasure.is.requiredStorageUnit)), timeUnitPresentation)
+ val storageUnit = select(S.?("unit"), nvl(S.?(SelectedMeasure.is.requiredStorageUnit)), timeUnitPresentation)
  
  override def cancelButton = <button>{S.?("cancel")}</button>
  override def finishButton = <button>{S.?("finish")}</button>
+ 
+ def uniqueMeasureName(name: String, isShortName: Boolean): List[FieldError] = {
+  val names = Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id))
+  if(isShortName && names.exists(msr => msr.shortName == name && msr.id != SelectedMeasure.is.id)) S.?("measureAlreadyExists") 
+  else if(!isShortName && names.exists(msr => msr.longName == name && msr.id != SelectedMeasure.is.id)) S.?("measureAlreadyExists")
+  else Nil 
+ }
+
+ def uniqueMeasureShortName(name: String) = uniqueMeasureName(name, true)
+ def uniqueMeasureLongName(name: String) = uniqueMeasureName(name, false)
  
  def finish() { 
   val measure = SelectedMeasure.is

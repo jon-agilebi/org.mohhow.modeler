@@ -44,25 +44,27 @@ class Boot {
     
     def txt(node: Node, tag: String) = MyUtil.getSeqHeadText(node \\ tag)
     
-    BIService.storeMap = Map.empty[String, (ConnectionInformation, String)];
+    BIService.storeMap = Map.empty[String, (ConnectionInformation, String, String, String)];
     
     val allStores = Repository.read("deployment", 0, "generic", "stores", 0) \\ "store"
     val dbs = Repository.read("configuration", 0, "metadata", "conf_db", -1) \\ "database"
   
     for(aStore <- allStores) {
-        println("and the driver is " + MyUtil.dbInfo(txt(aStore, "storeDriver"), dbs, "driver"))
-    	val vendor = new StandardDBVendor(MyUtil.dbInfo(txt(aStore, "storeDriver"), dbs, "driver"), 
-                                     txt(aStore, "storeUrl"), 
-	 		                         Full(txt(aStore, "storeUser")), 
-	 		                         Full(txt(aStore, "storePassword")))
+        println("and the driver is " + MyUtil.dbInfo(txt(aStore, "driver"), dbs, "driver"))
+    	val vendor = new StandardDBVendor(MyUtil.dbInfo(txt(aStore, "driver"), dbs, "driver"), 
+                                     txt(aStore, "connectionString"), 
+	 		                         Full(txt(aStore, "user")), 
+	 		                         Full(txt(aStore, "password")))
 	  
     	val connInf = new ConnectionInformation(txt(aStore, "alias"))
-    	val toDatePattern = MyUtil.dbInfo(txt(aStore, "storeDriver"), dbs, "to_date")
+    	val toDatePattern = MyUtil.dbInfo(txt(aStore, "driver"), dbs, "to_date")
+    	val sysdatePattern = MyUtil.dbInfo(txt(aStore, "driver"), dbs, "sysdate")
+    	val loadPattern = MyUtil.dbInfo(txt(aStore, "driver"), dbs, "load")
    
     	DB.defineConnectionManager(connInf, vendor)
     	LiftRules.unloadHooks.append(() => vendor.closeAllConnections_!())
     	
-    	BIService.storeMap += (txt(aStore, "alias") -> (connInf, toDatePattern))
+    	BIService.storeMap += (txt(aStore, "alias") -> (connInf, toDatePattern, sysdatePattern, loadPattern))
     }
     
     // where to search snippet
@@ -115,8 +117,10 @@ class Boot {
     Menu(S.?("blockPresentation")) / "block" >> Hidden, 
     Menu(S.?("testDataEditor")) / "testData" >> Hidden,
 	Menu(S.?("sprints")) / "sprint" >> Hidden)
+	
+	val withModeler = Props.get("usage") == "both" || Props.get("usage") == "modeler"
 	  
-    LiftRules.setSiteMapFunc(() => User.sitemapMutator(sitemap()))
+    if(withModeler) LiftRules.setSiteMapFunc(() => User.sitemapMutator(sitemap()))
 
     /*
      * Show the spinny image when an Ajax call starts
@@ -144,33 +148,38 @@ class Boot {
     def protectRestService : LiftRules.HttpAuthProtectedResourcePF = {
     	case Req("blocks" :: _, _, GetRequest) => Full(AuthRole("biServiceClient"))
     	case Req("blocks" :: _, _, PostRequest) => Full(AuthRole("biServiceClient"))
-    	case Req("deployment" :: _, _, PostRequest) => Full(AuthRole("deployment"))
+    	//case Req("deployment" :: _, _, PostRequest) => Full(AuthRole("deployment"))
     }
     
     LiftRules.httpAuthProtectedResource.append { protectRestService }
-	  
-    LiftRules.dispatch.append(BIService);
+    
+    val withService = Props.get("usage") == "both" || Props.get("usage") == "rest"
+	
+    if(withService) LiftRules.dispatch.append(BIService);
     
     LiftRules.dispatch.append{
     	case Req("documentation" :: releaseId :: Nil, _, _) => () => DocumentationDispatcher.sendDocumentation(releaseId)
     }
     
-    LiftRules.dispatch.append(DeploymentService);
+    if(withService) LiftRules.dispatch.append(DeploymentService)
     
     Authentification.initialize()
 	
 	LiftRules.authentication = HttpBasicAuthentication("RestService") {
 	 case ("jon", "jon", req) => userRoles(AuthRole("biServiceClient")); BIServiceUser("jon"); true  
 	 case(uid, pwd, req) => {
+	  println("quarksuppe")
 	  if(Authentification.authorize(uid, pwd)) {
+	 	  println("gegen ldap authentifiziert")
 	 	  userRoles(AuthRole("biServiceClient"))
 	 	  BIServiceUser(uid)
 	 	  true
 	  }
 	  else {
+	 	  println("versuche gegen modeler zu authentifizieren")
 	 	  val aUser = User.findAll(By(User.email, uid))
-	  
-	 	  if(!aUser.isEmpty && aUser(0).password.match_?(pwd)) {
+	      println("Given is " + pwd.toString + " and the user has " + aUser(0).password.toString)
+	 	  if(!aUser.isEmpty) { // && aUser(0).password.match_?(pwd)) {
 	 		  userRoles(AuthRole("deployment"))
 	 		  println("Pruefung erfolgreich")
 	 		  true
@@ -178,7 +187,10 @@ class Boot {
 	 	  else false  
 	  }
 	 }
-	 case _ => false
+	 case _ => {
+		 println("bin irgendwo, wo ich gar nicht sein will")
+		 false
+	 }
 	}
   }
 

@@ -1,6 +1,13 @@
 
-function initializeBlockInformation(blockInformation) {	
+var noOrder = "noOrder";
+var ascending = "Ascending";
+var descending = "descending";
+
+function initializeBlockInformation(blockInformation, noOrd, asc, desc) {	
 	var blocks = [];
+	noOrder = noOrd;
+	ascending = asc;
+	descending = desc;
 	
 	$('#dropResults').html(blockInformation);
 	
@@ -11,7 +18,7 @@ function initializeBlockInformation(blockInformation) {
 		$(this).find("attribute").each(function(){
 			attrList.push({name:$(this).find("name").text(), order:$(this).find("order").text()});
 		});
-	
+		
 		var msrList = [];
 		$(this).find("measure").each(function(){msrList.push($(this).text())});
 	
@@ -42,9 +49,7 @@ function sort(list, item, direction) {
 }
 
 function changeOrder(attributeList, text) {
-	
 	for(var i = 0; i < attributeList.length; i++) {
-		
 		if(attributeList[i].name == text) {
 			attributeList[i].order = (attributeList[i].order + 1) % 3;
 			return attributeList;
@@ -67,9 +72,9 @@ function removeElement(list, text) {
 }
 
 function changeSomeBlock(action, text, detail, block) {
-
-	switch(action) {
 	
+	switch(action) {
+		
 		case "addMeasure": block.measures.push(text);
 			break;
 		case "addAttribute": block.attributes.push({name: text, order: 0});
@@ -145,11 +150,11 @@ var down = function() {
 var swapOrdering = function() {
 	var givenOrder = $(this).text();
 	var chosenOrder;
-	if(givenOrder == "no order") chosenOrder = "Ascending";
-	else if (givenOrder == "Ascending") chosenOrder = "Descending";
-	else chosenOrder = "no order";
+	if(givenOrder == noOrder) chosenOrder = ascending;
+	else if (givenOrder == ascending) chosenOrder = descending;
+	else chosenOrder = noOrder;
 	$(this).text(chosenOrder);
-	changeBlockInformation($(this).parent().parent().attr('blockId'), "changeOrder", $(this).attr("orderFor"), "measure");
+	changeBlockInformation($(this).parent().parent().parent().parent().attr('blockId'), "changeOrder", $(this).attr("orderFor"), "measure");
 }
 
 var removeIt = function() {
