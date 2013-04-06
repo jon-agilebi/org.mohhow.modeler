@@ -31,7 +31,7 @@ object FeatureForm extends LiftScreen {
  val featureType = select(S.?("type"), nvl(RelevantFeature.is.featureType.toString),  featureTypes)
  val featureDescription = textarea(S.?("description"), nvl(RelevantFeature.is.description.toString), valMaxLen(1000, S.?("textToLong")), parseDescription _)
  val featurePriority = field(S.?("priority"), nvl(RelevantFeature.is.priority.toString), valRegex(priorityPattern, S.?("priorityNotInRange"))) 
- val featureStoryPoints = select(S.?("storyPoints"), nvl(RelevantFeature.is.featureType.toString), List("1", "2", "3", "5", "8", "13", "21", "Gogol"))
+ val featureStoryPoints = select(S.?("storyPoints"), nvl(RelevantFeature.is.storyPoints.toString), List("1", "2", "3", "5", "8", "13", "21", "Gogol"))
  
  override def cancelButton = <button>{S.?("cancel")}</button>
  override def finishButton = <button>{S.?("finish")}</button>

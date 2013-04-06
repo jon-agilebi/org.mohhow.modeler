@@ -124,7 +124,7 @@ object BIService extends RestHelper{
   def mergeColumns(columns: List[List[List[String]]]):List[List[String]] = List.flatten(columns).distinct
   
   def computeColumn(measureId: Long, answers: List[List[List[String]]], attributes: List[List[String]], metadata: Node) = {
-   def row(list: List[String], index: Int) = if(index >= 0) list(index) else ""
+   def row(list: List[String], index: Int) = if(index >= 0 && index < list.size) list(index) else ""
    val indices = (metadata \\ "select").map(s => first((s \\ "measureId").map(MyUtil.getNodeText(_).toLong).toList, measureId, 0)).toList
    
    if(attributes.size > 0 && attributes.head != null) {
@@ -402,7 +402,7 @@ object BIService extends RestHelper{
    // GET command starting with 'blocks' is the standard case	  
    if(!isInitialized) initializeBIService()
    
-   try {
+   //try {
 	   if(isActual(checksum)) {
 		val blockIds = blocks.substring(1).split("b").map(_.toLong).toList
 		
@@ -413,11 +413,11 @@ object BIService extends RestHelper{
 		else <msg>Access to some blocks forbidden</msg>
 	   }
 	   else sendMetaData(userMap(BIServiceUser.is)._2)
-   }
+   /*}
    catch {
 	   case e: Exception => println(e.toString)
 	   <msg>Access to some blocks forbidden</msg>
-   }
+   }  */
   }
   
   case "blocks" :: mode :: checksum :: blocks :: Nil XmlPost xml -> _ => {

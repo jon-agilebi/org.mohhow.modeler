@@ -952,7 +952,7 @@ class ReleaseSnippet {
  
  def userGroups(specs: List[Specification]): List[(List[Specification], List[(Provider, String)])] = {
   def member(rtg: RoleToGroup): List[(Provider, String)] = {
-	if(rtg.fkProvider != null) {
+	if(rtg.fkProvider != null && rtg.fkProvider > 0) {
 		val provider = Provider.findAll(By(Provider.id, rtg.fkProvider)).apply(0)
 		val conf = MyUtil.createConfiguration(provider)
 		
