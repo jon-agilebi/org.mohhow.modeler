@@ -63,7 +63,7 @@ function removeElement(list, text) {
 	
 	for(var i = 0; i < list.length; i++) {
 		if(list[i] == text) {
-			list.splice(i,i);
+			list.splice(i,1);
 			return list;
 		}
 	}
@@ -87,7 +87,7 @@ function changeSomeBlock(action, text, detail, block) {
 			break;
 		case "editFilter": block.filter = text;
 			break;
-		case "remove": if(detail == "measure") removeElement(block.measures, text); else removeElement(block.attributes, text);
+		case "remove": if(detail == "measure") block.measures = removeElement(block.measures, text); else block.attributes = removeElement(block.attributes, text);
 			break;
 		default: break;
 	}

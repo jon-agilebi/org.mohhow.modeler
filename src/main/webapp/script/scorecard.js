@@ -392,7 +392,12 @@ function drawIndicator(raphael, presentationDetail, x, y, width, height) {
 
 function drawPlain(raphael, presentationDetail, x, y, width, height) {	
 	var plainElements = [];
-	var text = raphael.text(x + width/2, y + height/2, "12 $");
+	var phrase = "bla bla";
+	
+	if(presentationDetail == "total") phrase = "1000.000 $"; 
+	else if(presentationDetail == "meaning") phrase = "pretty good";
+	
+	var text = raphael.text(x + width/2, y + height/2, phrase);
 	plainElements.push(text);
 	
 	return plainElements;

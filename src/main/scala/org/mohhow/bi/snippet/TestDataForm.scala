@@ -167,13 +167,14 @@ object TestDataForm extends LiftScreen {
   val rls = Release.findAll(By(Release.fkScenario, t.fkScenario))
   if(rls.isEmpty) None 
   else {
-	  val matchingItem = releaseMap.filter(_._1 == rls(0).id.toString)
+	  println("and the release map is " + releaseMap.toString)
+	  val matchingItem = releaseMap.filter(r => rls.exists(_.id.toString == r._1))
 	  if(matchingItem.isEmpty) None else Some(matchingItem(0)._2)
   }
  }
   
  def finish() {
-  
+  println("jetzt mach mal")
   def date(d: String) = MyUtil.dateAsNumber(MyUtil.asDate(d))
   
   val repositoryAnswer = Repository.prepareTestData(testDataName)
@@ -183,7 +184,7 @@ object TestDataForm extends LiftScreen {
 	 val tablesAndModels =  TestDataModel.is   
 	 val tableSizes = Map.empty[String, Int];
 	 val releases = (TestDataNode.is \\ "deployment" \ "release").map(r => ((r \ "@releaseId").text, MyUtil.getSeqHeadText(r))).toList
-	 
+	 println(tablesAndModels.toString)
 	 for(tm <- tablesAndModels) {
 		 
 		 // first loop: compute table sizes
@@ -204,7 +205,7 @@ object TestDataForm extends LiftScreen {
 	  val tableName = tm._1.name.toString
 	  
 	  val maybeAlias = getRightAlias(tm._1, releases)
-	  
+	  println(maybeAlias.toString)
 	  maybeAlias match {
 	  
 	 	  case None => Noop

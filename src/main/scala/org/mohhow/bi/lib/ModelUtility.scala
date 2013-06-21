@@ -279,6 +279,7 @@ object ModelUtility {
   val select = "SELECT "
   val attrList = MyUtil.makeSeparatedList(attrs.map(a => a._2 + "." + a._3),",")
   val msrList = MyUtil.makeSeparatedList(msrs.map(m => determineAggregation(m._1, attrs.map(_._1), organizedLevel) + "(" + m._2 + "." + m._3 + ")"),",")
+  
   val from = MyUtil.makeSeparatedList((List(fact.name.toString) ::: attrs.map(_._2) ::: filter._2.map(t => t._2.name.toString)).distinct, ",")
   val joins = createJoinStatement(attrs.map(a => findJoinPath(fact, a._1)) ::: filter._2.map(f => findJoinPath(fact, f._1)))
   val groupBy = if(attrList.size > 0) "\nGROUP BY " + attrList else ""

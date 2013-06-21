@@ -134,11 +134,6 @@ object WikiParser {
 	 }
  }
  
- def plain(measureId: String, value: BigDecimal, isMeaning: Boolean) = {
-  val msrs = Measure.findAll(By(Measure.id, measureId.toLong))
-  if(msrs.isEmpty) "" else value.toString + " " + msrs(0).unit
- }
- 
  def evaluateTerm(text: String, vals: List[BigDecimal]): Option[BigDecimal] = {
   val parser = new Term
   val evaluatedText = substituteMeasure(text, vals)
@@ -154,7 +149,7 @@ object WikiParser {
 
   parser.parseAll(parser.evalIndicator, evaluatedText) match {
 	  case parser.Success(result, _) => result 
-	  case parser.NoSuccess(msg, next) => "1"
+	  case parser.NoSuccess(msg, next) =>  "1"  
   }
  }
  
@@ -251,7 +246,6 @@ class Term extends JavaTokenParsers {
  }
  
  def prettyAtom(text: String) = evalHelper(text, "measure")
- def id(text: String) = evalHelper(text, "id")
  
  // parse bracket expressions
  
@@ -278,8 +272,9 @@ class Term extends JavaTokenParsers {
  def range: Parser[Any] = "range("~measureDim~")"^^{ case "range("~m~")" => "<mi>range</mi><mfenced>" + m +  "</mfenced>"}
  def evalRange: Parser[String] = "range("~evalNumber~","~valueList~")"^^{ case "range("~evalNumber~","~list~")" => meanIt(evalNumber, list)}
  
+ def unit: Parser[Any] = """[^,()]*""".r
  def plain: Parser[Any] = "plain("~measureDim~")"^^{ case "plain("~m~")" => "<mi>plain</mi><mfenced>" + m +  "</mfenced>"}
- def evalPlain: Parser[String] = "plain("~measureDim~","~valueList~")"^^{ case "plain("~evalNumber~","~unit~")" => evalNumber.toString + " " + unit.toString}
+ def evalPlain: Parser[String] = "plain("~evalNumber~","~unit~")"^^{ case "plain("~evalNumber~","~unit~")" => evalNumber.toString + " " + unit.toString}
 
  def rnd: Parser[Any] = "rnd("~number~","~number~";"~repsep(naturalNumber~","~number,",")~")"^^{ case "rnd("~min~","~max~";"~appendix~")" => "<mi>rnd</mi><mfenced>" + min + max + ";" + "..." + "</mfenced>"}
 	
@@ -353,7 +348,7 @@ class Term extends JavaTokenParsers {
  def timePattern: Parser[Any] = "?"~("today"|"yesterday"|"tomorrow" |"actual_week"|"actual_month"|"actual_quarter"|"actual_year"
 		                                    |"previous_week"|"previous_month"|"previous_quarter"|"previous_year")~"?"^^{case "?"~pattern~"?" => "?" + pattern + "?"}
  
- def parameter: Parser[Any] = "?"
+ def parameter: Parser[Any] = "?"|"'?'"
  
  def separate (x: ~[String, Any]) = x match {
   case s~d => s + d
@@ -379,7 +374,7 @@ class Term extends JavaTokenParsers {
  
  def filter: Parser[Any] = filterBrackets~rep(("and"|"AND"|"or"|"OR")~filterBrackets)^^{case cond2~conds2 => 
  																				val conds2String = ("" /: conds2.map(separate)) (_ + _)
- 																				cond2 + conds2String}  */
+ 																				cond2 + conds2String} */
 }
 
 class Wiki extends JavaTokenParsers {

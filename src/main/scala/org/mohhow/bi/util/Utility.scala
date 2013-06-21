@@ -355,5 +355,18 @@ def timeInSql(timePattern: String, toDatePattern:  String): String = {
   val otherFrames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr").toList
   Repository.write("scenario", SelectedScenario.is.id, "frames", "frames", -1, <frames>{flattenNodeSeq(portrait :: landscape :: otherFrames)}</frames>)
  }
-  
+ def scale(desc: String): Int = desc match {
+	 case "fiveAfter" => 5
+	 case "fourAfter" => 4
+	 case "threeAfter" => 3
+	 case "twoAfter" => 2
+	 case "oneAfter" => 1
+	 case "noScale" => 0
+	 case "powerTen" => -1
+	 case "powerHundred" => -2 
+	 case "powerThousand" => -3
+	 case "powerMillion" => -6
+	 case "powerBillion" => -9
+	 case _ => 0
+ }
 }

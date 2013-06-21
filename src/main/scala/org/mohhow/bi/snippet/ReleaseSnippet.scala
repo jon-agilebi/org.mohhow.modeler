@@ -442,13 +442,19 @@ class ReleaseSnippet {
    val msrXML = msrsOfFT.map(m => <column><kind>measure</kind><measureId>{m.id.toString}</measureId><type></type></column>).toSeq
    val augmentedAttrs = attrs.map(a => (a._1, findPhysics(a._1.id, true), a._2)).map(item => (anAttribute(item._2._1), tName(item._2._2), aName(item._2._1), item._3))
    val augmentedMsrs = msrs.map(m => (m, findPhysics(m.id, false))).map(item => (item._1, tName(item._2._2), aName(item._2._1)))
-	  
+   
    <select>{attrXML}{msrXML}<sql>{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), filter)}</sql></select>
   }
   
   def aMeasure(m: Option[Measure]): Measure = m match {
 	   case None => null
 	   case Some(msr) => msr
+  }
+  
+  def makeFormula(formula: String, measureId: Long, presentationType: String, presentationDetail: String) = {
+   if(presentationType == "text" && presentationDetail == "total" && (formula == null || formula == "")) refineFormula("plain(<m" + measureId.toString + ">)")  
+   else if(presentationType == "text" && presentationDetail == "meaning" && (formula == null || formula == "")) refineFormula("meaning(<m" + measureId.toString + ">)")
+   else refineFormula(formula)
   }
   
   def refineFormula(formula: String): String = {
@@ -472,7 +478,7 @@ class ReleaseSnippet {
 		 		}
 		 		else {
 		 			val msrs = Measure.findAll(By(Measure.id,digits.toLong))
-		 			if(msrs.isEmpty) formula else formula.substring(1, formula.length - 1) + ", " + msrs(0).unit + ")"
+		 			if(msrs.isEmpty) formula else formula.substring(0, formula.length - 1) + ", " + msrs(0).unit + ")"
 		 		}
 		 	}
 	 	 }  
@@ -481,7 +487,11 @@ class ReleaseSnippet {
   }
   
   val blockId = (bl \ "@blockId").text
-  val blockType = findBlockType(MyUtil.getSeqHeadText(bl \ "presentationType"))
+  val presentationType = MyUtil.getSeqHeadText(bl \ "presentationType")
+  val pie = if(presentationType == "pie") "pie" else "none"
+  val presentationDetail = MyUtil.getSeqHeadText(bl \ "presentationDetail")
+  val scale = MyUtil.scale(MyUtil.getSeqHeadText(bl \ "scale"))
+  val blockType = findBlockType(presentationType)
   val filter = translateFilter("""&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(bl \\ "filter"), "<"), ">"), Nil)
   val attrs = (bl \\ "attribute").map(a => (findAttribute(MyUtil.getSeqHeadText(a \ "name")), setOrder(MyUtil.getSeqHeadText(a \ "order")))).filter(_._1 != null)
   val msrs = (bl \\ "measure").map(m => findMeasure(MyUtil.getNodeText(m)))
@@ -489,15 +499,15 @@ class ReleaseSnippet {
   val factTables = relevantMeasures.map(msr => findPhysics(msr.id, false)).map(_._2).distinct
   
   val attrXML = attrs.map(attr => <attribute><id>{attr._1.id.toString}</id><order>{attr._2}</order><emphasize></emphasize></attribute>).toSeq
-  val msrXML = msrs.map(aMeasure).toList.map(msr => <measure><id>{msr.id.toString}</id><formula>{refineFormula(msr.formula.toString.trim)}</formula></measure>).toSeq
+  val msrXML = msrs.map(aMeasure).toList.filter(_ != null).map(msr => <measure><id>{msr.id.toString}</id><formula>{makeFormula(msr.formula, msr.id, presentationType, presentationDetail)}</formula></measure>).toSeq
   val sqlXML = factTables.map(fact => sql(fact, relevantMeasures, attrs.toList, filter))
   val grid = if(blockType == "grid") {
 	  val check = checkGrid(MyUtil.getSeqHeadText(bl \ "horizontalSpan"), MyUtil.getSeqHeadText(bl \ "verticalSpan"), attrs.map(_._1).toList)
-	  <grid><horizontalSpan>{check._2}</horizontalSpan><verticalSpan>{check._2}</verticalSpan></grid>
+	  <grid><horizontalSpan>{check._2}</horizontalSpan><verticalSpan>{check._3}</verticalSpan></grid>
   }
   else NodeSeq.Empty
   
-  <block blockId={blockId}><blockType>{blockType}</blockType><structure>{attrXML}{msrXML}</structure><selects>{sqlXML}</selects>{grid}</block> 
+  <block blockId={blockId}><blockType>{blockType}</blockType><structure>{attrXML}{msrXML}{grid}<pie>{pie}</pie><scale>{scale}</scale></structure><selects>{sqlXML}</selects></block> 
  }
  
  def checkGrid(horizontalName: String, verticalName: String, attributes: List[ModelVertex]): (Boolean, String, String) = {
@@ -515,11 +525,12 @@ class ReleaseSnippet {
   else {
 	  val horizontalAttrs = ModelUtility.attributesAbove(horizontal(0))
 	  val verticalAttrs = ModelUtility.attributesAbove(vertical(0))
+	  println(horizontalAttrs.toString + "dfg" + verticalAttrs.toString)
 	  val hMatch = attributes.intersect(horizontalAttrs)
 	  val vMatch = attributes.intersect(verticalAttrs)
 	  
-	  if(attributes.diff(hMatch ::: vMatch).size > 0) (false, "attributeNotInHierarchy", "attributeNotInHierarchy")
-	  else (true, serialize(hMatch), serialize(vMatch))
+	  if(attributes.diff(hMatch ::: vMatch).size > 2) (false, "attributeNotInHierarchy", "attributeNotInHierarchy")
+	  else (true, serialize(horizontal), serialize(vertical))
   }
  }
  
@@ -568,8 +579,10 @@ class ReleaseSnippet {
   
   <block><blockType>{blockType}</blockType>{structure}{selects}</block> % ("blockId" -> (bl \ "@blockId").text)
  }
+ 
+ 
 
- def createMetadata(isAccountModel: Boolean) = {
+ def createMetadata(isAccountModel: Boolean) = {	 
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => MyUtil.getSeqHeadText(b \\ "presentationType") != null && MyUtil.getSeqHeadText(b \\ "presentationType").length > 0)
   val frames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr")
 
@@ -1001,10 +1014,12 @@ class ReleaseSnippet {
   else item
  }
  
+ def scId(node: Node): Long = (node \ "@scorecardId").text.toString.toLong
+ def metadata(rs: List[Release]): Node = <anything>{MyUtil.flattenNodeSeq(rs.map(r => Repository.getMetadataOfRelease(r.id) \\ "metadata").toList)}</anything>
+ 
  def deployOnEnvironment(n: Node, targetRelease: Release, releasesSoFar: List[Release]): JsCmd = {
   def txt(node: Node, tag: String) = MyUtil.getSeqHeadText(node \\ tag)
-  def scId(node: Node): Long = (node \ "@scorecardId").text.toString.toLong
-  def metadata(rs: List[Release]): Node = <anything>{MyUtil.flattenNodeSeq(rs.map(r => Repository.getMetadataOfRelease(r.id) \\ "metadata").toList)}</anything>
+  
   def ddlAsNode(ddl: String): Node = (XML.loadString("<ddl>" + ddl + "</ddl>") \\ "ddl").apply(0)
 	 
   val releasesAfterDeployment = targetRelease :: releasesSoFar.filter(_.fkScenario != targetRelease.fkScenario)	 
@@ -1035,9 +1050,6 @@ class ReleaseSnippet {
 	  
 	  val oldRelease = releasesSoFar.filter(r => r.fkScenario == targetRelease.fkScenario)
 	  val allUserGroups = userGroups(specs)
-	  println("specs is " + specs.toString)
-	  println("allUserGroups is " + allUserGroups.toString)
-	  
 	  val indexedList = allUserGroups.indices zip allUserGroups
 	  
 	  val userItems = new ListBuffer[(String, String, String, String)] 
@@ -1228,6 +1240,58 @@ class ReleaseSnippet {
   </div>
  }
  
+ def deployIndividual(): JsCmd = {
+	 
+  val nodes = Repository.read("configuration", -1, "nodes", "nodes",0) \\ "node"
+  val deploymentItems = new ListBuffer[(String, String, String, Node)]
+		  
+  for(node <- nodes) {		  
+	  val allMetadata = metadata(releasesOfNode(node))
+	  val scorecardIds = (allMetadata \\ "fr").map(scId).distinct.toList
+	  val specs = List.flatten(scorecardIds.map(id => Specification.findAll(By(Specification.id, id))))
+	  val allUserGroups = userGroups(specs)
+	  val indexedList = allUserGroups.indices zip allUserGroups
+	  val userItems = new ListBuffer[(String, String, String, String)] 
+	   
+	  for(index <- indexedList) {
+		  val userMetaData = createUserMetadata(index._2._1, allMetadata) 
+		  val fileName = "m" + index._1.toString
+		  val node = Utility.trim(userMetaData._1)
+		  val userHash = node.hashCode.toString
+		  val userGroupInformation = (fileName, userHash, "individual", node)
+		 
+		  deploymentItems += userGroupInformation
+		  
+		  for(aUser <- index._2._2) {
+		 	  val aUserItem = (aUser._2, userMetaData._2, fileName, userMetaData._3)
+		 	  userItems += aUserItem
+		  }
+	   }
+	  
+	  val userNode = Utility.trim(<node>{userItems.map(item => userRow(item._1, item._2, item._3, item._4))}</node>)
+	  val userItem = ("user", userNode.hashCode.toString, "generic", userNode)
+	  
+	  deploymentItems += userItem
+	  
+	  val deploymentInformation = <items><token>{Token.is}</token>{deploymentItems.map(item => <item><name>{item._1}</name><checksum>{item._2}</checksum></item>)}</items>
+	  
+	  // prepare the ajax requests 
+	  
+	  val url = "http://" + MyUtil.getSeqHeadText(node \\ "host") + ":" + MyUtil.getSeqHeadText(node \\ "port")
+	  
+	  val user = User.currentUser openOr null
+	  
+	  // Post at first the start request
+	  
+	  val startStatus = MyPost.post(url + "/deployment/start", deploymentInformation, user)
+	  
+	  if(startStatus == "deploying") deploymentItems.map(item => MyPost.post(url + "/deployment/transfer/" + item._3 + "/" +  item._1 + ".xml", item._4, user)).toList
+	  deploymentItems.clear
+   }
+  
+   Noop
+ }
+ 
  def allScenariosWithReleases (xhtml: NodeSeq): NodeSeq = {
   
   def makeInitialDeployment() = deploy(true)
@@ -1243,6 +1307,7 @@ class ReleaseSnippet {
   bind("deployment", xhtml, "releases" -> allReleases(),
 		                    "deploy" -> ajaxButton(S.?("deploy"), makeInitialDeployment _) % ("class" -> "standardButton"),
 		                    "transport" -> ajaxButton(S.?("transport"), transport _) % ("class" -> "standardButton"),
+		                    "deployIndividual" -> ajaxButton(S.?("deployIndividual"), deployIndividual _) % ("class" -> "standardButton"),
 		                    "createTestData" -> ajaxButton(S.?("createTestData"), createTestData _) % ("class" -> "standardButton"),
 		                    "systems" -> allSystems(),
 		                    "estimation" -> estimate(),

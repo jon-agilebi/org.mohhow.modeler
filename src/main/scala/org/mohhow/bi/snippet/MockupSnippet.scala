@@ -257,7 +257,7 @@ class MockupSnippet {
     val blocksFromXml = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(bl => (bl \\ "@blockId").text == b.id.toString)
     if(blocksFromXml.isEmpty) S.?("presentationType") 
     else {
-    	val desc = S.?(MyUtil.getSeqHeadText(blocksFromXml(0) \\ "presentationDetail")) + " " + S.?(MyUtil.getSeqHeadText(blocksFromXml(0) \\ "presentationType"))
+    	val desc = S.?(MyUtil.getSeqHeadText(blocksFromXml(0) \\ "presentationDetail")) + S.?(MyUtil.getSeqHeadText(blocksFromXml(0) \\ "presentationType"))
     	if(desc != null && desc.length > 1) desc else S.?("presentationType")
     }
  }
@@ -287,6 +287,7 @@ class MockupSnippet {
  
  def refineFilterText(text: String): String = {
    def findIt(name: String ):String = {
+	   println("and the name is " + name)
 	  val attrs = ModelVertex.findAll(By(ModelVertex.elementName, name), By(ModelVertex.elementType, "attribute"), By(ModelVertex.fkScenario, SelectedScenario.is.id))
 	  if(!attrs.isEmpty) "<d" + attrs(0).id.toString + ">"
 	  else {
@@ -295,19 +296,23 @@ class MockupSnippet {
 	  }
    }
    
-   val firstMatch = """\*.+\*""".r findFirstIn text
+   val firstMatch = """\*[^\*]+\*""".r findFirstIn text
    
    firstMatch match {
 	   case None => text
 	   case Some(m) => {
 	  	   val reference = findIt(m.substring(1, m.length - 1))
-	  	   if(reference.length > 0) refineFilterText("""\*.+\*""".r replaceFirstIn(text, reference)) else text   
+	  	   if(reference.length > 0) {
+	  	  	   refineFilterText("""\*[^\*]+\*""".r replaceFirstIn(text, reference))    
+	  	   }
+	  	   else text
 	   }
    }
  }
   
  def saveFilter(text: String, blockId: String): JsCmd = {
   if(text != null && text.length > 0) {
+	  println("and the filter text is " + refineFilterText(text))
 	  val parseResult = WikiParser.checkFilter(refineFilterText(text))
 	  parseResult match {
 			case (true, resultText) => Alert(resultText)
@@ -461,7 +466,7 @@ class MockupSnippet {
    }
    
    var blocksWithNewStructure:List[(String, Node)] = Nil
-	  
+   println("and the block structure is " + blockString)
    if(blockString != null && blockString.length > 0) blocksWithNewStructure  = serializeStructure(blockString)
    val blocks = Block.findAll(By(Block.fkSpecification, SelectedSpecification.is.id)).toList
    val serializedBlocks = Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block"
@@ -597,7 +602,8 @@ class MockupSnippet {
 	  val someSuccessor = successors.filter(succ => (block \ "@blockId").text == (succ \ "@blockId").text)
 	  if(someSuccessor.isEmpty) block
 	  else {
-	 	  val transform = "[successorId]" #>  (someSuccessor(0) \ "@successorId").text
+	 	  val succId = (someSuccessor(0) \ "@successorId").text
+	 	  val transform = "block [successorId]" #> succId
 	 	  transform(block)
 	  }
   }
@@ -773,7 +779,7 @@ class MockupSnippet {
 	  }
 	   else block
   }
-  
+  println("and the xml is " + xml)
   val block = XML.loadString(xml)
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").map(b => replaceBlock(b, block)).toSeq
   Repository.write("scenario", SelectedScenario.is.id, "blocks", "blocks", -1, <blocks>{blocks}</blocks>)

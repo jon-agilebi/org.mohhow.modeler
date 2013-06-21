@@ -61,6 +61,7 @@ object BIService extends RestHelper{
  // wrapper method for DB.runQuery
  
  def query(sql: String, system: String):(List[String],List[List[String]]) = {
+  println(sql)
   val purgedSql = """&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(sql,"<"), ">")
   DB.runQuery(purgedSql, Nil, storeMap(system)._1)
  }
@@ -129,7 +130,7 @@ object BIService extends RestHelper{
    
    if(attributes.size > 0 && attributes.head != null) {
 	   val firstRow = attributes.head
-	   val pairs = (answers zip indices).filter(_._2 > 0).map(x => (extractColumn(x._1, firstRow.size), extractSelectedColumn(x._1, firstRow.size + x._2 - 1)))
+	   val pairs = (answers zip indices).filter(_._2 > 0).map(x => (extractColumn(x._1, firstRow.size), extractSelectedColumn(x._1, x._2)))
 	   val rows = (List.flatten(pairs.map(_._1)), List.flatten(pairs.map(_._2)))
 	   attributes.map(attr => row(rows._2, first(rows._1, attr,0))).toList
    }
@@ -162,16 +163,25 @@ object BIService extends RestHelper{
    case head :: tail => arrangeColumns(tail, (item(head, toBeSorted) :: sortedSoFar.reverse).reverse, toBeSorted)
   }
   
-  def toRow(matrix: List[List[String]], m: Int) = matrix.map(column => column(m)).toList
+  def toRow(matrix: List[List[String]], m: Int) = if(m == -1 && matrix.size > 0) List.range(0, matrix.size).map(x => "")  else matrix.map(column => column(m)).toList
   
   def asString(d: Option[BigDecimal]): String = d match {
    case None => ""
-   case Some(x) => x.toString
+   case Some(x) => x.toString   
   }
   
   def asDecimal(d: Option[BigDecimal]): BigDecimal = d match {
    case None => new BigDecimal("0")
    case Some(x) => x
+  }
+  
+  def scl(d: String, n: Int) = {
+	  try{
+	 	  (new BigDecimal(d)).setScale(n, java.math.RoundingMode.HALF_UP).toString
+	  }
+	  catch{
+	 	  case e: Exception => d
+	  }
   }
   
   def computeMeasure(measure: Node, columns: List[(Long, List[String])], isPie: Boolean): List[String] = {
@@ -183,7 +193,6 @@ object BIService extends RestHelper{
 	   val results = columns.filter(c => c._1 == MyUtil.getSeqHeadText(measure \\ "id").toLong).head._2
 	   
 	   if(isPie) {
-	  	   
 	  	   val sumResults = ((new BigDecimal("0")) /: results.map(x => new BigDecimal(x))) (_.add(_))
 	  	   if(sumResults.doubleValue() != 0) results.map(r => norm(new BigDecimal(r), sumResults)).map(_.toString)
 	  	   else results
@@ -191,14 +200,10 @@ object BIService extends RestHelper{
 	   else results
    }
    else {
-	  
 	   val iDs = measuresInFormula(formula)
 	   val arrangedColumns = arrangeColumns(iDs, List(), columns)
-	   println(arrangedColumns.head.indices.toList.toString)
-	   println("XXXXX")
-	   println(arrangedColumns.head.indices.toList.map(i => toRow(arrangedColumns,i)).toString)
 	   val results = arrangedColumns.head.indices.toList.map(i => WikiParser.evaluateTerm(formula,toRow(arrangedColumns,i).map(digits => new BigDecimal(digits))))
-	   println(results.toString)
+	   
 	   if(isPie) {
 	  	   val sumResults = ((new BigDecimal("0")) /: results.map(asDecimal)) (_.add(_))
 	  	   if(sumResults.doubleValue() != 0) results.map(r => norm(asDecimal(r), sumResults)).map(_.toString) 
@@ -210,8 +215,8 @@ object BIService extends RestHelper{
   
   def measureRow(measureColumns: List[List[String]], attributes: List[List[String]], vertical: String, horizontals: List[String], vPosition: Int, hPosition: Int): List[String] = {
    def pos(v: String, h: String, vPos: Int, hPos: Int, matrix: List[List[String]], index: Int): Int = matrix match {
-	   case Nil => index
-	   case head :: tail => if(head(hPos) == h && head(vPos) == v) index else pos(v, h, vPos, hPos, matrix, index + 1) 
+	   case Nil => -1
+	   case head :: tail => if(head(hPos) == h && head(vPos) == v) index else pos(v, h, vPos, hPos, tail, index + 1) 
    }
    
    List.flatten(horizontals.map(h => toRow(measureColumns, pos(vertical, h, vPosition, hPosition, attributes, 0))))	  
@@ -294,7 +299,7 @@ object BIService extends RestHelper{
 	  val metadata = blockMap(blockId)
 	  val blockType = MyUtil.getSeqHeadText(metadata \\ "blockType")
 		 
-	  if(blockType == "text") {
+	  if(blockType == "text" && (MyUtil.getSeqHeadText(metadata \\ "formula") == null || MyUtil.getSeqHeadText(metadata \\ "formula") == "")) {
 		  val select = metadata \\ "select"
 		  val system = MyUtil.getSeqHeadText(select \\ "system")
 		  val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter, system)
@@ -303,7 +308,6 @@ object BIService extends RestHelper{
 		  blocks +=  <block type="text">{text}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 	  } 
 	  else {
-			println("kuemmere mich um " + blockType)
 		  val allAnswers = for(select <- metadata \\ "select";
 			                     val system = MyUtil.getSeqHeadText(select \\ "system");
 			                     val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter, system)
@@ -311,7 +315,7 @@ object BIService extends RestHelper{
 			
 		  val measureIds = (metadata \\ "select" \\ "measureId").map(MyUtil.getNodeText(_).toLong).filter(mId => mId >= 0)
 			
-		  if(blockType == "zero") {
+		  if(blockType == "zero" || blockType == "text") {
 			  val allNumbers = List.flatten(allAnswers.map(answer => answer._2.head).toList)
 			  val formula = """&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(metadata \\ "formula"), "<"), ">")
 			  
@@ -321,37 +325,38 @@ object BIService extends RestHelper{
 				  val measureIds = measuresInFormula(formula)
 				  val parameter = measureIds.map(measureId => findValue(measureId, indices, allNumbers))
 				
-				  blocks += <block type="zero">{WikiParser.evaluateIndicator(formula, parameter.map(new BigDecimal(_)))}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+				  if(blockType == "zero") blocks += <block type="zero">{WikiParser.evaluateIndicator(formula, parameter.map(new BigDecimal(_)))}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+				  else blocks += <block type="text">{WikiParser.evaluateIndicator(formula, parameter.map(new BigDecimal(_))).toString}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 			 }
 		  } 
 		  else {
 				
 			  val attributeCount = (metadata \\ "structure" \\ "attribute").size
 			  val attributes = mergeColumns(allAnswers.map(x => extractColumn(x._2,attributeCount)).toList)
-			  println("bin ich auch noch hier I? ")
 			  val cols = measureIds zip measureIds.map(measureId => computeColumn(measureId, allAnswers.map(_._2).toList, attributes, metadata))
-			  println("bin ich auch noch hier II? ")
 			  val measureMetadata = (metadata \\ "structure" \\ "measure")	
-			   println("bin ich auch noch hier III? ")
-			  val measureColumns = measureMetadata.map(m => computeMeasure(m, cols.toList, blockType == "pie")).toList
-				println("bin ich auch noch hier? ")
+			
+			  val isPie = MyUtil.getSeqHeadText(metadata \\ "structure" \\ "pie") == "pie"
+			  val measureColumns = measureMetadata.map(m => computeMeasure(m, cols.toList, isPie)).toList
+			  
+			  val scale = MyUtil.getSeqHeadText(metadata \\ "structure" \\ "scale").toInt
+			 
 			  if(blockType == "grid") {
-					
-					val horizontalSpan = MyUtil.getSeqHeadText((metadata \\ "horizontalSpan")).split(";").toList.map(_.toLong)
-					val verticalSpan = MyUtil.getSeqHeadText((metadata \\ "verticalSpan")).split(";").toList.map(_.toLong)
+					val horizontalSpan = MyUtil.getSeqHeadText((metadata \\ "structure" \\ "grid" \\ "horizontalSpan")).split(";").toList.map(_.toLong)
+					val verticalSpan = MyUtil.getSeqHeadText((metadata \\ "structure" \\ "grid" \\ "verticalSpan")).split(";").toList.map(_.toLong)
 					val attrIds = (metadata \\ "structure" \\ "attribute" \\ "id").map(MyUtil.getNodeText(_).toLong).toList
 					
 					val vertical = attributes.map(row => rearrangeRow(row, attrIds, verticalSpan)).distinct
 					val horizontal = transpose(attributes.map(row => rearrangeRow(row, attrIds, horizontalSpan)).distinct)
 					
+					val headerRows = if(vertical.isEmpty) horizontal else horizontal.map(h => List.range(1, vertical(0).size + 1).map(index => "") ::: h)
 					
-					val headerRows = if(vertical.isEmpty) horizontal else horizontal.map(h => List.range(1, vertical(0).size).map(index => "") ::: h)
 					val bodyRows = if(vertical.isEmpty && horizontal.isEmpty) List(List(""))
 						           else if (vertical.isEmpty) List(hRow(measureColumns, attributes, horizontal(0), first(attrIds, horizontalSpan(0), 0)))
 						           else if(horizontal.isEmpty) vertical.map(v => v ::: vRow(measureColumns, attributes, v(0), first(attrIds, verticalSpan(0), 0))).toList
 						           else vertical.map(v => v ::: measureRow(measureColumns, attributes, v(0), horizontal(0), first(attrIds, verticalSpan(0), 0), first(attrIds, horizontalSpan(0), 0))).toList
-						           
-					blocks += <block type="grid">{serializeGrid(headerRows ::: bodyRows)}</block> % new UnprefixedAttribute("id", blockId.toString, Null) 
+				    
+					blocks += <block type="grid">{serializeGrid(headerRows ::: bodyRows.map(_.map(d => scl(d, scale))))}</block> % new UnprefixedAttribute("id", blockId.toString, Null) 
 			 }
 			 else blocks += <block type="one">{serialize(attributes, measureColumns, null)}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 			} 
@@ -402,8 +407,8 @@ object BIService extends RestHelper{
    // GET command starting with 'blocks' is the standard case	  
    if(!isInitialized) initializeBIService()
    
-   //try {
-	   if(isActual(checksum)) {
+   try {
+	   if(userMap.contains(BIServiceUser.is) && isActual(checksum)) {
 		val blockIds = blocks.substring(1).split("b").map(_.toLong).toList
 		
 		if(isPartOf(blocks.substring(1).split("b").toList, userMap(BIServiceUser.is)._3.map(_.toString))) {
@@ -412,12 +417,13 @@ object BIService extends RestHelper{
 		}
 		else <msg>Access to some blocks forbidden</msg>
 	   }
-	   else sendMetaData(userMap(BIServiceUser.is)._2)
-   /*}
+	   else if (userMap.contains(BIServiceUser.is)) sendMetaData(userMap(BIServiceUser.is)._2)
+	   else <msg>Access forbidden</msg>
+   }
    catch {
 	   case e: Exception => println(e.toString)
 	   <msg>Access to some blocks forbidden</msg>
-   }  */
+   }
   }
   
   case "blocks" :: mode :: checksum :: blocks :: Nil XmlPost xml -> _ => {
@@ -425,7 +431,7 @@ object BIService extends RestHelper{
    if(!isInitialized) initializeBIService()
    	 
    try {
-	   if(isActual(checksum)) {
+	   if(userMap.contains(BIServiceUser.is) && isActual(checksum)) {
 		val blockIds = blocks.substring(1).split("b").map(_.toLong).toList
 		
 		if(isPartOf(blocks.substring(1).split("b").toList, userMap(BIServiceUser.is)._3.map(_.toString))) {
@@ -434,7 +440,8 @@ object BIService extends RestHelper{
 		}
 		else <msg>Access to some blocks forbidden</msg>
 	   }
-	   else sendMetaData(userMap(BIServiceUser.is)._2)
+	   else if (userMap.contains(BIServiceUser.is)) sendMetaData(userMap(BIServiceUser.is)._2)
+	   else <msg>Access forbidden</msg>
    }
    catch {
 	   case e: Exception => println(e.toString)
@@ -444,5 +451,6 @@ object BIService extends RestHelper{
   }
   
   case "bi" :: "ping" :: Nil Get _ => <html><body><b>OK</b></body></html>
+  
  }
 }

@@ -148,7 +148,6 @@ class Boot {
     def protectRestService : LiftRules.HttpAuthProtectedResourcePF = {
     	case Req("blocks" :: _, _, GetRequest) => Full(AuthRole("biServiceClient"))
     	case Req("blocks" :: _, _, PostRequest) => Full(AuthRole("biServiceClient"))
-    	//case Req("deployment" :: _, _, PostRequest) => Full(AuthRole("deployment"))
     }
     
     LiftRules.httpAuthProtectedResource.append { protectRestService }
@@ -168,27 +167,24 @@ class Boot {
 	LiftRules.authentication = HttpBasicAuthentication("RestService") {
 	 case ("jon", "jon", req) => userRoles(AuthRole("biServiceClient")); BIServiceUser("jon"); true  
 	 case(uid, pwd, req) => {
-	  println("quarksuppe")
+	  
 	  if(Authentification.authorize(uid, pwd)) {
-	 	  println("gegen ldap authentifiziert")
 	 	  userRoles(AuthRole("biServiceClient"))
 	 	  BIServiceUser(uid)
 	 	  true
 	  }
 	  else {
-	 	  println("versuche gegen modeler zu authentifizieren")
 	 	  val aUser = User.findAll(By(User.email, uid))
-	      println("Given is " + pwd.toString + " and the user has " + aUser(0).password.toString)
-	 	  if(!aUser.isEmpty) { // && aUser(0).password.match_?(pwd)) {
-	 		  userRoles(AuthRole("deployment"))
-	 		  println("Pruefung erfolgreich")
+	     
+	 	  if(!aUser.isEmpty && aUser(0).password.match_?(pwd)) {
+	 		  userRoles(AuthRole("biServiceClient"))
+	 		  BIServiceUser(uid)
 	 		  true
 	 	  }
 	 	  else false  
 	  }
 	 }
 	 case _ => {
-		 println("bin irgendwo, wo ich gar nicht sein will")
 		 false
 	 }
 	}
