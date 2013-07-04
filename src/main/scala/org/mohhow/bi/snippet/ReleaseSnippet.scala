@@ -982,10 +982,11 @@ class ReleaseSnippet {
 			}
 		}
 	}
-	else {
+	else if (rtg.fkScenario > 0){
 		val allUser = List.flatten(ScenarioRole.findAll(By(ScenarioRole.fkScenario, rtg.fkScenario)).map(sr => User.findAll(By(User.id, sr.fkUser))))
 		allUser.map(u => (null, u.email.toString)).toList
 	}
+	else List((null, "daisy"))
   }
   
   val withRoles = specs.map(sp => (sp, SpecificationToRole.findAll(By(SpecificationToRole.fkSpecification, sp.id)).map(_.getUserRole).toList))

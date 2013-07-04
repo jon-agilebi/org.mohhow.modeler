@@ -417,7 +417,10 @@ object BIService extends RestHelper{
 		}
 		else <msg>Access to some blocks forbidden</msg>
 	   }
-	   else if (userMap.contains(BIServiceUser.is)) sendMetaData(userMap(BIServiceUser.is)._2)
+	   else if (userMap.contains(BIServiceUser.is)) {
+	  	   println("quarkspeise")
+	  	   sendMetaData(userMap(BIServiceUser.is)._2)
+	   }
 	   else <msg>Access forbidden</msg>
    }
    catch {

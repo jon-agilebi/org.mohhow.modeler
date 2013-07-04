@@ -165,7 +165,7 @@ class Boot {
     Authentification.initialize()
 	
 	LiftRules.authentication = HttpBasicAuthentication("RestService") {
-	 case ("jon", "jon", req) => userRoles(AuthRole("biServiceClient")); BIServiceUser("jon"); true  
+	 case ("daisy", "duck", req) => userRoles(AuthRole("biServiceClient")); BIServiceUser("daisy"); true  
 	 case(uid, pwd, req) => {
 	  
 	  if(Authentification.authorize(uid, pwd)) {

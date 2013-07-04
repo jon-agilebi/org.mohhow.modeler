@@ -397,8 +397,11 @@ class RoleSnippet {
   else {
 	SelectedProvider(None)
 	val scenarios = Scenario.findAll()
+	val guestAction = SHtml.ajaxCall(JsRaw("$(this).attr('groupName')"), selectDn _)._2
+	val guests = <li class="emphasizableGroup">AgileBIGuest<ul style="list-style-position:inside"><li>daisy</li></ul></li> % new UnprefixedAttribute("groupName", "AgileBIGuest", Null) % ("onclick" -> guestAction)
 	val scenarioTree = scenarios.map(sc => groupToTree(sc.name, ScenarioRole.findAll(By(ScenarioRole.fkScenario, sc.id)).map(usr).toList, "notRelevant"))
-	SetHtml("providerSearchResult", scenarioTree)
+	val scenarioTreeAndGuests = MyUtil.flattenNodeSeq(List(guests) ::: scenarioTree.toList)
+	SetHtml("providerSearchResult", scenarioTreeAndGuests)
   }
  } 
  
@@ -551,9 +554,13 @@ class RoleSnippet {
 	 		  if(check.isEmpty) {
 	 		 	  val scenarios = Scenario.findAll(By(Scenario.name, SelectedDn.is))
 	 		 	  val scenario = if(scenarios.isEmpty) null else scenarios(0)
-	 			  val r2g = RoleToGroup.create
-	 			  r2g.fkRole(SelectedRoleForDn.is).dn(SelectedDn.is).fkScenario(scenario).save
-	 			  SetHtml("roleList", showRoles())
+	 		 	  
+	 		 	  val r2g = RoleToGroup.create
+	 		 	  
+	 		 	  if(scenario != null) r2g.fkRole(SelectedRoleForDn.is).dn(SelectedDn.is).fkScenario(scenario).save
+	 		 	  else r2g.fkRole(SelectedRoleForDn.is).dn("AgileBIGuest").save
+	 		 	   
+	 		 	  SetHtml("roleList", showRoles())
 	 		  }
 	 		  else Noop  
 	 	  }
