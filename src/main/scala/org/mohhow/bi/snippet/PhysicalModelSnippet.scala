@@ -62,45 +62,6 @@ class PhysicalModelSnippet {
   f(h, Nil, allLevel)
  }
  
- def nameFromPattern(attr: String, kind: String): String =  kind match {
-  	case "pk" => e(Setup.is, "namePrimaryKey").replace("#tableName#", attr)
-	case "fk" => e(Setup.is, "nameReferences").replace("#reference#", attr)
-	case _ => ""
- }
- 
- def getDescriptionPart(text: String, partOfInterest: String) = {
-	 
-	 val i = text.indexOf("(")
-	 
-	 partOfInterest match {
-		 case "datatype" => if(i > 0) text.substring(0,i) else text
-		 case _ => {
-			 if(i > 0) {
-				 val rightPart = text.substring(i, text.length)
-				 val j = rightPart.indexOf(",")
-				 if(j > 0 && partOfInterest == "precision") rightPart.substring(1,j) 
-				 else if (partOfInterest == "precision") rightPart.substring(1, rightPart.length -1)
-				 else if(j > 0) rightPart.substring(j + 1, rightPart.length -1)
-				 else "none"
-		 	}
-		 	else "none" 
-		 }	  
-	 }
- }
- 
- def setAttributePhysicalType(attributeType: String, attr: PAttribute): PAttribute = {
-  
-  if(attributeType != null && attributeType.length > 0) {
-	  attr.dataType(getDescriptionPart(attributeType, "datatype"))
-	  val length = getDescriptionPart(attributeType, "precision")
-	  if(length != "none") attr.length(length.toLong)
-	  val scale = getDescriptionPart(attributeType, "scale")   
-	  if(scale != "none") attr.scale(scale.toLong)
-  }
-  
-  attr
- }
- 
  /**
   * create a table attribute from a model attribute
   */
@@ -108,13 +69,13 @@ class PhysicalModelSnippet {
  def createAttribute(table: PTable, attr: ModelVertex, dataType: String) = {
   val newAttribute = PAttribute.create
   newAttribute.fkPTable(table).name(attr.elementName).validFrom(new Date).isCurrent(1).isDerivedFromModel(1).fkModelAttribute(attr.id).isPrimaryKey(0)
-  setAttributePhysicalType(dataType, newAttribute).save
+  MyUtil.setAttributePhysicalType(dataType, newAttribute).save
  }
  
  def createAttributeFromMeasure(table: PTable, m: Measure, dataType: String) = {
   val newAttribute = PAttribute.create
   newAttribute.fkPTable(table).name(m.shortName.toString.toUpperCase).validFrom(new Date).isCurrent(1).isDerivedFromModel(4).fkMeasure(m.id).isPrimaryKey(0)
-  setAttributePhysicalType(dataType, newAttribute).save
+  MyUtil.setAttributePhysicalType(dataType, newAttribute).save
  }
  
  def createReference(table: PTable, refTable: PTable) = {
@@ -125,52 +86,16 @@ class PhysicalModelSnippet {
   
   val defaultKeyType = MyUtil.getSeqHeadText(Setup.is \\ "defaultKeyType")
   val newAttribute = PAttribute.create
-  newAttribute.fkPTable(table).name(nameFromPattern(refTable.name,"fk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(3)
+  newAttribute.fkPTable(table).name(MyUtil.nameFromPattern(refTable.name,"fk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(3)
   newAttribute.fkModelAttribute(0).isPrimaryKey(0).reference(findReferencingAttribute(refTable))
-  setAttributePhysicalType(defaultKeyType, newAttribute).save
+  MyUtil.setAttributePhysicalType(defaultKeyType, newAttribute).save
  }
  
  def cubeDimensions(v: ModelVertex): List[PTable] = {
   val copies = ModelVertex.findAll(By(ModelVertex.referenceId, v.id), By(ModelVertex.elementType, "dimension"))
   List.flatten(copies.map(ModelUtility.findOriginal).map(o => PTable.findAll(By(PTable.fkDimension, o.id))))
  }
- 
- def e(node: Node, name: String) = MyUtil.getSeqHeadText(Setup.is \ "design" \ name)
   
- def addAdditionalAttributes(kind: String, table: PTable) = {
-  	 
-  def createAdditionalAttribute(name: String, attributeType: String) = {
-   val newAttribute = PAttribute.create
-   newAttribute.fkPTable(table).name(name).validFrom(new Date).isCurrent(1).isDerivedFromModel(0)
-   newAttribute.fkModelAttribute(-1).isPrimaryKey(0)
-   
-   if(attributeType != null && attributeType.length > 0) {
-	   newAttribute.dataType(getDescriptionPart(attributeType, "datatype"))
-	   val length = getDescriptionPart(attributeType, "precision")
-	   if(length != "none") newAttribute.length(length.toLong)
-	   val scale = getDescriptionPart(attributeType, "scale")   
-	   if(scale != "none") newAttribute.scale(scale.toLong)
-   }
-   
-   newAttribute.save
-  }
-  
-  val n = Setup.is
-	 
-  val additionalList = List(List(e(n, "identifierETLTableType" ), e(n, "identifierETLName" ), e(n, "identifierETLType")),
-		 				   List(e(n, "timestampETLTableType" ), e(n, "timestampETLName" ), e(n, "timestampETLType")),
-		 				   List(e(n, "validFromTableType" ), e(n, "validFromName" ), e(n, "validFromType")),
-		 				   List(e(n, "validUntilTableType" ), e(n, "validUntilName" ), e(n, "validUntilType")),
-		 				   List(e(n, "isActualTableType" ), e(n, "isActualName" ), e(n, "isActualType")),
-		                   List(e(n, "consecutiveNumberTableType" ), e(n, "consecutiveNumberName" ), e(n, "consecutiveNumberType")),
-		                   List(e(n, "asIsTableType" ), e(n, "asIsNumberName" ), e(n, "asIsType")),
-		                   List(e(n, "toBeTableType" ), e(n, "toBeName" ), e(n, "toBeType")),
-		                   List(e(n, "forecastTableType" ), e(n, "forecastName" ), e(n, "forecastType")),
-		                   List(e(n, "planTableType" ), e(n, "planName" ), e(n, "planType")))
-		                   
-  additionalList.filter(t => t(0) == "allTable" || t(0) == kind).map(item => createAdditionalAttribute(item(1), item(2))) 	 
- }
- 
  def createTable(vertex: ModelVertex, refs: List[PTable], kind: String) = {
   def findCorrespondingTables(v: ModelVertex, kind: String) = {
    if(kind == "dimension") PTable.findAll(By(PTable.fkScenario, SelectedScenario.is.id), By(PTable.fkDimension, vertex.id))
@@ -218,8 +143,8 @@ class PhysicalModelSnippet {
 	 // create primary key
 	 
 	 val pkAttribute = PAttribute.create
-	 pkAttribute.fkPTable(newTable).name(nameFromPattern(newTable.name, "pk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(2).fkModelAttribute(0).isPrimaryKey(1)
-	 setAttributePhysicalType(defaultKeyType, pkAttribute).save 
+	 pkAttribute.fkPTable(newTable).name(MyUtil.nameFromPattern(newTable.name, "pk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(2).fkModelAttribute(0).isPrimaryKey(1)
+	 MyUtil.setAttributePhysicalType(defaultKeyType, pkAttribute).save 
 	 
 	 // add foreign keys for all referencing tables
 	 
@@ -237,7 +162,7 @@ class PhysicalModelSnippet {
 	 
 	// add all additional attributes
 	 
-	addAdditionalAttributes(kind, newTable)
+	MyUtil.addAdditionalAttributes(kind, newTable)
   }
   else {
 	 
@@ -250,11 +175,11 @@ class PhysicalModelSnippet {
 	 if(givenPk.isEmpty) {
 		 
 		 val pkAttribute = PAttribute.create
-		 pkAttribute.fkPTable(referenceTable).name(nameFromPattern(referenceTable.name, "pk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(2).fkModelAttribute(0).isPrimaryKey(1)
-		 setAttributePhysicalType(defaultKeyType, pkAttribute).save 
+		 pkAttribute.fkPTable(referenceTable).name(MyUtil.nameFromPattern(referenceTable.name, "pk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(2).fkModelAttribute(0).isPrimaryKey(1)
+		 MyUtil.setAttributePhysicalType(defaultKeyType, pkAttribute).save 
 		 
 	 }
-	 else givenPk.apply(0).name(nameFromPattern(referenceTable.name, "pk")).save
+	 else givenPk.apply(0).name(MyUtil.nameFromPattern(referenceTable.name, "pk")).save
 	 
 	 // add references that are missing
 	 
@@ -294,7 +219,7 @@ class PhysicalModelSnippet {
 	 // check additional attributes
 	 
 	 PAttribute.findAll(By(PAttribute.fkPTable, referenceTable.id), By(PAttribute.fkModelAttribute, -1)).map(t => t.delete_!)
-	 addAdditionalAttributes(kind, referenceTable)
+	 MyUtil.addAdditionalAttributes(kind, referenceTable)
   }
  }
  
@@ -331,17 +256,17 @@ class PhysicalModelSnippet {
 		 
 		 // add primary key
 		 val pkAttribute = PAttribute.create
-		 pkAttribute.fkPTable(dim).name(nameFromPattern(dim.name, "pk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(1).fkModelAttribute(0).isPrimaryKey(1)
-		 setAttributePhysicalType(defaultKeyType, pkAttribute).save 
+		 pkAttribute.fkPTable(dim).name(MyUtil.nameFromPattern(dim.name, "pk")).validFrom(new Date).isCurrent(1).isDerivedFromModel(1).fkModelAttribute(0).isPrimaryKey(1)
+		 MyUtil.setAttributePhysicalType(defaultKeyType, pkAttribute).save 
 		 
 		 // add measure name
 		 
 		 val measureName = PAttribute.create
 		 measureName.fkPTable(dim).name("MEASURE_NAME").validFrom(new Date).isCurrent(1).isDerivedFromModel(1).fkModelAttribute(0).isPrimaryKey(1)
-		 setAttributePhysicalType(defaultAttributeType, measureName).save 
+		 MyUtil.setAttributePhysicalType(defaultAttributeType, measureName).save 
 	 
 		 // add additional attributes
-		 addAdditionalAttributes("dimension", dim)	 
+		 MyUtil.addAdditionalAttributes("dimension", dim)	 
 	 } 
  }
  
@@ -408,15 +333,26 @@ class PhysicalModelSnippet {
 	  }
   }
   
+  def copyTable(): JsCmd = {
+	   RedirectTo("/tableCopy")
+  }
+  
   def empty(): JsCmd = Noop
   
   val addButton = if(MyUtil.isDesigner()) ajaxButton(S.?("addTable"), addTable _) % ("class" -> "standardButton") else ajaxButton(S.?("addTable"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
   val deriveButton = if(MyUtil.isDesigner()) ajaxButton(S.?("deriveFromLogic"), deriveFromLogic _) % ("class" -> "standardButton") else ajaxButton(S.?("deriveFromLogic"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
+  val copyButton = if(MyUtil.isDesigner()) ajaxButton(S.?("copyTable"), copyTable _) % ("class" -> "standardButton") else ajaxButton(S.?("copyTable"), empty _) % ("class" -> "standardButton") % ("disabled" -> "")
 		
   bind("physical", xhtml, "add" -> addButton,
 		  				  "derive" -> deriveButton,
+		  				  "copy" -> copyButton,
 		                  "header" -> showHeader(),
 		                  "overview" -> PTable.findAll(By(PTable.fkScenario,SelectedScenario.is.id)).map(createListItem).toSeq,
 		                  "rows" -> showRows())
   }
+  
+ def copyForm (xhtml: NodeSeq): NodeSeq = {
+	 bind("copy", xhtml, "original" -> <h3>{S.?("copyTableOriginal") + " " + SelectedTable.is.name}</h3>)
+ }
+ 
 }

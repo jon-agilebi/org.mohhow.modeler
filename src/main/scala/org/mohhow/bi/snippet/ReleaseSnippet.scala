@@ -341,16 +341,6 @@ class ReleaseSnippet {
 	  }
  }
   
- def niceMeasures(l : List[Option[Measure]]): List[Measure] = l match {
-	  case Nil => Nil
-	  case h :: tail => {
-	 	  h match {
-	 	 	  case Some(m) => m :: niceMeasures(tail)
-	 	 	  case _ => niceMeasures(tail)
-	 	  }
-	  }
- }
-  
  def getRelevantMeasures(maybeMeasure: Option[Measure]): List[Measure] = maybeMeasure match {
 	  case None => Nil
 	  case Some(m) => {
@@ -360,7 +350,8 @@ class ReleaseSnippet {
 	 	 	  val pattern = """<m\d+>""".r
 	 	 	  val digits = """\d+""".r
 	 	 	  val candidates = (pattern findAllIn m.formula.toString).map(x => findMeasureIfExists(digits findFirstIn x))
-	 	 	  niceMeasures(candidates.toList)
+	 	 	  
+	 	 	  List.flatten(candidates.toList.map(aMeasure => getRelevantMeasures(aMeasure)))
 	 	  }
 	  }
  }
@@ -477,8 +468,13 @@ class ReleaseSnippet {
 		 			formula.substring(0, formula.length - 1) + ", " + rangeString.substring(1) + ")"
 		 		}
 		 		else {
+		 			
 		 			val msrs = Measure.findAll(By(Measure.id,digits.toLong))
-		 			if(msrs.isEmpty) formula else formula.substring(0, formula.length - 1) + ", " + msrs(0).unit + ")"
+		 			if(msrs.isEmpty) formula else  {
+		 				val matchingUnit = (Setup.is \\ "unit" ).toList.filter(u => MyUtil.getSeqHeadText(u \\ "name") == msrs(0).unit.toString)
+		 				val symb = if(matchingUnit.isEmpty) msrs(0).unit else MyUtil.getSeqHeadText(matchingUnit(0) \\ "symbol")
+		 				formula.substring(0, formula.length - 1) + ", " + symb + ")"
+		 			}
 		 		}
 		 	}
 	 	 }  
@@ -486,8 +482,30 @@ class ReleaseSnippet {
 	  else formula
   }
   
+  def resolveNestedFormula(formula: String): String = {
+   def subformulas(digit: Option[String]): String = digit match {
+	  case None => null
+	  case Some(id) => {
+	 	val msrs = Measure.findAll(By(Measure.id, id.toLong))
+	 	if(msrs.isEmpty || msrs(0).formula == null || msrs(0).formula.length == 0) null 
+	 	else msrs(0).formula
+	  }
+   }
+   
+   def rpl(givenFormula: String, pattern: List[(String,String)]): String = pattern match {
+	   case Nil => givenFormula
+	   case head :: tail => rpl(givenFormula.replaceAll(head._1, "(" + head._2 + ")"), tail)
+   }
+	  
+   val pattern = """<m\d+>""".r
+   val digits = """\d+""".r
+   val replacements = (pattern findAllIn formula).map(p => (p, subformulas(digits findFirstIn p))).filter(item => item._2 != null).toList
+   if(replacements.isEmpty) formula else resolveNestedFormula(rpl(formula, replacements))
+  }
+  
   val blockId = (bl \ "@blockId").text
   val presentationType = MyUtil.getSeqHeadText(bl \ "presentationType")
+  val emphasize = MyUtil.getSeqHeadText(bl \ "emphasize")
   val pie = if(presentationType == "pie") "pie" else "none"
   val presentationDetail = MyUtil.getSeqHeadText(bl \ "presentationDetail")
   val scale = MyUtil.scale(MyUtil.getSeqHeadText(bl \ "scale"))
@@ -498,14 +516,14 @@ class ReleaseSnippet {
   val relevantMeasures = List.flatten(msrs.toList.map(getRelevantMeasures)).toList
   val factTables = relevantMeasures.map(msr => findPhysics(msr.id, false)).map(_._2).distinct
   
-  val attrXML = attrs.map(attr => <attribute><id>{attr._1.id.toString}</id><order>{attr._2}</order><emphasize></emphasize></attribute>).toSeq
-  val msrXML = msrs.map(aMeasure).toList.filter(_ != null).map(msr => <measure><id>{msr.id.toString}</id><formula>{makeFormula(msr.formula, msr.id, presentationType, presentationDetail)}</formula></measure>).toSeq
+  val attrXML = attrs.map(attr => <attribute><id>{attr._1.id.toString}</id><order>{attr._2}</order><emphasize>{emphasize}</emphasize></attribute>).toSeq
+  val msrXML = msrs.map(aMeasure).toList.filter(_ != null).map(msr => <measure><id>{msr.id.toString}</id><formula>{resolveNestedFormula(makeFormula(msr.formula, msr.id, presentationType, presentationDetail))}</formula></measure>).toSeq
   val sqlXML = factTables.map(fact => sql(fact, relevantMeasures, attrs.toList, filter))
   val grid = if(blockType == "grid") {
 	  val check = checkGrid(MyUtil.getSeqHeadText(bl \ "horizontalSpan"), MyUtil.getSeqHeadText(bl \ "verticalSpan"), attrs.map(_._1).toList)
 	  <grid><horizontalSpan>{check._2}</horizontalSpan><verticalSpan>{check._3}</verticalSpan></grid>
-  }
-  else NodeSeq.Empty
+  	}
+  	else NodeSeq.Empty
   
   <block blockId={blockId}><blockType>{blockType}</blockType><structure>{attrXML}{msrXML}{grid}<pie>{pie}</pie><scale>{scale}</scale></structure><selects>{sqlXML}</selects></block> 
  }
@@ -800,6 +818,7 @@ class ReleaseSnippet {
 	
 	if(checks.isEmpty && checkGrid.isEmpty) {
 		val setup = Repository.read("scenario", SelectedScenario.is.id, "setup","setup", -1) \\ "setup"
+		Setup(setup(0))
 		
 		val extraViewLayer = MyUtil.getSeqHeadText(setup \\ "extraViewLayer") == "Y"
 		val stableViewLayer = MyUtil.getSeqHeadText(setup \\ "stableViewLayer") == "Y"

@@ -70,6 +70,10 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
  object fkMeasure extends MappedLong(this) {
    override def dbColumnName = "FK_MEASURE"
  }
+ 
+ object dependsOn extends MappedLong(this) {
+   override def dbColumnName = "DEPENDS_ON"
+ }
 	
  object validFrom extends MappedDateTime(this) {
    override def dbColumnName = "VALID_FROM"
@@ -109,16 +113,29 @@ class PAttribute extends LongKeyedMapper[PAttribute] with IdPK {
 
  def saveText(attributeId: Long, selectionKind: String, text : String) : JsCmd = {
   val attr = PAttribute.findAll(By(PAttribute.id, attributeId)).apply(0)
+  val dependants = PAttribute.findAll(By(PAttribute.dependsOn, attributeId))
   
   selectionKind match {
-	 	  case "name" => attr.name(text)
-	 	  case "length" => attr.length(text.toLong)
-	 	  case "scale" => attr.scale(text.toLong)
+	 	  case "name" => {
+	 	 	  attr.name(text)
+	 	 	  dependants.map(d => d.name(text))
+	 	  }
+	 	  case "length" => {
+	 	 	  attr.length(text.toLong)
+	 	 	  dependants.map(d => d.length(text.toLong))
+	 	  }
+	 	  case "scale" => {
+	 	 	  attr.scale(text.toLong)
+	 	 	  dependants.map(d => d.scale(text.toLong))
+	 	  }
 	 	  case "reference" => attr.reference(0)
-	 	  case "comment" => attr.comment(text)
+	 	  case "comment" => {
+	 	 	  attr.comment(text)
+	 	 	  dependants.map(d => d.comment(text))
+	 	  }
 	  }
 	 
-	  attr.save	   
+  attr.save	   
   Noop
  }
  

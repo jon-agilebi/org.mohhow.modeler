@@ -61,7 +61,6 @@ object BIService extends RestHelper{
  // wrapper method for DB.runQuery
  
  def query(sql: String, system: String):(List[String],List[List[String]]) = {
-  println(sql)
   val purgedSql = """&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(sql,"<"), ">")
   DB.runQuery(purgedSql, Nil, storeMap(system)._1)
  }
@@ -89,7 +88,7 @@ object BIService extends RestHelper{
   def replaceTimeParameter(select: String, toDatePattern: String): String = {
    val timePattern = """\?[\w\_]+\?""".r 
    val firstMatch = timePattern findFirstIn select
-   println("replacing time parameter: " + select + " and the toDatePattern is " + toDatePattern)
+   
    firstMatch match {
 		case None => select
 	 	case Some(m) => replaceTimeParameter(timePattern replaceFirstIn(select, MyUtil.timeInSql(m, toDatePattern)) , toDatePattern)  	   
@@ -319,12 +318,12 @@ object BIService extends RestHelper{
 			  val allNumbers = List.flatten(allAnswers.map(answer => answer._2.head).toList)
 			  val formula = """&gt;""".r replaceAllIn("""&lt;""".r replaceAllIn(MyUtil.getSeqHeadText(metadata \\ "formula"), "<"), ">")
 			  
-			  if(formula == null || formula == "") blocks += <block type="zero">{allNumbers.head}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+			  if(formula == null || formula == "") blocks += <block>{allNumbers.head}</block> % new UnprefixedAttribute("id", blockId.toString, Null) % new UnprefixedAttribute("type", blockType, Null)
 			  else {
 				  val indices = (metadata \\ "select" \\ "measureId").map(MyUtil.getNodeText(_).toLong).toList
 				  val measureIds = measuresInFormula(formula)
 				  val parameter = measureIds.map(measureId => findValue(measureId, indices, allNumbers))
-				
+				  
 				  if(blockType == "zero") blocks += <block type="zero">{WikiParser.evaluateIndicator(formula, parameter.map(new BigDecimal(_)))}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 				  else blocks += <block type="text">{WikiParser.evaluateIndicator(formula, parameter.map(new BigDecimal(_))).toString}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 			 }
@@ -335,6 +334,7 @@ object BIService extends RestHelper{
 			  val attributes = mergeColumns(allAnswers.map(x => extractColumn(x._2,attributeCount)).toList)
 			  val cols = measureIds zip measureIds.map(measureId => computeColumn(measureId, allAnswers.map(_._2).toList, attributes, metadata))
 			  val measureMetadata = (metadata \\ "structure" \\ "measure")	
+			  val emphasize = MyUtil.getSeqHeadText((metadata \\ "structure" \\ "attribute" \\ "emphasize"))
 			
 			  val isPie = MyUtil.getSeqHeadText(metadata \\ "structure" \\ "pie") == "pie"
 			  val measureColumns = measureMetadata.map(m => computeMeasure(m, cols.toList, isPie)).toList
@@ -354,11 +354,11 @@ object BIService extends RestHelper{
 					val bodyRows = if(vertical.isEmpty && horizontal.isEmpty) List(List(""))
 						           else if (vertical.isEmpty) List(hRow(measureColumns, attributes, horizontal(0), first(attrIds, horizontalSpan(0), 0)))
 						           else if(horizontal.isEmpty) vertical.map(v => v ::: vRow(measureColumns, attributes, v(0), first(attrIds, verticalSpan(0), 0))).toList
-						           else vertical.map(v => v ::: measureRow(measureColumns, attributes, v(0), horizontal(0), first(attrIds, verticalSpan(0), 0), first(attrIds, horizontalSpan(0), 0))).toList
+						           else vertical.map(v => v ::: measureRow(measureColumns, attributes, v(0), horizontal(0), first(attrIds, verticalSpan(0), 0), first(attrIds, horizontalSpan(0), 0)).map(d => scl(d, scale))).toList
 				    
-					blocks += <block type="grid">{serializeGrid(headerRows ::: bodyRows.map(_.map(d => scl(d, scale))))}</block> % new UnprefixedAttribute("id", blockId.toString, Null) 
+					blocks += <block type="grid">{serializeGrid(headerRows ::: bodyRows)}</block> % new UnprefixedAttribute("id", blockId.toString, Null) 
 			 }
-			 else blocks += <block type="one">{serialize(attributes, measureColumns, null)}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+			 else blocks += <block type="one">{serialize(attributes, measureColumns, emphasize)}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 			} 
 		 } 
 	 }
@@ -418,7 +418,6 @@ object BIService extends RestHelper{
 		else <msg>Access to some blocks forbidden</msg>
 	   }
 	   else if (userMap.contains(BIServiceUser.is)) {
-	  	   println("quarkspeise")
 	  	   sendMetaData(userMap(BIServiceUser.is)._2)
 	   }
 	   else <msg>Access forbidden</msg>

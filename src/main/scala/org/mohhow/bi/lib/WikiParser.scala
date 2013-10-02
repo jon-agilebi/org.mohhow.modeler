@@ -72,7 +72,7 @@ object WikiParser {
  }
  
  def transformWikiText(text: String) = transformEnumeration(replaceWithTags("''", "em", replaceWithTags("'''", "b", replaceWithTags("''''", "em", text))))
- def transformVisionText(text: String) = transformWikiText("""</subject>|</domain>""".r replaceAllIn("""<subject>|<domain>""".r replaceAllIn(text, "<em>"),"</em>"))
+ def transformVisionText(text: String) = transformWikiText("""</subject>|</domain>|</source>""".r replaceAllIn("""<subject>|<domain>|<source>""".r replaceAllIn(text, "<em>"),"</em>"))
  
  // parse a term; in case of successful parsing, a Math XML expression will be returned 
  
@@ -146,10 +146,11 @@ object WikiParser {
  def evaluateIndicator(text: String, vals: List[BigDecimal]): String = {
   val parser = new Term
   val evaluatedText = substituteMeasure(text, vals)
-
   parser.parseAll(parser.evalIndicator, evaluatedText) match {
 	  case parser.Success(result, _) => result 
-	  case parser.NoSuccess(msg, next) =>  "1"  
+	  case parser.NoSuccess(msg, next) =>  {
+	 	  "1"  
+	  }
   }
  }
  
@@ -158,7 +159,6 @@ object WikiParser {
   val replacement = makeReplacements(text)
   
   if(replacement._2.isEmpty) {
-	  println(replacement._1)
 	  parser.parseAll(parser.measureTerm, replacement._1) match {
 	  	case parser.Success(result, _) => (false, "") 
 	  	case parser.NoSuccess(msg, next) => (true, msg)
@@ -266,7 +266,7 @@ class Term extends JavaTokenParsers {
  }
  
  def meaning: Parser[Any] = "meaning("~measureDim~")"^^{ case "meaning("~m~")" => "<mi>meaning</mi><mfenced>" + m +  "</mfenced>"}
- def valueList: Parser[String] = """[\d,\_,;,\.,-]+""".r
+ def valueList: Parser[String] = """[^,()]+""".r //"""[\d,\_,;,\.,-]+""".r
  def evalMeaning: Parser[String] = "meaning("~evalNumber~","~valueList~")"^^{ case "meaning("~evalNumber~","~list~")" => meanIt(evalNumber, list)}
   
  def range: Parser[Any] = "range("~measureDim~")"^^{ case "range("~m~")" => "<mi>range</mi><mfenced>" + m +  "</mfenced>"}
@@ -274,7 +274,8 @@ class Term extends JavaTokenParsers {
  
  def unit: Parser[Any] = """[^,()]*""".r
  def plain: Parser[Any] = "plain("~measureDim~")"^^{ case "plain("~m~")" => "<mi>plain</mi><mfenced>" + m +  "</mfenced>"}
- def evalPlain: Parser[String] = "plain("~evalNumber~","~unit~")"^^{ case "plain("~evalNumber~","~unit~")" => evalNumber.toString + " " + unit.toString}
+ def evalPlain: Parser[String] = "plain("~evalNumber~","~unit~")"^^{ case "plain("~evalNumber~","~unit~")" => {
+	 evalNumber.toString + " " + unit.toString}}
 
  def rnd: Parser[Any] = "rnd("~number~","~number~";"~repsep(naturalNumber~","~number,",")~")"^^{ case "rnd("~min~","~max~";"~appendix~")" => "<mi>rnd</mi><mfenced>" + min + max + ";" + "..." + "</mfenced>"}
 	
@@ -337,7 +338,7 @@ class Term extends JavaTokenParsers {
  
  def manageRightTerm(rightTerm: Any) = rightTerm.toString match {
 	 case RightTermPattern(lbracket, operand, tilde, remainder, rbracket) => "<mo>" + operand + "</mo>" + remainder
-	 case _ => println(rightTerm.toString); rightTerm.toString
+	 case _ => rightTerm.toString
  }
  
  def concAndEnriche(left: Any, right: Any): String = manageRightTerm(left) + manageRightTerm(right)

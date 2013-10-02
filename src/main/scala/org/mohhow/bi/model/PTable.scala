@@ -28,10 +28,6 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
    override def dbColumnName = "FK_SCENARIO"
  }
 	
- object schema extends MappedPoliteString(this, 100) {
-   override def dbColumnName = "SCHEMA"
- }
-	
  object name extends MappedPoliteString(this, 100) {
    override def dbColumnName = "NAME"
  }
@@ -39,9 +35,13 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
  object description extends MappedPoliteString(this, 1024) {
    override def dbColumnName = "DESCRIPTION"
  }
+ 
+ object tier extends MappedLong(this) {
+   override def dbColumnName = "TIER"
+ }
 	
- object tablespace extends MappedPoliteString(this, 100) {
-   override def dbColumnName = "TABLESPACE"
+ object domain extends MappedLong(this) {
+   override def dbColumnName = "DOMAIN"
  }
 	
  object tableType extends MappedPoliteString(this, 100) {
@@ -60,12 +60,8 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
    override def dbColumnName = "FK_LEVEL"
  }
 	
- object isSource extends MappedLong(this) {
-   override def dbColumnName = "IS_SOURCE"
- }
-	
- object isTarget extends MappedLong(this) {
-   override def dbColumnName = "IS_TARGET"
+ object dependsOn extends MappedLong(this) {
+   override def dbColumnName = "DEPENDS_ON"
  }
 	
  object isDerivedFromModel extends MappedLong(this) {
@@ -85,16 +81,22 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
  }
  
  def add() : JsCmd = {
- 	val attr = PAttribute.create
- 	attr.name("new_column").fkPTable({id})
- 	attr.save
- 	SetHtml("physicalRows", List.flatten(PAttribute.findAll(By(PAttribute.fkPTable, id), OrderBy(PAttribute.id, Ascending)).map(_.tr2.toList)).toSeq)
- 	
+  def createAttr(tableId: Long, refId: Long): Long = {
+	  val attr = PAttribute.create
+	  attr.name("new_column").fkPTable(tableId)
+	  attr.dependsOn(refId).save
+	  attr.id
+  }
+  
+  val refId = createAttr(id, 0)
+  PTable.findAll(By(PTable.dependsOn, id)).map(tbl => createAttr(tbl.id, refId))
+  SetHtml("physicalRows", List.flatten(PAttribute.findAll(By(PAttribute.fkPTable, id), OrderBy(PAttribute.id, Ascending)).map(_.tr2.toList)).toSeq)
  }
  
  def deleteIt(attributeId: String): JsCmd = {
   println("attributeId" + attributeId) 
   try {
+	  PAttribute.findAll(By(PAttribute.dependsOn, attributeId.toLong)).map(attr => attr.delete_!)
 	  PAttribute.findAll(By(PAttribute.id, attributeId.toLong)).apply(0).delete_!
   }
   catch {
@@ -108,10 +110,11 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
   val table = PTable.findAll(By(PTable.id, tableId)).apply(0)
   
   selectionKind match {
-  	case "schema" => table.schema(text)
 	case "name" => table.name(text)
 	case "description" => table.description(text)
 	case "tableType" => table.tableType(text)
+	case "tier" => table.tier(text.toLong)
+	case "domain" => table.domain(text.toLong)
   }
 	 
   table.save	  
@@ -124,11 +127,24 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
  	val removeIt = <button>-</button>  % ("onclick" -> removeAction) % new UnprefixedAttribute("class", "standardButton", Null) 
  	val chooseTableType = SHtml.ajaxSelect(("", "") :: MyUtil.tableTypes.map(t => (t, S.?(t))), Full(tableType) , tt => saveText(id, "tableType", tt))
  	
+ 	val tiers = ArchItem.findAll(By(ArchItem.fkScenario, fkScenario.toLong), By(ArchItem.itemType, "tier"))
+ 	val givenTier = ArchItem.findAll(By(ArchItem.id, tier))
+ 	val theTier = if(givenTier.isEmpty) "" else givenTier(0).itemName.toString		
+ 	val chooseTier = SHtml.ajaxSelect(("", "") :: tiers.map(t => (t.id.toString, t.itemName.toString)), Full(theTier) , txt => saveText(id, "tier", txt))
+ 	
+ 	val domains = ArchItem.findAll(By(ArchItem.fkScenario, fkScenario.toLong), By(ArchItem.itemType, "domain"))
+ 	val givenDomain = ArchItem.findAll(By(ArchItem.id, domain))
+ 	val theDomain = if(givenDomain.isEmpty) "" else givenDomain(0).itemName.toString		
+ 	val chooseDomain = SHtml.ajaxSelect(("", "") :: domains.map(t => (t.id.toString, t.itemName.toString)), Full(theDomain) , txt => saveText(id, "domain", txt))
+ 	
  	<thead>
 		<tr>
- 			<td>{S.?("schema")}</td>
- 			<td colspan="3">{SHtml.ajaxText(schema.toString, text => saveText(id, "schema", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "30", Null) }</td>
+ 			<td>{S.?("tier")}</td><td colspan="3">{chooseTier}</td>
  			<td></td><td></td><td colspan="3">{chooseTableType}</td>
+ 		</tr>
+ 		<tr>
+ 			<td>{S.?("domain")}</td><td colspan="3">{chooseDomain}</td>
+ 			<td></td><td></td><td></td><td></td><td></td>
  		</tr>
 		<tr>
  			<td>{S.?("tableName")}</td><td colspan="3">{SHtml.ajaxText(name.toString, text => saveText(id, "name", text)) % new UnprefixedAttribute("size", "30", Null) % new UnprefixedAttribute("maxlength", "30", Null) }</td>

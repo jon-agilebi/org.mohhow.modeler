@@ -1,0 +1,29 @@
+<lift:surround with="mohhow_default" at="content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/style/mohhow.css" />
+		<link rel="stylesheet" media="screen" type="text/css" href="/script/colorpicker/css/colorpicker.css" />
+		<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+		<script  src="/script/jquery.blockUI.js" type="text/javascript"></script>
+		<script  src="/script/raphael-min.js" type="text/javascript"></script>
+		<script  src="/script/architecture.js" type="text/javascript"></script>
+		<script type="text/javascript" src="/script/colorpicker/js/colorpicker.js"></script>
+	</head>
+	
+	<lift:RoleSnippet.out>	
+	</lift:RoleSnippet.out>
+	
+	<lift:RoleSnippet.in>
+		<div id="architecture_metadata"></div>
+		<lift:ArchitectureSnippet.model>
+			<div class="upper_right">
+				<h1>Architektur</h1>
+            	<div class="menuBar">
+					<model:save /><lift:ScenarioSnippet.scenarios><scenario:display/></lift:ScenarioSnippet.scenarios>
+				</div>
+			</div>
+			<div class="rightContent">
+				<model:display />
+			</div>
+		</lift:ArchitectureSnippet.model>
+	</lift:RoleSnippet.in>
+</lift:surround>

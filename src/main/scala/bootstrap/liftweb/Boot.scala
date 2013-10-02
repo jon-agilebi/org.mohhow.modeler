@@ -72,7 +72,7 @@ class Boot {
     Schemifier.schemify(true, Schemifier.infoF _, User, Client, ClientToUser, Scenario, ProductBacklog, Feature, Release, Meeting, Minutes, ProtocolItem, 
     		                     				  MeetingRecipient, ProtocolComment, ProtocolToBacklog, Measure, ModelVertex, ModelEdge, MeasureToModelVertex, 
     		                     				  MeasureRange, ScenarioRole, PTable, PAttribute, Specification, Block, UserRole, SpecificationToRole, RoleToGroup, 
-    		                     				  Provider, Sprint, BacklogToSpecification)
+    		                     				  Provider, Sprint, BacklogToSpecification, ArchItem)
 
     // Build SiteMap
     
@@ -90,7 +90,8 @@ class Boot {
       Menu(S.?("projectDesignPage")) / "projectDesign" submenus (
     	Menu(S.?("cataloguePage")) / "catalogue",
     	Menu(S.?("logicPage")) / "adapt",
-    	Menu(S.?("specificationPage")) / "specification"  
+    	Menu(S.?("specificationPage")) / "specification",  
+    	Menu(S.?("architecturePage")) / "architecture" 
       ),
     Menu(S.?("implementationPage")) / "implementation" submenus (
      Menu(S.?("scorecardPage")) / "scorecard",
@@ -116,7 +117,8 @@ class Boot {
 	Menu(S.?("scorecardDesign")) / "design" >> Hidden,
     Menu(S.?("blockPresentation")) / "block" >> Hidden, 
     Menu(S.?("testDataEditor")) / "testData" >> Hidden,
-	Menu(S.?("sprints")) / "sprint" >> Hidden)
+	Menu(S.?("sprints")) / "sprint" >> Hidden,
+	Menu(S.?("copyTable")) / "tableCopy" >> Hidden)
 	
 	val withModeler = Props.get("usage") == "both" || Props.get("usage") == "modeler"
 	  

@@ -17,7 +17,7 @@ body{
  text-decoration: line-through;
 }
 
-.blockDialogue {
+.blockDialogue * {
  padding: 5px;
 }
 

@@ -369,4 +369,82 @@ def timeInSql(timePattern: String, toDatePattern:  String): String = {
 	 case "powerBillion" => -9
 	 case _ => 0
  }
+ 
+ // helper methods for table creation
+ 
+ def e(node: Node, name: String) = getSeqHeadText(Setup.is \ "design" \ name)
+ 
+ def nameFromPattern(attr: String, kind: String): String =  kind match {
+  	case "pk" => e(Setup.is, "namePrimaryKey").replace("#tableName#", attr)
+	case "fk" => e(Setup.is, "nameReferences").replace("#reference#", attr)
+	case _ => ""
+ }
+
+ def setAttributePhysicalType(attributeType: String, attr: PAttribute): PAttribute = {
+  
+  if(attributeType != null && attributeType.length > 0) {
+	  attr.dataType(getDescriptionPart(attributeType, "datatype"))
+	  val length = getDescriptionPart(attributeType, "precision")
+	  if(length != "none") attr.length(length.toLong)
+	  val scale = getDescriptionPart(attributeType, "scale")   
+	  if(scale != "none") attr.scale(scale.toLong)
+  }
+  
+  attr
+ }
+ 
+ def getDescriptionPart(text: String, partOfInterest: String) = {
+	 
+	 val i = text.indexOf("(")
+	 
+	 partOfInterest match {
+		 case "datatype" => if(i > 0) text.substring(0,i) else text
+		 case _ => {
+			 if(i > 0) {
+				 val rightPart = text.substring(i, text.length)
+				 val j = rightPart.indexOf(",")
+				 if(j > 0 && partOfInterest == "precision") rightPart.substring(1,j) 
+				 else if (partOfInterest == "precision") rightPart.substring(1, rightPart.length -1)
+				 else if(j > 0) rightPart.substring(j + 1, rightPart.length -1)
+				 else "none"
+		 	}
+		 	else "none" 
+		 }	  
+	 }
+ }
+ 
+ def addAdditionalAttributes(kind: String, table: PTable) = {
+  	 
+  def createAdditionalAttribute(name: String, attributeType: String) = {
+   val newAttribute = PAttribute.create
+   newAttribute.fkPTable(table).name(name).validFrom(new Date).isCurrent(1).isDerivedFromModel(0)
+   newAttribute.fkModelAttribute(-1).isPrimaryKey(0)
+   
+   if(attributeType != null && attributeType.length > 0) {
+	   newAttribute.dataType(getDescriptionPart(attributeType, "datatype"))
+	   val length = getDescriptionPart(attributeType, "precision")
+	   if(length != "none") newAttribute.length(length.toLong)
+	   val scale = getDescriptionPart(attributeType, "scale")   
+	   if(scale != "none") newAttribute.scale(scale.toLong)
+   }
+   
+   newAttribute.save
+  }
+  
+  val n = Setup.is
+	 
+  val additionalList = List(List(e(n, "identifierETLTableType" ), e(n, "identifierETLName" ), e(n, "identifierETLType")),
+		 				   List(e(n, "timestampETLTableType" ), e(n, "timestampETLName" ), e(n, "timestampETLType")),
+		 				   List(e(n, "validFromTableType" ), e(n, "validFromName" ), e(n, "validFromType")),
+		 				   List(e(n, "validUntilTableType" ), e(n, "validUntilName" ), e(n, "validUntilType")),
+		 				   List(e(n, "isActualTableType" ), e(n, "isActualName" ), e(n, "isActualType")),
+		                   List(e(n, "consecutiveNumberTableType" ), e(n, "consecutiveNumberName" ), e(n, "consecutiveNumberType")),
+		                   List(e(n, "asIsTableType" ), e(n, "asIsNumberName" ), e(n, "asIsType")),
+		                   List(e(n, "toBeTableType" ), e(n, "toBeName" ), e(n, "toBeType")),
+		                   List(e(n, "forecastTableType" ), e(n, "forecastName" ), e(n, "forecastType")),
+		                   List(e(n, "planTableType" ), e(n, "planName" ), e(n, "planType")))
+		                   
+  additionalList.filter(t => t(0) == "allTable" || t(0) == kind).map(item => createAdditionalAttribute(item(1), item(2))) 	 
+ }
+  
 }
