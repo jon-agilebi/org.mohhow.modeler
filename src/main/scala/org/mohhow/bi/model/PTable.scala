@@ -127,15 +127,11 @@ class PTable extends LongKeyedMapper[PTable] with IdPK {
  	val removeIt = <button>-</button>  % ("onclick" -> removeAction) % new UnprefixedAttribute("class", "standardButton", Null) 
  	val chooseTableType = SHtml.ajaxSelect(("", "") :: MyUtil.tableTypes.map(t => (t, S.?(t))), Full(tableType) , tt => saveText(id, "tableType", tt))
  	
- 	val tiers = ArchItem.findAll(By(ArchItem.fkScenario, fkScenario.toLong), By(ArchItem.itemType, "tier"))
- 	val givenTier = ArchItem.findAll(By(ArchItem.id, tier))
- 	val theTier = if(givenTier.isEmpty) "" else givenTier(0).itemName.toString		
- 	val chooseTier = SHtml.ajaxSelect(("", "") :: tiers.map(t => (t.id.toString, t.itemName.toString)), Full(theTier) , txt => saveText(id, "tier", txt))
+ 	val tiers = ArchItem.findAll(By(ArchItem.fkScenario, fkScenario.toLong), By(ArchItem.itemType, "tier"))	
+ 	val chooseTier = SHtml.ajaxSelect(("-1", S.?("noMapping")) :: tiers.map(t => (t.id.toString, t.itemName.toString)), Full(tier.toString) , txt => saveText(id, "tier", txt))
  	
- 	val domains = ArchItem.findAll(By(ArchItem.fkScenario, fkScenario.toLong), By(ArchItem.itemType, "domain"))
- 	val givenDomain = ArchItem.findAll(By(ArchItem.id, domain))
- 	val theDomain = if(givenDomain.isEmpty) "" else givenDomain(0).itemName.toString		
- 	val chooseDomain = SHtml.ajaxSelect(("", "") :: domains.map(t => (t.id.toString, t.itemName.toString)), Full(theDomain) , txt => saveText(id, "domain", txt))
+ 	val domains = ArchItem.findAll(By(ArchItem.fkScenario, fkScenario.toLong), By(ArchItem.itemType, "domain"))	
+ 	val chooseDomain = SHtml.ajaxSelect(("-1", S.?("noMapping")) :: domains.map(t => (t.id.toString, t.itemName.toString)), Full(domain.toString) , txt => saveText(id, "domain", txt))
  	
  	<thead>
 		<tr>

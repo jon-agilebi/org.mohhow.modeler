@@ -1,4 +1,3 @@
-
 # Properties in this file will be read when running in dev mode
 
 superAdmin=bert.business@agile-bi.de
@@ -7,6 +6,6 @@ deploymentRoot = /Users/Jon/MOHHOW/test/deployment/
 scenarioRoot = /Users/Jon/MOHHOW/test/scenario/
 transferRoot = /Users/Jon/MOHHOW/test/transfer/
 usage=both
-token=quark
+token = quark
 db.driver=org.postgresql.Driver
 db.url=jdbc:postgresql://localhost:5432/postgres?user=postgres&password=postgres

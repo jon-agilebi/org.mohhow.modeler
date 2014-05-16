@@ -303,8 +303,18 @@ object BIService extends RestHelper{
 		  val system = MyUtil.getSeqHeadText(select \\ "system")
 		  val sql = setSQLParameter(MyUtil.getSeqHeadText(select \\ "sql"), filter, system)
 		  val text = getText(query(sql, system))
-			 
-		  blocks +=  <block type="text">{text}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+		  
+		  val isCloud = (metadata \\ "structure" \\ "filterLanguage").size
+		  
+		  if(isCloud > 0) {
+		 	  
+		 	  val filterLanguage = MyUtil.getSeqHeadText(metadata \\ "structure" \\ "filterLanguage")
+		 	  val maxWords = MyUtil.getSeqHeadText(metadata \\ "structure" \\ "maxWords")
+		 	  
+		 	  blocks += <block type="one">{MyUtil.makeCloudList(text, filterLanguage, maxWords)}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
+		 	  
+		  }
+		  else blocks +=  <block type="text">{text}</block> % new UnprefixedAttribute("id", blockId.toString, Null)
 	  } 
 	  else {
 		  val allAnswers = for(select <- metadata \\ "select";

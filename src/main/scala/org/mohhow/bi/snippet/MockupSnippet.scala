@@ -213,7 +213,6 @@ class MockupSnippet {
   if(PresentationTypes.is == null) PresentationTypes(Repository.read("configuration", 0, "metadata", "model_metadata", -1) \ "presentationTypes" \ "presentationType")
   val blocksFromXml = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(bl => (bl \\ "@blockId").text == b.id.toString)
   if(!blocksFromXml.isEmpty) SelectedBlockInformation(blocksFromXml(0)) else SelectedBlockInformation(<block blockId="-1"></block>)
-  println(" selected block information is " + SelectedBlockInformation.is.toString)
  }
  
  def measureListItem(m: Node): Node = <li class='emphasizableMeasure'>{MyUtil.getSeqHeadText(m)}</li>
@@ -287,7 +286,6 @@ class MockupSnippet {
  
  def refineFilterText(text: String): String = {
    def findIt(name: String ):String = {
-	   println("and the name is " + name)
 	  val attrs = ModelVertex.findAll(By(ModelVertex.elementName, name), By(ModelVertex.elementType, "attribute"), By(ModelVertex.fkScenario, SelectedScenario.is.id))
 	  if(!attrs.isEmpty) "<d" + attrs(0).id.toString + ">"
 	  else {
@@ -312,7 +310,6 @@ class MockupSnippet {
   
  def saveFilter(text: String, blockId: String): JsCmd = {
   if(text != null && text.length > 0) {
-	  println("and the filter text is " + refineFilterText(text))
 	  val parseResult = WikiParser.checkFilter(refineFilterText(text))
 	  parseResult match {
 			case (true, resultText) => Alert(resultText)
@@ -420,12 +417,25 @@ class MockupSnippet {
   case class AttributeContent(name: String, order: String)
   case class BlockContent(blockId: String, measures: List[String], attributes: List[AttributeContent], filter: String)
   
+  def getRanges(m: Measure) : Node = {
+	  val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, m.id), OrderBy(MeasureRange.lowerBound, Ascending))
+	  <ranges>{ranges.map(r => <range><lower>{r.lowerBound.toString}</lower><upper>{r.lowerBound.toString}</upper><meaning>{r.meaning}</meaning></range>)}</ranges>
+  }
+  
   def serializeStructure(blockString: String): List[(String, Node)] = {
    def asAttribute(ac: AttributeContent) = ac match {case AttributeContent(n, o) => <attribute><name>{n}</name><order>{o}</order></attribute>}
    
+   def createRanges(l: List[String]) : Node = {
+	   if(l.length == 1) {
+	  	   val measureList = Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), (By(Measure.shortName, l(0))))
+	  	   if(measureList.size == 1) getRanges(measureList(0)) else <ranges />
+	   }
+	   else <ranges />  
+   }
+   
    def toStructure(bc: BlockContent) = bc match {
 	case BlockContent(blockId, msrs, attrs, filter) => {
-		(blockId, <structure><measures>{msrs.map(m => <measure>{m}</measure>)}</measures><attributes>{attrs.map(asAttribute)}</attributes><filter>{filter}</filter></structure>)
+		(blockId, <structure><measures>{msrs.map(m => <measure>{m}</measure>)}</measures><attributes>{attrs.map(asAttribute)}</attributes><filter>{filter}</filter>{createRanges(msrs)}</structure>)
 	}
    }
 	  
@@ -466,14 +476,13 @@ class MockupSnippet {
    }
    
    var blocksWithNewStructure:List[(String, Node)] = Nil
-   println("and the block structure is " + blockString)
+  
    if(blockString != null && blockString.length > 0) blocksWithNewStructure  = serializeStructure(blockString)
    val blocks = Block.findAll(By(Block.fkSpecification, SelectedSpecification.is.id)).toList
    val serializedBlocks = Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block"
    val result = serializedBlocks.map(b => changeTitle(b, blocks)).map(b => changeStructure(b, blocksWithNewStructure)).toSeq
    Repository.write("scenario", SelectedScenario.is.id, "blocks", "blocks", -1, <blocks>{result}</blocks>) 
-   
-   
+    
    CmdPair(RedirectTo("/specification"), JsCmds.SetHtml("specifications", createSpec(SelectedSpecification.is)))
   }
   
@@ -710,12 +719,7 @@ class MockupSnippet {
  }
  
  def tableAndIndicator() = {
-   /*	 
-   def sel(pt: String, pd: String) = {
-		 if(MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationType") == pt &&
-	 	   MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationDetail") == pd) "Y" else "N"	 
-   }
-	*/
+   
    def sel(pt: String, pd: String) = if(MyUtil.getSeqHeadText(SelectedBlockInformation.is \\ "presentationType") == pt) "Y" else "N"
 	 
    def act(pt: String, pd: String) = if(isActive(pt, pd, false)) "Y" else "N"
@@ -724,6 +728,7 @@ class MockupSnippet {
    val statusThumbnail = <td class="presentationThumbnail" id="statusIndicatorThumbnail" presentationType="indicator" presentationDetail="circle"></td> % new UnprefixedAttribute("selected", sel("indicator", "circle"), Null) % new UnprefixedAttribute("active", act("indicator", "circle"), Null)
    val trendThumbnail = <td class="presentationThumbnail" id="trendIndicatorThumbmail" presentationType="indicator" presentationDetail="arrow"></td> % new UnprefixedAttribute("selected", sel("indicator", "arrow"), Null) % new UnprefixedAttribute("active", act("indicator", "arrow"), Null)
    val plainThumbnail = <td class="presentationThumbnail" id="plainThumbmail" presentationType="text" presentationDetail="plain"></td> % new UnprefixedAttribute("selected", sel("text", "plain"), Null) % new UnprefixedAttribute("active", act("text", "plain"), Null)
+   //val cloudThumbnail = <td class="presentationThumbnail" id="cloudThumbmail" presentationType="text" presentationDetail="cloud"></td> % new UnprefixedAttribute("selected", sel("text", "cloud"), Null) % new UnprefixedAttribute("active", act("text", "cloud"), Null)
 
    <table class="protocolTable">
     <col width="85" text-align="left"/>
@@ -736,6 +741,7 @@ class MockupSnippet {
 	    <tr><td>{S.?("statusIndicator")}</td>{statusThumbnail}</tr> 
 	    <tr><td>{S.?("trendIndicator")}</td>{trendThumbnail}</tr> 
 	 	<tr><td>{S.?("plainPresentation")}</td>{plainThumbnail}</tr> 
+        <!-- <tr><td>{S.?("cloudPresentation")}</td>{cloudThumbnail}</tr> -->
     </tbody>
    </table>
  }
@@ -779,7 +785,7 @@ class MockupSnippet {
 	  }
 	   else block
   }
-  println("and the xml is " + xml)
+  
   val block = XML.loadString(xml)
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").map(b => replaceBlock(b, block)).toSeq
   Repository.write("scenario", SelectedScenario.is.id, "blocks", "blocks", -1, <blocks>{blocks}</blocks>)
@@ -796,7 +802,6 @@ class MockupSnippet {
   val selectionValue = if(givenValue.length > 0) Full(givenValue) else Empty
 	 
 	 val input = if(addAttr._2 == null || addAttr._2.length == 0) {
-		 			//<input type="text" class="blockAttributeInput" inputFor={addAttr._1} /> % new UnprefixedAttribute("value", givenValue, Null)
 		 			ajaxText(givenValue, v => {selectAttributeChoice(v)}) % new UnprefixedAttribute("class", "blockAttributeInput", Null) % new UnprefixedAttribute("inputFor", addAttr._1, Null)
 	 			 }
 	 			 else {

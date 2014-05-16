@@ -171,9 +171,7 @@ class LogicalModelSnippet {
   
   val backlogs = ProductBacklog.findAll(By(ProductBacklog.fkScenario, SelectedScenario.is.id)) 
   val features = List.flatten(backlogs.map(b => Feature.findAll(By(Feature.fkPb, b.id), By(Feature.featureType, S.?("businessQuestion")))))
-  println(features.map(_.name).toString)
   val attributeList = List.flatten(features.map(f => attrOfQuestion(WikiParser.contentOfQuestion(f.description)._2))).distinct.sort(_ < _)
-  println("The attribute list is " + attributeList)
   val usedAttributes = ModelVertex.findAll(By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.elementType, "attribute")).map(_.elementKind.toString).distinct
   val formated = attributeList.map(a => if(usedAttributes exists (_ == a)) <span class="used">{a}</span> else <span class="unused">{a}</span>)
   if(formated.isEmpty) <span /> else MyUtil.flattenNodeSeq(List.flatten(formated.tail.map(item => List(item, <span>, </span>))) ::: List(formated.head))
@@ -285,13 +283,10 @@ class LogicalModelSnippet {
   
   val msrs = Measure.findAll(By(Measure.fkScenario, SelectedScenario.is.id), By(Measure.status, "approved")).filter(m => m.formula == null || m.formula.length == 0)
   val groups = msrs.map(m => (sep(m), findLevel(m))).distinct.toList
-  println("The groups are " + groups.toString)
   val cubes = ModelVertex.findAll(By(ModelVertex.fkScenario, SelectedScenario.is.id), By(ModelVertex.elementType, "cube")).map(c => (c, findLevelVertices(c))).toList
-  println("The cubes are " + cubes.toString)
   
   for(group <- groups) {
    val msrs = measuresOfAGroup(group)
-   println("The measures of group " + group.toString + " are " + msrs.toString)
    val cubeCandidate = findCube(group._2, msrs, cubes)
    for(measure <- msrs) if(measure.fkCube != cubeCandidate.id) measure.fkCube(cubeCandidate.id).save
   }

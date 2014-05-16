@@ -131,8 +131,11 @@ object ModelUtility {
  }
  
  def initialSize(v: ModelVertex): String = {
-  val details = v.elementDetail.split(";").toList
-  if(details.size == 2) details.apply(0).toString else ""
+  if(v != null && v.elementDetail != null && v.elementDetail.length > 0) {
+	  val details = v.elementDetail.split(";").toList
+	  if(details.size == 2) details.apply(0).toString else ""
+  }
+  else ""
  }
  
  def initialSizeAsNumber(v: ModelVertex): Long = {
@@ -151,8 +154,11 @@ object ModelUtility {
  }
  
  def computeSize(tableKind: String, initialSize: Long, growth: Long, end: Long, begin: Long, initialDate: Long, cycle: Long): Long = {
-  if(tableKind == "transactionTable") Math.ceil(MyUtil.duration(end, begin) * 60 * 60 * 24/cycle).toLong * growth
-  else Math.ceil(MyUtil.duration(initialDate, end) * 60 * 60 * 24/cycle).toLong * growth + initialSize
+  if(cycle == 0) initialSize
+  else {
+	  if(tableKind == "transactionTable") Math.ceil(MyUtil.duration(end, begin) * 60 * 60 * 24/cycle).toLong * growth
+	  else Math.ceil(MyUtil.duration(initialDate, end) * 60 * 60 * 24/cycle).toLong * growth + initialSize
+  }
  }
  
  def computeReducedSize(v: ModelVertex, tableName: String, end: Long, begin: Long, initialLoadDate: Long, ratio: Long): Int = {
@@ -167,17 +173,24 @@ object ModelUtility {
 	 
   def f(source: PAttribute, target: PTable, path:List[PAttribute]): List[PAttribute] = {
 	  val next = PAttribute.findAll(By(PAttribute.reference, source.id))
-	  if(next.isEmpty) path 
+	  if(next.isEmpty) List() 
 	  else {
+	 	  val candidate = next.map((fk => (fk, getTable(fk)))).filter(_._2 == target)
+	 	  if(candidate.size == 1) candidate.apply(0)._1 :: path
+	 	  else List.flatten(next.map(fk => f(fk, target, fk :: path)))
+	 	  /*
 	 	  val fk = next(0)
 	 	  val t = getTable(fk)
 	 	  if(t == target) fk :: path else f(fk, target, fk :: path )
+	 	  
+	 	  */
 	  }
   }
-  
+  println("start with " + factTable.toString)
   val keyAttribute = PAttribute.findAll(By(PAttribute.fkPTable, attr.fkPTable), By(PAttribute.isPrimaryKey, 1))
   if(keyAttribute.isEmpty) Nil 
   else {
+	  println("got " + f(keyAttribute(0), factTable, List(keyAttribute(0))))
 	  f(keyAttribute(0), factTable, List(keyAttribute(0)))
   }
  }
@@ -191,34 +204,47 @@ object ModelUtility {
  
  def getTable(a: PAttribute) = PTable.findAll(By(PTable.id, a.fkPTable)).apply(0)
  
+ 
  // check whether left list is part of right list
  
  def isPartOf(l1: List[PAttribute], l2: List[PAttribute]) = (true /: l1.map(x => isIn(x, l2))) (_ && _)
  
- def createJoinStatement(paths: List[List[PAttribute]]): String = {
+ def createJoinStatement(paths: List[List[PAttribute]], isANSIStandard: Boolean): String = {
   def reduce(ls: List[List[PAttribute]]): List[List[PAttribute]] = ls match {
 	  case Nil => Nil
 	  case head :: tail => if((false /:tail.map(t => isPartOf(head, t))) (_ || _)) reduce(tail) else head :: reduce(tail) 
   }
   
   def onePath(l: List[PAttribute]): List[String] = l match {
-	  case l :: r :: tail => getTable(l).name + "." + l.name + " = " + getTable(r).name + "." + r.name :: onePath(r:: tail)
+	  case l :: r :: tail => {
+	 	  getTable(l).name + "." + l.name + " = " + getTable(r).name + "." + r.name :: onePath(r:: tail)
+	  }
 	  case _ => List("")
   }
   
-  def conPath(paths: List[String]): String = paths match{
+  def ansiPath(list: List[PAttribute], initial: Boolean): String = list match {
+	  case l :: r :: tail => {
+	 	  var init = if(initial) getTable(l).name else ""
+	 	  init + " JOIN " + getTable(r).name + " ON " + getTable(l).name + "." + l.name + " = " + getTable(r).name + "." + r.name + ansiPath(tail, false)
+	  }
+	  case _ => ""
+  }
+  
+  def conPath(paths: List[String], concatenator: String): String = paths match{
 	  case Nil => ""
 	  case List(aPath) => aPath
-	  case head :: tail => head + " AND " + conPath(tail) 
-	  
+	  case head :: tail => head + concatenator + conPath(tail, concatenator) 
   }
   
   val reducedPaths = reduce(paths.sort(_.size < _.size))
-  val statements = List.flatten(reducedPaths.map(a => onePath(a))).filter(_.length > 0)
   
-  if(statements.isEmpty) ""
-  else if (statements.size == 1) statements(0)
-  else conPath(statements)
+  if(isANSIStandard) ansiPath(List.flatten(reducedPaths).distinct, true)
+  else {
+	  val statements = List.flatten(reducedPaths.map(a => onePath(a))).filter(_.length > 0)
+	   if(statements.isEmpty) ""
+	   else if (statements.size == 1) statements(0)
+	   else conPath(statements, " AND ")
+  }  
  }
  
  def organizeLevel(organizedLevel: List[(ModelVertex, Int)], remainingLevel: Set[ModelVertex], n: Int): List[(ModelVertex, Int)] = {
@@ -263,7 +289,10 @@ object ModelUtility {
   if(levelsBelow.isEmpty) "sum" else levelsBelow.map(lb => aggr(lb, m)).apply(0)
  }
  
- def createSelect(attrs: List[(PAttribute, String, String, String)], msrs: List[(Measure, String, String)], fact: PTable, filter: (String, List[(PAttribute, PTable)])): String = {
+ def maybeTwoThings(whatIsBefore: String, whatFollows: String, something: String) = if(whatIsBefore.length > 0 && whatFollows.length > 0) something else ""
+ def maybeSomething(whatFollows: String, something: String) = if(whatFollows.length > 0) something else ""
+ 
+ def createSelect(attrs: List[(PAttribute, String, String, String)], msrs: List[(Measure, String, String)], fact: PTable, filter: (String, List[(PAttribute, PTable)]), ansiJoin: Boolean): String = {
   def makeLevel(attrs: List[(PAttribute, String, String, String)]) = {
    if(attrs.isEmpty) Nil else {
 	   val representative = ModelVertex.findAll(By(ModelVertex.id, attrs(0)._1.fkModelAttribute)).apply(0)
@@ -271,23 +300,39 @@ object ModelUtility {
    }
   }
   
-  def maybeTwoThings(whatIsBefore: String, whatFollows: String, something: String) = if(whatIsBefore.length > 0 && whatFollows.length > 0) something else ""
-  def maybeSomething(whatFollows: String, something: String) = if(whatFollows.length > 0) something else ""
-  
   val organizedLevel = makeLevel(attrs)
-	 
+  	 
   val select = "SELECT "
   val attrList = MyUtil.makeSeparatedList(attrs.map(a => a._2 + "." + a._3),",")
   val msrList = MyUtil.makeSeparatedList(msrs.map(m => determineAggregation(m._1, attrs.map(_._1), organizedLevel) + "(" + m._2 + "." + m._3 + ")"),",")
   
-  val from = MyUtil.makeSeparatedList((List(fact.name.toString) ::: attrs.map(_._2) ::: filter._2.map(t => t._2.name.toString)).distinct, ",")
-  val joins = createJoinStatement(attrs.map(a => findJoinPath(fact, a._1)) ::: filter._2.map(f => findJoinPath(fact, f._1)))
+  val joins = createJoinStatement(attrs.map(a => findJoinPath(fact, a._1)) ::: filter._2.map(f => findJoinPath(fact, f._1)), ansiJoin)
+  val from = if(ansiJoin) joins else MyUtil.makeSeparatedList((List(fact.name.toString) ::: attrs.map(_._2) ::: filter._2.map(t => t._2.name.toString)).distinct, ",")
+  val joinStatement = if(ansiJoin) "" else joins
   val groupBy = if(attrList.size > 0) "\nGROUP BY " + attrList else ""
   val orderedAttributes = attrs.filter(_._4.length > 0).map(a => a._2 + "." + a._3 + " " + a._4)
   val orderBy = if(orderedAttributes.size > 0) "\nORDER BY " + MyUtil.makeSeparatedList(orderedAttributes, ",") else ""
-  val conjunction = if(joins != null && joins.length > 0 && filter._1 != null && filter._1.length > 0) " AND " else "" 
-	 // ::: filter._2.map(t => t._2.name)
-  select + attrList  + maybeTwoThings(attrList, msrList, ", ") + msrList + "\nFROM "  + from + maybeSomething(joins + filter._1, "\nWHERE ") + joins + conjunction + filter._1  + groupBy + orderBy 
+  val conjunction = if(joinStatement != null && joinStatement.length > 0 && filter._1 != null && filter._1.length > 0) " AND " else "" 
+ 
+  select + attrList  + maybeTwoThings(attrList, msrList, ", ") + msrList + "\nFROM "  + from + maybeSomething(joinStatement + filter._1, "\nWHERE ") + joinStatement + conjunction + filter._1  + groupBy + orderBy 
+ }
+ 
+ def createSelect(attrs: List[(PAttribute, String, String, String)], filter: (String, List[(PAttribute, PTable)])): String = {
+  
+  val dimTables = attrs.map(a => getTable(a._1)).distinct
+  
+  if(dimTables.size == 1) {
+	val select = "SELECT "
+	val attrList = MyUtil.makeSeparatedList(attrs.map(a => a._2 + "." + a._3),",")
+  
+	val from = dimTables.apply(0).name
+	val orderedAttributes = attrs.filter(_._4.length > 0).map(a => a._2 + "." + a._3 + " " + a._4)
+	val orderBy = if(orderedAttributes.size > 0) "\nORDER BY " + MyUtil.makeSeparatedList(orderedAttributes, ",") else ""
+  
+	select + attrList  + "\nFROM "  + from + maybeSomething(filter._1, "\nWHERE ") + filter._1 + orderBy  
+  }
+  else ""
+
  }
  
  def findOriginal(v: ModelVertex): ModelVertex = {
@@ -298,8 +343,6 @@ object ModelUtility {
 		                         
   if(org.isEmpty) null else org(0)
  } 
-
-
 
 /**
  * consistency checks: Connectedness of diagrams, correct relation types

@@ -196,7 +196,7 @@ def weekInYear(dateAsNumber: Int) = {
 def timeInSql(timePattern: String, toDatePattern:  String): String = {
 	
 	val today = new Date
-	println("aglhagldackl")
+	
 	timePattern match {
 		case "?today?" =>  toDatePattern.replace("?1", formatDate(today, S.?("dateFormat"))).replaceAll("?2", S.?("dateFormat")) 
 		case "?tomorrow?" =>  toDatePattern.replaceAll("?1", formatDate(dateFromNumber(succDate(dateAsNumber(today))), S.?("dateFormat"))).replaceAll("?2", S.?("dateFormat"))
@@ -446,5 +446,31 @@ def timeInSql(timePattern: String, toDatePattern:  String): String = {
 		                   
   additionalList.filter(t => t(0) == "allTable" || t(0) == kind).map(item => createAdditionalAttribute(item(1), item(2))) 	 
  }
+ 
+ def analyse(item: String, n:Int, inp: List[String], result: List[(String, Int)]): List[(String, Int)] = inp match {
+	 case Nil => result
+	 case head :: tail => {
+		 if(head == item) analyse(item, n + 1, tail, result)
+		 else analyse(head, 1, tail, (item, n) :: result)
+	 }
+ }
+ 
+ def makeCloudList(text: String, filterLanguage: String, maxWords:String): NodeSeq = {
+	 
+  def isTrue(bools: List[Boolean]): Boolean = bools match {
+	  case Nil => true
+	  case h:: tail => if(!h) false else isTrue(tail)
+  }
   
+  def isWord(str: String): Boolean = isTrue(str.toList.map(letter => (letter >= 'a' && letter <= 'z') || (letter >= 'A' && letter <= 'Z')).toList)	
+  
+  val commonWords = S.?("commonWords", filterLanguage).split(" ")
+  val allWords = text.split("[\\s\\.,;!]").filter(isWord).filter(word => !commonWords.exists(_ == word.toLowerCase)).toList.sort(_ < _)
+  
+  if(allWords.isEmpty) NodeSeq.Empty
+  else {
+	  val occurences = analyse(allWords.head, 1, allWords.tail,Nil).sort(_._2 > _._2).take(maxWords.toInt)
+	   flattenNodeSeq(List.flatten(occurences.map(entry => List(<name>{entry._1}</name>, <last>{entry._2.toString}</last>)))) 
+  }
+ }
 }

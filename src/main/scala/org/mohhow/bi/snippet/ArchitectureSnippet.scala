@@ -69,7 +69,7 @@ class ArchitectureSnippet {
   val items = model \\ "item"
   items.map(processItem)
   
-  Noop	 
+  RedirectTo("/architecture")
  }
 
  def model (xhtml: NodeSeq): NodeSeq = {

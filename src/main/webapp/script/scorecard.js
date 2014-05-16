@@ -391,16 +391,42 @@ function drawIndicator(raphael, presentationDetail, x, y, width, height) {
 }
 
 function drawPlain(raphael, presentationDetail, x, y, width, height) {	
-	var plainElements = [];
-	var phrase = "bla bla";
-	
-	if(presentationDetail == "total") phrase = "1000.000 $"; 
-	else if(presentationDetail == "meaning") phrase = "pretty good";
-	
-	var text = raphael.text(x + width/2, y + height/2, phrase);
-	plainElements.push(text);
-	
-	return plainElements;
+	if(presentationDetail == "cloud") {
+		var cloudElements = [];
+		
+		var revenue = raphael.text(x + width/2, y + height/2, "revenue");
+		revenue.attr("font-size", 16);
+		cloudElements.push(revenue);
+		
+		var impact = raphael.text(x, y + height, "impact");
+		impact.attr("font-size", 14);
+		var impactBox = impact.getBBox();
+		impact.attr("x", x + impactBox.width/2);
+		impact.attr("y", y + height - impactBox.height/2);
+		cloudElements.push(impact);
+		
+		var risk = raphael.text(x, y, "risk");
+		var riskBox = impact.getBBox();
+		risk.attr("font-size", 14);
+		risk.attr("x", x + width - riskBox.width/2);
+		risk.attr("y", y + riskBox.height/2);
+		cloudElements.push(risk);
+		
+		return cloudElements;
+		
+	}
+	else {
+		var plainElements = [];
+		var phrase = "bla bla";
+		
+		if(presentationDetail == "total") phrase = "1000.000 $"; 
+		else if(presentationDetail == "meaning") phrase = "pretty good";
+		
+		var text = raphael.text(x + width/2, y + height/2, phrase);
+		plainElements.push(text);
+		
+		return plainElements;
+	}
 }
 
 function getPadBox() {
@@ -1358,13 +1384,13 @@ function takeAttribute(attributeName, attributeValue) {
 
 function readBlockInformation() {
 	// choose at first presentation type, presentation detail, title and block id
-	//alert('hello world');
+	
 	var block = $('#readBlockFirstTime block');
 	presentationType = block.find("presentationType").text();
 	presentationDetail = block.find("presentationDetail").text();
 	title = block.find("title").text();
 	blockId = block.attr("blockId");
-	//alert(' and the block id is ' + blockId);
+	
 	// initialize arrays for additional attributes
 	
 	blockAttributeNames = [];
@@ -1374,7 +1400,7 @@ function readBlockInformation() {
 		if($(this).parent().parent().attr("presentationType") == presentationType && $(this).parent().parent().attr("presentationDetail") == presentationDetail) {
 			var attrName = $(this).attr('inputFor');
 			blockAttributeNames.push(attrName);
-			blockAttributeValues.push("");
+			blockAttributeValues.push($(this).val());
 		}
 	}); 
 	

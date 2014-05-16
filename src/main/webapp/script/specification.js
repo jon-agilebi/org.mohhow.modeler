@@ -60,9 +60,8 @@ function changeOrder(attributeList, text) {
 }
 
 function removeElement(list, text) {
-	
 	for(var i = 0; i < list.length; i++) {
-		if(list[i] == text) {
+		if(list[i].name == text.substring(0,list[i].name.length)) {
 			list.splice(i,1);
 			return list;
 		}
@@ -114,12 +113,6 @@ function changeBlockInformation(blockId, action, text, detail) {
 	}
 	
 	$('#dropResults').data('blockInformation', blocks); 
-	
-	for(var i = 0; i < blocks.length; i++) {
-		for(var j = 0; j < blocks[i].measures.length; j++) {
-			
-		}
-	}
 }
 
 function activateSorting() {

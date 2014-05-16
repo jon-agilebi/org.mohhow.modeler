@@ -56,6 +56,11 @@ class ReleaseSnippet {
   <li class='listItem'>{item}</li>
  }
  
+ def rangeList(m: Measure): NodeSeq = {
+  val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, m.id), OrderBy(MeasureRange.lowerBound, Ascending))
+  ranges.map(r => <range><lb>{r.lowerBound.toString}</lb><ub>{r.upperBound.toString}</ub><value>{r.rangeValue.toString}</value><meaning>{r.meaning}</meaning></range>).toSeq	 
+ }
+ 
  def showStatus(): NodeSeq = {
    val release = SelectedRelease.is
 
@@ -285,11 +290,28 @@ class ReleaseSnippet {
 	 }
  }
  
- def createDDL(table: PTable, extraViewLayer: Boolean, stableViewLayer: Boolean, previousRelease: Option[Release]) = {
+ def findSchemaName(table: PTable): String = {
+	 
+	 val domains = ArchItem.findAll(By(ArchItem.id, table.domain), By(ArchItem.itemType,"domain"))
+	 val tiers = ArchItem.findAll(By(ArchItem.id, table.tier), By(ArchItem.itemType,"tier"))
+	 
+	 if(!domains.isEmpty && !tiers.isEmpty) {
+		 val intersections = ArchItem.findAll(By(ArchItem.itemDetail, domains(0).id.toString + "_" + tiers(0).id.toString))
+		 if(!intersections.isEmpty && intersections(0).scheme != null && intersections(0).scheme.length > 0) intersections(0).scheme + "."
+		 else {
+			 if(domains(0).scheme.length > 0) domains(0).scheme + "." else ""
+		 }
+	 }
+	 else if(!domains.isEmpty && domains(0).scheme.length > 0) domains(0).scheme + "."
+	 else ""
+ }
+ 
+ def createDDL(table: PTable, extraViewLayer: Boolean, stableViewLayer: Boolean, previousRelease: Option[Release], withSchemaName: Boolean) = {
   
   val attributeList = PAttribute.findAll(By(PAttribute.fkPTable, table.id), By(PAttribute.isCurrent, 1), OrderBy(PAttribute.id, Ascending))
   val rows = commaList(attributeList.map(createLine))
-  val completeDDL = "CREATE TABLE " + table.name + "(" + rows + ");\n\n" + keyConstraint(table, true) + "\n\n" + keyConstraint(table, false)
+  val schemaName = if(withSchemaName) findSchemaName(table) else ""
+  val completeDDL = "CREATE TABLE " + schemaName + table.name + "(" + rows + ");\n\n" + keyConstraint(table, true) + "\n\n" + keyConstraint(table, false)
   val commaAttributes = commaList(attributeList.map(_.name.toString))
   val simpleView = "CREATE OR REPLACE VIEW V_" + table.name + "(" + commaAttributes + ") AS SELECT (" + commaAttributes + " FROM " + table.name + ");" 
   
@@ -356,7 +378,7 @@ class ReleaseSnippet {
 	  }
  }
  
- def createSelects(bl: Node, isAccountModel: Boolean): Node = { 
+ def createSelects(bl: Node, isAccountModel: Boolean, ansiJoin: Boolean): Node = { 
   
   def translateFilter(filterText: String, content: List[(PAttribute, PTable)]): (String, List[(PAttribute, PTable)]) = {
    val genericPattern = """<[m|d]\d+>""".r
@@ -407,34 +429,40 @@ class ReleaseSnippet {
 	  case _ => "DESC"
   }
   
-  def sql(fact: Option[PTable], msrs: List[Measure], attrs: List[(ModelVertex, String)], filter: (String, List[(PAttribute, PTable)])): Node = {
-   def tName(t: Option[PTable]): String = t match {
-	   case None => ""
-	   case Some(pt) => pt.name.toString
-   }
-   
-   def aName(a: Option[PAttribute]): String = a match {
-	   case None => ""
-	   case Some(attr) => attr.name.toString
-   }
-   
-   def anAttribute(a: Option[PAttribute]): PAttribute = a match {
-	   case None => null
-	   case Some(attr) => attr
-   }
-   
-   def aTable(t: Option[PTable]): PTable = t match {
-	   case None => null
-	   case Some(pt) => pt
-   }
-   
-   val attrXML = attrs.map(attr => <column><kind>attribute</kind><measureId>-1</measureId><type></type></column>).toSeq  
-   val msrsOfFT = msrs.filter(m => findPhysics(m.id, false)._2  == fact)
-   val msrXML = msrsOfFT.map(m => <column><kind>measure</kind><measureId>{m.id.toString}</measureId><type></type></column>).toSeq
-   val augmentedAttrs = attrs.map(a => (a._1, findPhysics(a._1.id, true), a._2)).map(item => (anAttribute(item._2._1), tName(item._2._2), aName(item._2._1), item._3))
-   val augmentedMsrs = msrs.map(m => (m, findPhysics(m.id, false))).map(item => (item._1, tName(item._2._2), aName(item._2._1)))
-   
-   <select>{attrXML}{msrXML}<sql>{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, aTable(fact), filter)}</sql></select>
+  def anAttribute(a: Option[PAttribute]): PAttribute = a match {
+	  case None => null
+	  case Some(attr) => attr
+  }
+  
+  def tName(t: Option[PTable]): String = t match {
+	  case None => ""
+	  case Some(pt) => pt.name.toString
+  }
+  
+  def aName(a: Option[PAttribute]): String = a match {
+	  case None => ""
+	  case Some(attr) => attr.name.toString
+  }
+  
+  def sql(fact: Option[PTable], msrs: List[Measure], attrs: List[(ModelVertex, String)], filter: (String, List[(PAttribute, PTable)])): Node =  fact match {
+	  case None => {
+	 	  
+	 	  val attrXML = attrs.map(attr => <column><kind>attribute</kind><measureId>-1</measureId><type></type></column>).toSeq  
+	 	  val augmentedAttrs = attrs.map(a => (a._1, findPhysics(a._1.id, true), a._2)).map(item => (anAttribute(item._2._1), tName(item._2._2), aName(item._2._1), item._3))
+	 	  
+	 	  <select>{attrXML}<sql>{ModelUtility.createSelect(augmentedAttrs, filter)}</sql></select>
+	  }
+	   
+	  case Some(fTable) => {
+	 	  val attrXML = attrs.map(attr => <column><kind>attribute</kind><measureId>-1</measureId><type></type></column>).toSeq  
+	 	  val msrsOfFT = msrs.filter(m => findPhysics(m.id, false)._2  == fact)
+	 	  val msrXML = msrsOfFT.map(m => <column><kind>measure</kind><measureId>{m.id.toString}</measureId><type></type></column>).toSeq
+	 	  val augmentedAttrs = attrs.map(a => (a._1, findPhysics(a._1.id, true), a._2)).map(item => (anAttribute(item._2._1), tName(item._2._2), aName(item._2._1), item._3))
+	 	  val augmentedMsrs = msrs.map(m => (m, findPhysics(m.id, false))).map(item => (item._1, tName(item._2._2), aName(item._2._1)))
+          
+	 	  <select>{attrXML}{msrXML}<sql>{ModelUtility.createSelect(augmentedAttrs, augmentedMsrs, fTable, filter, ansiJoin)}</sql></select>
+	 	  
+	  }
   }
   
   def aMeasure(m: Option[Measure]): Measure = m match {
@@ -516,16 +544,27 @@ class ReleaseSnippet {
   val relevantMeasures = List.flatten(msrs.toList.map(getRelevantMeasures)).toList
   val factTables = relevantMeasures.map(msr => findPhysics(msr.id, false)).map(_._2).distinct
   
+  val cloudDetails = if(presentationDetail == "cloud") {
+	  					println("passiert denn etwas mit der Cloud?")
+	  					val help = List(<filterLanguage>{MyUtil.getSeqHeadText(bl \ "filterLanguage")}</filterLanguage>,
+	  					                <maxWords>{MyUtil.getSeqHeadText(bl \ "maxNumberOfWords")}</maxWords>)
+	  					                
+	  					MyUtil.flattenNodeSeq(help)
+  					 }
+                     else NodeSeq.Empty
+  
   val attrXML = attrs.map(attr => <attribute><id>{attr._1.id.toString}</id><order>{attr._2}</order><emphasize>{emphasize}</emphasize></attribute>).toSeq
   val msrXML = msrs.map(aMeasure).toList.filter(_ != null).map(msr => <measure><id>{msr.id.toString}</id><formula>{resolveNestedFormula(makeFormula(msr.formula, msr.id, presentationType, presentationDetail))}</formula></measure>).toSeq
-  val sqlXML = factTables.map(fact => sql(fact, relevantMeasures, attrs.toList, filter))
+  val sqlXML = if(factTables.isEmpty) sql(None, Nil, attrs.toList, filter)
+	  		   else factTables.map(fact => sql(fact, relevantMeasures, attrs.toList, filter))
+    		   
   val grid = if(blockType == "grid") {
 	  val check = checkGrid(MyUtil.getSeqHeadText(bl \ "horizontalSpan"), MyUtil.getSeqHeadText(bl \ "verticalSpan"), attrs.map(_._1).toList)
 	  <grid><horizontalSpan>{check._2}</horizontalSpan><verticalSpan>{check._3}</verticalSpan></grid>
   	}
   	else NodeSeq.Empty
   
-  <block blockId={blockId}><blockType>{blockType}</blockType><structure>{attrXML}{msrXML}{grid}<pie>{pie}</pie><scale>{scale}</scale></structure><selects>{sqlXML}</selects></block> 
+  <block blockId={blockId}><blockType>{blockType}</blockType><structure>{attrXML}{msrXML}{grid}<pie>{pie}</pie><scale>{scale}</scale>{cloudDetails}</structure><selects>{sqlXML}</selects></block> 
  }
  
  def checkGrid(horizontalName: String, verticalName: String, attributes: List[ModelVertex]): (Boolean, String, String) = {
@@ -598,17 +637,37 @@ class ReleaseSnippet {
   <block><blockType>{blockType}</blockType>{structure}{selects}</block> % ("blockId" -> (bl \ "@blockId").text)
  }
  
+ def addRange(b: Node) : Node = {
+	 val presentationType = MyUtil.getSeqHeadText(b \ "presentationType")
+	 
+	 if(presentationType == "bar" || presentationType == "column" || presentationType == "line") {
+		  val msrs = (b \\ "measure").map(m => findMeasure(MyUtil.getNodeText(m)))
+		  
+		  
+		  if(msrs.size == 1) {
+		      msrs(0) match {
+		     	  case None => b
+		     	  case Some(m) => {
+		     	 	  val ranges =  <ranges>{rangeList(m)}</ranges>
+		     	 	  val transform = "block *+" #> ranges
+		     	 	  transform(b).apply(0)
+		     	  }
+		      }
+		  }
+		  else b	  
+	 }
+	 else b
+ }
  
-
- def createMetadata(isAccountModel: Boolean) = {	 
+ def createMetadata(isAccountModel: Boolean, ansiJoin: Boolean) = {	 
   val blocks = (Repository.read("scenario", SelectedScenario.is.id, "blocks", "blocks", -1) \\ "block").filter(b => MyUtil.getSeqHeadText(b \\ "presentationType") != null && MyUtil.getSeqHeadText(b \\ "presentationType").length > 0)
   val frames = (Repository.read("scenario", SelectedScenario.is.id, "frames", "frames", -1) \\ "fr")
 
   val metadata = <metadata>
 	  				<frames>{frames}</frames>
   					{Setup.is \\ "layout"}
-	  				<blocks>{blocks}</blocks>
-	  				<backend>{blocks.map(bl => createSelects(bl, isAccountModel)).map(adjustBlock)}</backend>
+	  				<blocks>{blocks.map(addRange)}</blocks>
+	  				<backend>{blocks.map(bl => createSelects(bl, isAccountModel, ansiJoin)).map(adjustBlock)}</backend>
 	  		     </metadata>  % new UnprefixedAttribute("scenarioId", SelectedScenario.is.id.toString, Null)
   
   Repository.write("release", 0, null, "metadata", SelectedRelease.is.id, metadata)
@@ -654,11 +713,8 @@ class ReleaseSnippet {
 
    MeasureToModelVertex.findAll(By(MeasureToModelVertex.fkMeasure, m.id)).map(contextTr).toSeq
   }
-  
-  def serializeMeasure(m: Measure) = {
-	 
-   val ranges = MeasureRange.findAll(By(MeasureRange.fkMeasure, m.id), OrderBy(MeasureRange.lowerBound, Ascending))
-   val rangeList = ranges.map(r => <range><lb>{r.lowerBound.toString}</lb><ub>{r.upperBound.toString}</ub><value>{r.rangeValue.toString}</value><meaning>{r.meaning}</meaning></range>).toSeq	
+   
+  def serializeMeasure(m: Measure) = {	
    
    <measure>
       <shortName>{m.shortName}</shortName>
@@ -680,7 +736,7 @@ class ReleaseSnippet {
       <contextTitle>{S.?("context")}</contextTitle>
       <context>{getContext(m)}</context>
       <rangesTitle>{S.?("ranges")}</rangesTitle>
-      <ranges>{rangeList}</ranges>
+      <ranges>{rangeList(m)}</ranges>
       <dimensionTitle>{S.?("dimension")}</dimensionTitle>
       <levelTitle>{S.?("level")}</levelTitle>
       <aggregationTitle>{S.?("aggregation")}</aggregationTitle>
@@ -823,12 +879,15 @@ class ReleaseSnippet {
 		val extraViewLayer = MyUtil.getSeqHeadText(setup \\ "extraViewLayer") == "Y"
 		val stableViewLayer = MyUtil.getSeqHeadText(setup \\ "stableViewLayer") == "Y"
 		val accountModel = 	MyUtil.getSeqHeadText(setup \\ "accountModel") == "Y"
+		val ansiJoin = MyUtil.getSeqHeadText(setup \\ "ansiJoin") == "Y"
+		val schema = 	MyUtil.getSeqHeadText(setup \\ "schema") == "Y"	
+			
 		val previous = previousRelease(SelectedRelease.is) 
 		
 		Repository.emptyRelease(SelectedRelease.is.id.toLong)
-		PTable.findAll(By(PTable.fkScenario, SelectedScenario.is.id), By(PTable.isCurrent, 1)).map(table => createDDL(table, extraViewLayer, stableViewLayer, previous))
+		PTable.findAll(By(PTable.fkScenario, SelectedScenario.is.id), By(PTable.isCurrent, 1)).map(table => createDDL(table, extraViewLayer, stableViewLayer, previous, schema))
 		createDrops(SelectedRelease.is, previous)
-		createMetadata(accountModel)
+		createMetadata(accountModel, ansiJoin)
 		createDocumentation()
 		Alert(S.?("artefactsCreated"))
 	}
@@ -1009,14 +1068,10 @@ class ReleaseSnippet {
   }
   
   val withRoles = specs.map(sp => (sp, SpecificationToRole.findAll(By(SpecificationToRole.fkSpecification, sp.id)).map(_.getUserRole).toList))
-  println("withRoles " + withRoles.toString)
   val withGroups = withRoles.map(item => (item, List.flatten(item._2.map(ur => RoleToGroup.findAll(By(RoleToGroup.fkRole, ur.id))))))
-  println("withGroups " + withGroups)
   val withDns = withGroups.map(item => (item, List.flatten(item._2.map(member))))
-  println(" with dns " + withDns.toString)
   val specsDns = withDns.map(item => (item._1._1._1, item._2)).toList
   val allGuys = List.flatten(specsDns.map(_._2)).distinct
-  println("all Guys are " + allGuys.toString)
   val guysAndSpecs = allGuys.map(guy => (guy, specsDns.filter(item => item._2 exists(_ == guy)).map(_._1).distinct.sort(_.id < _.id)))
   val allGroups = guysAndSpecs.map(_._2).distinct
   allGroups.map(gr => (gr, guysAndSpecs.filter(_._2 == gr).map(_._1).distinct.toList))
@@ -1036,6 +1091,27 @@ class ReleaseSnippet {
  
  def scId(node: Node): Long = (node \ "@scorecardId").text.toString.toLong
  def metadata(rs: List[Release]): Node = <anything>{MyUtil.flattenNodeSeq(rs.map(r => Repository.getMetadataOfRelease(r.id) \\ "metadata").toList)}</anything>
+ 
+ def tableDependency(fileName: String, targetRelease: Release): Int = {
+  def ref(id: Long): PTable = {
+	  val refs = PTable.findAll(By(PTable.id, id))
+	  if(refs.isEmpty) null else refs(0)
+  }
+  
+  def deg(t: PTable):Int = {
+	 if(t == null) 0
+	 else {
+		 val refs = PAttribute.findAll(By(PAttribute.fkPTable, t.id), By_>(PAttribute.reference, 0))
+		 if(refs.isEmpty) 0
+		 else refs.map(attr => deg(ref(attr.reference))).max
+	 }
+  }
+ 
+  val parts = fileName.split("""\.""")
+  val tableName = if(parts.size == 2) parts(0) else fileName
+  val tables = PTable.findAll(By(PTable.name, tableName), By(PTable.fkScenario, targetRelease.fkScenario))
+  if(tables.isEmpty) 0 else tables.map(deg).max
+ }
  
  def deployOnEnvironment(n: Node, targetRelease: Release, releasesSoFar: List[Release]): JsCmd = {
   def txt(node: Node, tag: String) = MyUtil.getSeqHeadText(node \\ tag)
@@ -1107,7 +1183,7 @@ class ReleaseSnippet {
 	  
 	  // prepare the ddl commands for transformation
 	   
-	  val ddlNames = Repository.getArtefactList(targetRelease.id, List("sql"), false)
+	  val ddlNames = Repository.getArtefactList(targetRelease.id, List("sql"), false).sort(tableDependency(_, targetRelease) < tableDependency(_, targetRelease))
 	  val ddls = ddlNames.map(name => (name, ddlAsNode(Repository.getArtefactAsString(targetRelease.id, name))))
 	  
 	  // Post at first the start request
@@ -1116,13 +1192,13 @@ class ReleaseSnippet {
 	  
 	  if(startStatus == "deploying"){
 	 	  
-	 	  // when successfull post ddls
+	 	  // when successful post ddls
 	 	  
 	 	  val ddlStati = ddls.map(ddl => MyPost.post(url + "/deployment/ddl/" + ddl._1.substring(0, ddl._1.length - 4) + "/" + SelectedAlias.is, ddl._2, user)).toList
 	 	  
 	 	  if(ddlStati.filter(_ == "badDDL").isEmpty) {
 	 	 	  
-	 	 	  // when successfull post deployment files
+	 	 	  // when successful post deployment files
 	 	 	  
 	 	 	  val transferStati = deploymentItems.map(item => MyPost.post(url + "/deployment/transfer/" + item._3 + "/" +  item._1 + ".xml", item._4, user)).toList
 	 	 	  
@@ -1225,14 +1301,12 @@ class ReleaseSnippet {
 	 	  
 	 	  if(releases.isEmpty) Alert(S.?("noReleasesOnNode"))
 	 	  else { 	  
-	 	
 	 	 	  val tableNames = releases.map(r => (r, Repository.tableNamesOfRelease(r.id).toList)).toList
 	 	 	  val tables = List.flatten(tableNames.map(pair => pair._2.map(tn => getPTable(tn, pair._1)).filter(_ != null))).distinct.sort(sortTable(_) < sortTable(_))
 	 	 	  val tablesAndModels = tables zip tables.map(getTableModel)
 	 	 	  
 	 	 	  TestDataNode(devNode.apply(0))
 	 	 	  TestDataModel(tablesAndModels)
-	 	 	   	 	  
 	 	 	  RedirectTo("/testData")
 	 	  }
 	  }

@@ -619,6 +619,8 @@ class ScenarioSnippet {
   
   def extraViewOption(selection: Boolean) = viewOption(selection, "extraViewLayer")
   def stableViewOption(selection: Boolean) = viewOption(selection, "stableViewLayer")
+  def ansiJoinOption(selection: Boolean) = viewOption(selection, "ansiJoin")
+  def schemaOption(selection: Boolean) = viewOption(selection, "schema")
   
   def subjectOption(selection: Boolean) = viewOption(selection, "subjectSeparation")
   def simpleLCOption(selection: Boolean) = viewOption(selection, "simpleLifecycleSeparation")
@@ -631,6 +633,8 @@ class ScenarioSnippet {
   val subjectChoice = isChoice("subjectSeparation")
   val simpleLifecycleChoice = isChoice("simpleLifecycleSeparation")
   val complexLifecycleChoice = isChoice("complexLifecycleSeparation")
+  val ansiJoinChoice = isChoice("ansiJoin")
+  val schemaChoice = isChoice("schema")
   
   def editTFact(prefix: String) = updateDesignConfiguration("prefixTFact", prefix, "prefixTFact")
   def editSFact(prefix: String) = updateDesignConfiguration("prefixSFact", prefix, "prefixSFact")
@@ -733,6 +737,17 @@ class ScenarioSnippet {
    else <span>{makeRadio(false, "account", "account")} {S.?("accountModel")}<br />{makeRadio(true, "noAccount", "account")} {S.?("noAccountModel")}</span>
   }
   
+  def schemaByArchitecture() = {
+   if(accountChoice == "account") <span>{makeRadio(true, "account", "account")} {S.?("accountModel")}<br />{makeRadio(false, "noAccount", "account")} {S.?("noAccountModel")}</span>
+   else <span>{makeRadio(false, "account", "account")} {S.?("accountModel")}<br />{makeRadio(true, "noAccount", "account")} {S.?("noAccountModel")}</span>
+  }
+  
+  def ansiJoin() = {
+   if(accountChoice == "account") <span>{makeRadio(true, "account", "account")} {S.?("accountModel")}<br />{makeRadio(false, "noAccount", "account")} {S.?("noAccountModel")}</span>
+   else <span>{makeRadio(false, "account", "account")} {S.?("accountModel")}<br />{makeRadio(true, "noAccount", "account")} {S.?("noAccountModel")}</span>
+  }
+  
+  
   bind("design", xhtml, 
 	   "snowflake" -> snowflake(),
 	   "accountModel" -> accountModel(),
@@ -741,6 +756,8 @@ class ScenarioSnippet {
 	   "complexLifecycleSeparation" ->  SHtml.ajaxCheckbox(complexLifecycleChoice, complexLCOption _),
 	   "extraViewLayer" -> SHtml.ajaxCheckbox(extraViewChoice, extraViewOption _),
 	   "stableViewLayer" -> SHtml.ajaxCheckbox(stableViewChoice, stableViewOption _),
+	   "ansiJoin" -> SHtml.ajaxCheckbox(ansiJoinChoice, ansiJoinOption _),
+	   "schemeByArchitecture" -> SHtml.ajaxCheckbox(schemaChoice, schemaOption _),
 	   "prefixTFact" -> ajaxText(prefixTFact, text => editTFact(text)),
 	   "prefixSFact" -> ajaxText(prefixSFact, text => editSFact(text)),
 	   "prefixDim" -> ajaxText(prefixDim, text => editDim(text)),

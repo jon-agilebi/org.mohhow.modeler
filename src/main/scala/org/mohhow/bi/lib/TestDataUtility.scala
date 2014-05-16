@@ -73,7 +73,7 @@ object TestDataUtility {
   else if(pattern == "dayInMonth") MyUtil.dayInMonth(key.toInt).toString
   else if(pattern == "dayInWeek") MyUtil.dayInWeek(key.toInt).toString
   else if(pattern == "dayInYear") MyUtil.dayInYear(key.toInt).toString
-  else if(pattern == "weekInYear") MyUtil.weekInYear(key.toInt).toString
+  else if(pattern == "calendarWeek") MyUtil.weekInYear(key.toInt).toString
   else {
 	  try MyUtil.formatDate(MyUtil.dateFromNumber(key.toInt), pattern)
 	  catch {

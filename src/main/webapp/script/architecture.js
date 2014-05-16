@@ -61,6 +61,9 @@ function decodeColor(color) {
 	else return "rgb(" + color + ")";
 }
 
+// sort items: tiers at first, then domains, then inersection
+// items of one kind will be sorted according to their itemCounter
+
 function sortItems(first, second) {
 	
 	if(first.itemType == "intersection" && second.itemType != "intersection") return 1;
@@ -102,6 +105,7 @@ function createArchitecture(xml) {
 	// create model meta data
 	
 	$('#architecture_metadata').html(xml);
+	$('#architecture_metadata').css('color', 'white');
 	
 	$('#architecture_metadata').find("item").each(function(){
 		var itemType = $(this).find("type").text();
@@ -112,7 +116,7 @@ function createArchitecture(xml) {
 		var color = $(this).find("color").text();
 		var id = $(this).find("id").text();
 		var scheme = $(this).find("scheme").text();
-		items.push(paper.architectureItem(itemType, itemName, itemDescription, itemDetail, counter, color, id, 0, scheme));
+		items.push(paper.architectureItem(itemType, itemName, itemDescription, itemDetail, counter, color, id, 0, null, null, null, scheme));
 	});
 	
 	// find the source systems which are not in use yet
@@ -318,7 +322,6 @@ function editItem() {
 	for(var i = 0; i < items.length; i++) {
 		if(items[i].frame == itemToBeEdited) {
 			items[i].itemTitle = $('#archItemTitleInput').val();
-			items[i].itemScheme = $('#archItemSchemeInput').val();
 			items[i].itemUsage = $('#archItemUsageChoice').val();
 			items[i].itemDescription = $('#archItemDescriptionInput').val();
 			items[i].itemColor = $('#archItemColorInput').val();
@@ -433,7 +436,7 @@ var moveTier = function(dx, dy) {
 	var att = {y: Number(this.oy) + Number(dy)};
 	this.attr(att);	
 	yMove = Number(this.oy) + Number(dy);
-	
+	xMove = 0;
 	for(var i = 0; i < items.length; i++) {
 		if(items[i].frame == this) {
 			var attText = {y: Number(items[i].text.oy) + Number(dy)};
@@ -464,52 +467,54 @@ function stopMoving(tierOrDomain, xOrY, givenFrame) {
 	var move;
 	
 	if(xOrY == "x") move = xMove; else move = yMove;
-	
+	console.log(move);
 	for(var i = 0; i < items.length; i++) {
 		if(items[i].itemType == tierOrDomain) {
-			
+				
 			if(items[i].frame && items[i].frame.attr(xOrY) > move) break;
 			newCounter++;
 		}
 	}
-	
+		
 	for(var i = 0; i < items.length; i++) {
-
+	
 		if(items[i].itemType == tierOrDomain && items[i].frame == givenFrame) {
 			givenIndex = i;
 			givenItem = items[i];
 			break;
 		}
-	}
-	
-	var help;
-	
-	if(givenItem && newCounter < givenItem.itemCounter) {
 		
+		if(items[i].itemType == tierOrDomain) newReference++;
+	}
+		
+	var help;
+		
+	if(givenItem && newCounter < givenItem.itemCounter) {
+			
 		for(var i = 0; i < items.length; i++) {
 			if(items[i].itemType == tierOrDomain && items[i].itemCounter > newCounter && items[i].itemCounter <= givenItem.itemCounter && items[i].frame != givenFrame) {
 				help = items[i].itemCounter;
 				items[i].itemCounter = help + 1;
 			}
 		}
-		
+			
 		givenItem.itemCounter = newCounter;
 	}
-	
-	if(givenItem && newCounter > givenItem.itemCounter) {
 		
+	if(givenItem && newCounter > givenItem.itemCounter) {
+			
 		for(var i = 0; i < items.length; i++) {
 			if(items[i].itemType == tierOrDomain && items[i].itemCounter > givenItem.itemCounter && items[i].itemCounter <= newCounter && items[i].frame != givenFrame) {
 				help = items[i].itemCounter;
 				items[i].itemCounter = help - 1;
 			}
 		}
-		
+			
 		givenItem.itemCounter = newCounter;
 	}
-	
+		
 	items.sort(sortItems);
-	removeElements();
+	removeElements();	
 	drawElements();
 };
 
@@ -526,6 +531,7 @@ var moveDomain = function(dx, dy) {
 	var att = {x: Number(this.ox) + Number(dx)};
 	this.attr(att);	
 	xMove = Number(this.ox) + Number(dx);
+	yMove = 0;
 	
 	for(var i = 0; i < items.length; i++) {
 		if(items[i].frame == this) {
@@ -541,7 +547,7 @@ var focus = function(event) {
 	var focusedDomain = null;
 	var xFocus = event.pageX - xOffset;
 	var yFocus = event.pageY - yOffset;
-	var interSectionToBeEdited = null;
+	intersectionToBeEdited = null;
 	
 	for(var i = 0; i < items.length; i++) {
 		if(items[i].frame == this) {
@@ -597,7 +603,6 @@ function saveIntersectionScheme()  {
 	
 	var scheme = $('#schemeIntersectionInput').val();
 
-
 	if(intersectionToBeEdited && intersectionToBeEdited.scheme)  {
 		
 		// edit existing scheme
@@ -618,9 +623,9 @@ function saveIntersectionScheme()  {
 	}
 	else {
 		// create new scheme
-	
+	    countCreation++;
 		items.push(paper.architectureItem("intersection", "", "", focusedSchemeDetail, "", "", 0, 0, null, null, null, scheme));
-		$('#architecture_metadata items').append("<item><type>intersection</type><name></name><detail>" + focusedSchemeDetail + "</detail><description></description><counter>100</counter><color></color><scheme>" + scheme + "</scheme><id></id></item>");
+		$('#architecture_metadata items').append("<item><type>intersection</type><name></name><detail>" + focusedSchemeDetail + "</detail><description></description><counter>100</counter><color></color><scheme>" + scheme + "</scheme><id>-" + countCreation + "</id></item>");
 	}
 	
 	// remove tier and domains

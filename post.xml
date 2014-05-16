@@ -1,2 +1,2 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<items><token>quark</token><item><name>stores</name><checksum>891702597</checksum></item><item><name>blocks</name><checksum>-1671201297</checksum></item><item><name>m0</name><checksum>-1143358976</checksum></item><item><name>user</name><checksum>-29445981</checksum></item></items>
+<node><user><id>bert.business@agile-bi.de</id><checksum>-991588043</checksum><metadata>m0</metadata><blocks>b6b12b13b14b9b10b18b7b8b17b19b20</blocks></user><user><id>daisy</id><checksum>-991588043</checksum><metadata>m0</metadata><blocks>b6b12b13b14b9b10b18b7b8b17b19b20</blocks></user></node>

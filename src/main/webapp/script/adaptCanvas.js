@@ -593,7 +593,7 @@ function movePath(path, dx, dy) {
 
 function createCanvas() {
 	
-	var canvas = paper.rect(0, 0, 800, 650);
+	var canvas = paper.rect(0, 0, 800, 630);
 	canvas.attr("fill", "#ffa");
 	canvas.attr("stroke", "#000");	
 }
@@ -601,12 +601,12 @@ function createCanvas() {
 function createEditCanvas() {
 	
 	paper.clear();
-	editPaper = Raphael(180, 60, 1096, 684);
-	var bigCanvas = editPaper.rect(0,0, 1096, 684);
+	editPaper = Raphael(180, 60, 1096, 664);
+	var bigCanvas = editPaper.rect(0,0, 1096, 664);
 	bigCanvas.attr("fill", "#ffa");
 	bigCanvas.attr("stroke", "#000");
 	
-	var leftCanvas = editPaper.rect(5, 5, 274, 674);
+	var leftCanvas = editPaper.rect(5, 5, 274, 654);
 	leftCanvas.attr("fill", "#ffd");
 	leftCanvas.attr("stroke", "#000");
 }
